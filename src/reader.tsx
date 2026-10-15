@@ -31,6 +31,7 @@ const nav = [
 ];
 const href = (page: string) => "#/" + page;
 function App() {
+  const [startupError, setStartupError] = useState<string | null>(null);
   const [ready, setReady] = useState(false),
     [books, setBooks] = useState<Book[]>([]),
     [progress, setProgress] = useState<Progress[]>([]),
@@ -90,7 +91,7 @@ function App() {
     setSettings(store.checkedSettings(s || store.defaults));
   };
   useEffect(() => {
-    void run(async () => {
+    void (async () => {
       await store.put("settings", "probe", true);
       await store.remove("settings", "probe");
       if (!(await store.get("settings", "initialized"))) {
@@ -107,7 +108,11 @@ function App() {
       }
       await refresh();
       setReady(true);
+      window.__frankaBoot?.finish();
       void navigator.storage?.persist?.().catch(() => {});
+    })().catch((e) => {
+      setStartupError(e instanceof Error ? e.message : String(e));
+      window.__frankaBoot?.finish();
     });
     const change = () => {
       setRoute(location.hash.slice(2) || "home");
@@ -503,11 +508,22 @@ function App() {
         <main class="page">
           <h1>Немецкий по Франку</h1>
           <p>
-            {message?.error
+            {startupError
               ? "Не удалось открыть хранилище браузера. Разрешите локальное хранение данных или откройте файл в Chrome / Edge."
               : "Открываем библиотеку…"}
           </p>
-          {message && <div role="alert">{message.text}</div>}
+          {startupError && (
+            <>
+              <div role="alert">{startupError}</div>
+              <p>
+                Данные не удалены. Проверьте разрешение браузера на хранение
+                данных.
+              </p>
+              <button onClick={() => location.reload()}>
+                Повторить запуск
+              </button>
+            </>
+          )}
         </main>
       </>
     );

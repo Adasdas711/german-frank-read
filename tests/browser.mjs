@@ -6,7 +6,9 @@ import { createServer } from "node:http";
 const server = createServer(async (req, res) => {
   try {
     const name =
-      new URL(req.url, "http://localhost").pathname.slice(1) || "index.html";
+      new URL(req.url, "http://localhost").pathname
+        .replace(/^\/german-frank-read\//, "")
+        .replace(/^\//, "") || "index.html";
     if (!["index.html", "fbook-builder.html"].includes(name)) {
       res.writeHead(404);
       res.end();
@@ -59,7 +61,7 @@ page.on("dialog", (d) => d.accept());
 const base =
   process.env.TEST_FILE_URL === "1"
     ? pathToFileURL(process.cwd() + "/index.html").href
-    : "http://127.0.0.1:4173/index.html";
+    : "http://127.0.0.1:4173/german-frank-read/index.html";
 const wait = () => page.waitForTimeout(200);
 try {
   await page.goto(base);
@@ -92,6 +94,8 @@ try {
     {},
     { timeout: 60000 },
   );
+  const audioErrors = await page.getByRole("alert").allTextContents();
+  assert.deepEqual(audioErrors, [], "Audio failure: " + audioErrors.join(" "));
   assert.ok(
     await page.evaluate(
       () => window.__audioPeak > 0.01 && window.__audioDuration > 0.05,

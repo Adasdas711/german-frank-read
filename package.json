@@ -9,7 +9,8 @@
     "test": "vitest run",
     "test:e2e": "node tests/browser.mjs",
     "typecheck": "tsc --noEmit",
-    "format": "prettier --write \"src/*.{ts,tsx,css}\" \"scripts/*.mjs\" \"tests/*.{ts,mjs}\""
+    "format": "prettier --write \"src/*.{ts,tsx,css}\" \"scripts/*.mjs\" \"tests/*.{ts,mjs}\"",
+    "test:startup": "node tests/startup.mjs"
   },
   "dependencies": {
     "espeak-ng": "1.0.2",

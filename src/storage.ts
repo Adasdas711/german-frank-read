@@ -35,19 +35,56 @@ export const defaults: Settings = {
   voice: "espeak",
   rate: 1,
 };
-let dbPromise: Promise<IDBDatabase>;
+let dbPromise: Promise<IDBDatabase> | undefined;
 export function db() {
-  return (dbPromise ??= new Promise((resolve, reject) => {
-    const r = indexedDB.open("franka-v2", 1);
+  if (dbPromise) return dbPromise;
+  dbPromise = new Promise<IDBDatabase>((resolve, reject) => {
+    let settled = false;
+    const timer = setTimeout(
+      () =>
+        fail(
+          Error(
+            "Хранилище браузера не ответило за 10 секунд. Закройте другие вкладки приложения и повторите запуск.",
+          ),
+        ),
+      10000,
+    );
+    function fail(error: unknown) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      reject(error);
+    }
+    let r: IDBOpenDBRequest;
+    try {
+      r = indexedDB.open("franka-v2", 1);
+    } catch (e) {
+      fail(e);
+      return;
+    }
     r.onupgradeneeded = () => {
       for (const name of ["books", "progress", "words", "settings", "drafts"])
-        r.result.createObjectStore(name);
+        if (!r.result.objectStoreNames.contains(name))
+          r.result.createObjectStore(name);
     };
-    r.onsuccess = () => resolve(r.result);
-    r.onerror = () => reject(r.error);
+    r.onsuccess = () => {
+      if (settled) {
+        r.result.close();
+        return;
+      }
+      settled = true;
+      clearTimeout(timer);
+      r.result.onversionchange = () => r.result.close();
+      resolve(r.result);
+    };
+    r.onerror = () => fail(r.error || Error("Ошибка хранилища браузера."));
     r.onblocked = () =>
-      reject(Error("Закройте другую вкладку приложения и попробуйте снова."));
-  }));
+      fail(Error("Закройте другую вкладку приложения и повторите запуск."));
+  }).catch((e) => {
+    dbPromise = undefined;
+    throw e;
+  });
+  return dbPromise;
 }
 export async function all<T>(store: string): Promise<T[]> {
   const d = await db();

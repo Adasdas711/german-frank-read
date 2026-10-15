@@ -28,6 +28,7 @@ const steps = [
   "Скачать .fbook",
 ];
 function Builder() {
+  const [startupError, setStartupError] = useState<string | null>(null);
   const [step, setStep] = useState(0),
     [source, setSource] = useState<Source | null>(null),
     [json, setJSON] = useState(""),
@@ -72,7 +73,7 @@ function Builder() {
     }
   }
   useEffect(() => {
-    void run(async () => {
+    void (async () => {
       const d: any = await store.get("drafts", "builder");
       if (d) {
         setSource(d.source);
@@ -90,6 +91,10 @@ function Builder() {
       }
       setDict((await store.get("drafts", "dictionary")) || {});
       setReady(true);
+      window.__frankaBoot?.finish();
+    })().catch((e) => {
+      setStartupError(e instanceof Error ? e.message : String(e));
+      window.__frankaBoot?.finish();
     });
   }, []);
   const draft = () => ({
@@ -265,6 +270,21 @@ function Builder() {
       ),
     );
   }
+  if (!ready)
+    return (
+      <main class="page">
+        <h1>Сборщик .fbook</h1>
+        {startupError ? (
+          <>
+            <div role="alert">{startupError}</div>
+            <p>Не удалось открыть хранилище. Данные не удалены.</p>
+            <button onClick={() => location.reload()}>Повторить запуск</button>
+          </>
+        ) : (
+          <p>Открываем черновик…</p>
+        )}
+      </main>
+    );
   return (
     <>
       <header class="app-header">

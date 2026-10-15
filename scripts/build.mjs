@@ -1,4 +1,4 @@
-import { build } from "vite";
+import { build, transformWithEsbuild } from "vite";
 import { viteSingleFile } from "vite-plugin-singlefile";
 import { readFile, writeFile, rm, mkdir, copyFile } from "node:fs/promises";
 import { gzipSync } from "node:zlib";
@@ -35,12 +35,36 @@ for (const [entry, name] of [
   const notice =
     "Немецкий по Франку · GPL-3.0-or-later. Source: accompanying src/, scripts/, package-lock.json. eSpeak source: https://github.com/ianmarmour/espeak-ng.js\n" +
     (await Promise.all(licenses.map((p) => readFile(p, "utf8")))).join("\n\n");
+  let html = await readFile(`.build-${entry}/${entry}-dev.html`, "utf8");
+  const script = html.match(/<script type="module"[^>]*>([\s\S]*?)<\/script>/);
+  if (!script) throw Error("Missing bundled application script");
+  // A module in <head> waits for the entire 13 MB document. Run a small classic
+  // bundle in <body> before the inert WASM tail instead, including on Pages.
+  const app = await transformWithEsbuild(script[1], "app.js", {
+    format: "iife",
+    minify: true,
+    target: "es2022",
+    define: { "import.meta.url": "location.href" },
+  });
+  const boot = await readFile("src/boot.js", "utf8");
+  html = html
+    .replace(script[0], "")
+    .replace("<head>", "<head><script>" + boot + "</script>");
+  const wasm = await readFile("src/wasm-base64.txt", "utf8");
+  html = html.replace(
+    "</body>",
+    () =>
+      "<script>" +
+      app.code.replaceAll("</script", "<\\/script") +
+      "</script>" +
+      '<script id="espeak-wasm" type="application/octet-stream">' +
+      wasm +
+      "</script></body>",
+  );
+  // Keep the doctype first. Legal text belongs at the end, off the first paint.
   await writeFile(
     name,
-    "<!--\n" +
-      notice.replaceAll("-->", "-- >") +
-      "\n-->\n" +
-      (await readFile(`.build-${entry}/${entry}-dev.html`, "utf8")),
+    html + "\n<!--\n" + notice.replaceAll("-->", "-- >") + "\n-->\n",
   );
   await rm(".build-" + entry, { recursive: true });
   console.log(

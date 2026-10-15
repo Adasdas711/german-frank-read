@@ -1,5 +1,23 @@
 import engine from "espeak-ng/dist/espeak-ng.js?raw";
-import wasm from "./wasm-base64.txt?raw";
+// The large synth payload is inert HTML data, outside the startup JavaScript.
+// The UI can run while the browser is still downloading this final part.
+async function embeddedWasm(): Promise<string> {
+  if (import.meta.env.DEV)
+    return (await import("./wasm-base64.txt?raw")).default;
+  if (document.readyState === "loading") {
+    await new Promise<void>((resolve) =>
+      document.addEventListener("DOMContentLoaded", () => resolve(), {
+        once: true,
+      }),
+    );
+  }
+  const data = document.getElementById("espeak-wasm")?.textContent?.trim();
+  if (!data)
+    throw Error(
+      "В HTML отсутствуют данные eSpeak NG. Скачайте полный файл приложения.",
+    );
+  return data;
+}
 import { toPhonemes } from "./ipa";
 export { toPhonemes } from "./ipa";
 const engineText = engine
@@ -47,6 +65,7 @@ export async function voiceRequest(
   clearTimeout(idle);
   const w = getWorker(),
     id = ++seq;
+  const wasm = sentWasm ? undefined : await embeddedWasm();
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       pending.delete(id);
