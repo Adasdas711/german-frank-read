@@ -1,0 +1,29 @@
+{
+  "name": "german-frank-read",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "node scripts/build.mjs",
+    "test": "vitest run",
+    "test:e2e": "node tests/browser.mjs",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write \"src/*.{ts,tsx,css}\" \"scripts/*.mjs\" \"tests/*.{ts,mjs}\""
+  },
+  "dependencies": {
+    "espeak-ng": "1.0.2",
+    "fflate": "0.8.2",
+    "pdfjs-dist": "5.4.296",
+    "preact": "10.27.2"
+  },
+  "devDependencies": {
+    "playwright-core": "1.56.0",
+    "prettier": "3.6.2",
+    "typescript": "5.9.3",
+    "vite": "7.1.7",
+    "vite-plugin-singlefile": "2.3.0",
+    "vitest": "3.2.4"
+  },
+  "license": "GPL-3.0-or-later"
+}

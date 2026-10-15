@@ -1,0 +1,5 @@
+node_modules/
+.test-results/
+src/wasm-base64.txt
+.build-*/
+.*.html
