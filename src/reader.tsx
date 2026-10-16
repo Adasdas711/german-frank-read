@@ -1,5 +1,5 @@
 import { render } from "preact";
-import { useState, useEffect, useRef } from "preact/hooks";
+import { useState, useEffect, useLayoutEffect, useRef } from "preact/hooks";
 import {
   readBook,
   plain,
@@ -15,6 +15,7 @@ import {
 import * as store from "./storage";
 import type { Progress, Settings, SavedWord } from "./storage";
 import { Icon, Modal, Toggle, ProgressBar } from "./ui";
+import { FocusReader } from "./focus-reader";
 import { speak, stop, unlockAudio } from "./voice";
 import {
   exportBackup,
@@ -59,6 +60,7 @@ function App() {
       hint: string;
     } | null>(null),
     [busy, setBusy] = useState(false),
+    [focusMode, setFocusMode] = useState(false),
     [tocOpen, setTocOpen] = useState(
       () => matchMedia("(min-width: 901px)").matches,
     ),
@@ -77,7 +79,8 @@ function App() {
     [usage, setUsage] = useState("");
   const fileRef = useRef<HTMLInputElement>(null),
     backupRef = useRef<HTMLInputElement>(null),
-    wordRef = useRef<HTMLElement>(null);
+    wordRef = useRef<HTMLElement>(null),
+    focusEntryRef = useRef<HTMLButtonElement>(null);
   const notify = (text: string, error = false) => setMessage({ text, error });
   const run = async (fn: () => Promise<void>) => {
     try {
@@ -295,6 +298,20 @@ function App() {
   const index = active ? addresses(active.content).indexOf(at) : 0,
     total = active?.manifest.stats.fragments || 0;
   const fragment = active ? locate(active.content, at) : null;
+  useEffect(() => {
+    if (page !== "read") setFocusMode(false);
+  }, [page]);
+  const enterFocus = () => {
+    stop();
+    setSelected(null);
+    setMessage(null);
+    setFocusMode(true);
+    window.scrollTo(0, 0);
+  };
+  const exitFocus = () => {
+    setFocusMode(false);
+    setTimeout(() => focusEntryRef.current?.focus({ preventScroll: true }), 0);
+  };
   const navigate = (delta: number) => {
     if (!active) return;
     const list = addresses(active.content),
@@ -318,10 +335,11 @@ function App() {
       });
     }
   };
-  useEffect(() => {
+  useLayoutEffect(() => {
     const listener = (e: KeyboardEvent) => {
       if (
         page !== "read" ||
+        focusMode ||
         confirm ||
         sizeOpen ||
         e.altKey ||
@@ -344,7 +362,7 @@ function App() {
     };
     window.addEventListener("keydown", listener);
     return () => window.removeEventListener("keydown", listener);
-  }, [active, at, mode, confirm, sizeOpen]);
+  }, [active, at, mode, confirm, sizeOpen, focusMode]);
   async function listen(text: string, ipa?: string) {
     unlockAudio();
     setBusy(true);
@@ -600,225 +618,253 @@ function App() {
         }}
       />
       {page === "read" && active && fragment ? (
-        <>
-          <header class="app-header reader-header">
-            <div class="header-inner">
-              <a class="back btn" href={href("home")}>
-                <Icon name="back" />
-                Назад
-              </a>
-              <div class="reader-title">
-                <h1>{active.manifest.title}</h1>
-                <small>
-                  {active.manifest.author} · {active.manifest.level} · отрывок{" "}
-                  {index + 1} из {total}
-                </small>
-              </div>
-              <div class="tabs" role="tablist" aria-label="Режим чтения">
-                {[
-                  ["frank", "Франк"],
-                  ["clean", "Чистый"],
-                  ["parallel", "Параллель"],
-                ].map(([v, label]) => (
-                  <button
-                    role="tab"
-                    aria-selected={mode === v}
-                    disabled={v === "parallel" && !active.content.t}
-                    title={
-                      v === "parallel" && !active.content.t
-                        ? "В книге нет перевода"
-                        : label
-                    }
-                    onClick={() =>
-                      (location.hash = `/read/${bookId}/${at}/${v}`)
-                    }
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <button
-                class="icon serif"
-                aria-label="Размер шрифта"
-                onClick={() => setSizeOpen(true)}
-              >
-                Aa
-              </button>
-            </div>
-          </header>
-          <div class={"reader-layout" + (tocOpen ? "" : " toc-collapsed")}>
-            <nav
-              class="toc"
-              id="reader-fragments"
-              aria-label="Отрывки"
-              hidden={!tocOpen}
-            >
-              <div class="eyebrow">Отрывки</div>
-              {active.content.c.map((c, ci) => (
-                <div>
-                  <p class="muted" style={{ padding: "0 12px", fontSize: 12 }}>
-                    {active.manifest.chapters[ci][0] || "Глава " + (ci + 1)}
-                  </p>
-                  {c.map((f, fi) => (
+        focusMode ? (
+          <FocusReader
+            content={active.content}
+            at={at}
+            mode={mode}
+            showClean={settings.showClean}
+            index={index}
+            total={total}
+            navigate={navigate}
+            onExit={exitFocus}
+          />
+        ) : (
+          <>
+            <header class="app-header reader-header">
+              <div class="header-inner">
+                <a class="back btn" href={href("home")}>
+                  <Icon name="back" />
+                  Назад
+                </a>
+                <div class="reader-title">
+                  <h1>{active.manifest.title}</h1>
+                  <small>
+                    {active.manifest.author} · {active.manifest.level} · отрывок{" "}
+                    {index + 1} из {total}
+                  </small>
+                </div>
+                <div class="tabs" role="tablist" aria-label="Режим чтения">
+                  {[
+                    ["frank", "Франк"],
+                    ["clean", "Чистый"],
+                    ["parallel", "Параллель"],
+                  ].map(([v, label]) => (
                     <button
-                      class={at === `${ci + 1}.${fi + 1}` ? "active" : ""}
-                      aria-current={
-                        at === `${ci + 1}.${fi + 1}` ? "location" : undefined
+                      role="tab"
+                      aria-selected={mode === v}
+                      disabled={v === "parallel" && !active.content.t}
+                      title={
+                        v === "parallel" && !active.content.t
+                          ? "В книге нет перевода"
+                          : label
                       }
                       onClick={() =>
-                        (location.hash = `/read/${bookId}/${ci + 1}.${fi + 1}/${mode}`)
+                        (location.hash = `/read/${bookId}/${at}/${v}`)
                       }
                     >
-                      {fi + 1}. {plain(f).slice(0, 34)}…
+                      {label}
                     </button>
                   ))}
                 </div>
-              ))}
-            </nav>
-            <main>
-              <div class="row reader-tools">
                 <button
-                  class="toc-toggle"
-                  aria-controls="reader-fragments"
-                  aria-expanded={tocOpen}
-                  onClick={() => setTocOpen((open) => !open)}
+                  class="focus-entry"
+                  ref={focusEntryRef}
+                  aria-label="Режим чтения"
+                  title="Режим чтения — только текст"
+                  onClick={enterFocus}
                 >
-                  <Icon name={tocOpen ? "back" : "next"} />
-                  {tocOpen ? "Скрыть отрывки" : "Показать отрывки"}
-                </button>
-                {mode === "frank" ? (
-                  <Toggle
-                    checked={settings.showClean}
-                    onChange={(v) =>
-                      void run(() => saveSettings({ showClean: v }))
-                    }
-                  >
-                    Текст без подсказок
-                  </Toggle>
-                ) : null}
-              </div>
-              {mode === "parallel" ? (
-                <section
-                  class="reading-panel"
-                  aria-label="Параллельный перевод"
-                >
-                  <div class="eyebrow">Немецкий · Русский</div>
-                  {(active.content.t?.[fragment.c]?.[fragment.f] || []).map(
-                    (t, i) => {
-                      const text =
-                        plain(fragment.chunks).match(
-                          /[^.!?]+[.!?]+[»”"']*|[^.!?]+$/g,
-                        )?.[i] || "";
-                      return (
-                        <div class="parallel-row">
-                          <p lang="de">{cleanText(text, text, t)}</p>
-                          <p class="translation">{t}</p>
-                        </div>
-                      );
-                    },
-                  )}
-                </section>
-              ) : (
-                <div class="reading-columns">
-                  {mode === "frank" && (
-                    <section class="reading-panel" aria-label="С подсказками">
-                      <div class="eyebrow">С подсказками</div>
-                      <p lang="de">{textBlock(fragment.chunks, true)}</p>
-                    </section>
-                  )}
-                  {(mode === "clean" || settings.showClean) && (
-                    <section class="reading-panel" aria-label="Без подсказок">
-                      <div class="eyebrow">Без подсказок</div>
-                      <p lang="de">{textBlock(fragment.chunks)}</p>
-                    </section>
-                  )}
-                </div>
-              )}
-              <div class="reader-actions">
-                <button
-                  class="listen"
-                  disabled={busy}
-                  onClick={() => void listenFragment()}
-                >
-                  <Icon name="sound" />
-                  {busy ? "Готовим звук…" : "Прослушать отрывок"}
+                  <Icon name="book" />
+                  <span>Только текст</span>
                 </button>
                 <button
-                  disabled={index === 0}
-                  class="icon"
-                  aria-label="Предыдущий отрывок"
-                  onClick={() => navigate(-1)}
+                  class="icon serif"
+                  aria-label="Размер шрифта"
+                  onClick={() => setSizeOpen(true)}
                 >
-                  <Icon name="back" />
-                </button>
-                <button class="primary" onClick={() => navigate(1)}>
-                  {index === total - 1
-                    ? "Завершить чтение"
-                    : "Следующий отрывок"}
-                  <Icon name="next" />
+                  Aa
                 </button>
               </div>
-              <div class="reader-info">
-                <span>← → для перехода</span>
-                <span>·</span>
-                <span>Место сохраняется автоматически</span>
-              </div>
-            </main>
-            {selected ? (
-              <aside
-                class="panel word-panel"
-                ref={wordRef}
-                aria-label="Подсказка к слову"
+            </header>
+            <div class={"reader-layout" + (tocOpen ? "" : " toc-collapsed")}>
+              <nav
+                class="toc"
+                id="reader-fragments"
+                aria-label="Отрывки"
+                hidden={!tocOpen}
               >
-                <div class="row between">
-                  <div class="grow">
-                    <h2 lang="de">{lemma?.[0] || selected.form}</h2>
-                    <small class="muted">В тексте: {selected.form}</small>
+                <div class="eyebrow">Отрывки</div>
+                {active.content.c.map((c, ci) => (
+                  <div>
+                    <p
+                      class="muted"
+                      style={{ padding: "0 12px", fontSize: 12 }}
+                    >
+                      {active.manifest.chapters[ci][0] || "Глава " + (ci + 1)}
+                    </p>
+                    {c.map((f, fi) => (
+                      <button
+                        class={at === `${ci + 1}.${fi + 1}` ? "active" : ""}
+                        aria-current={
+                          at === `${ci + 1}.${fi + 1}` ? "location" : undefined
+                        }
+                        onClick={() =>
+                          (location.hash = `/read/${bookId}/${ci + 1}.${fi + 1}/${mode}`)
+                        }
+                      >
+                        {fi + 1}. {plain(f).slice(0, 34)}…
+                      </button>
+                    ))}
                   </div>
+                ))}
+              </nav>
+              <main>
+                <div class="row reader-tools">
                   <button
-                    class="icon close-word"
-                    aria-label="Закрыть подсказку"
-                    onClick={() => setSelected(null)}
+                    class="toc-toggle"
+                    aria-controls="reader-fragments"
+                    aria-expanded={tocOpen}
+                    onClick={() => setTocOpen((open) => !open)}
                   >
-                    <Icon name="close" />
+                    <Icon name={tocOpen ? "back" : "next"} />
+                    {tocOpen ? "Скрыть отрывки" : "Показать отрывки"}
                   </button>
+                  {mode === "frank" ? (
+                    <Toggle
+                      checked={settings.showClean}
+                      onChange={(v) =>
+                        void run(() => saveSettings({ showClean: v }))
+                      }
+                    >
+                      Текст без подсказок
+                    </Toggle>
+                  ) : null}
                 </div>
-                <div class="row">
-                  <span class="ipa">[{selIpa}]</span>
+                {mode === "parallel" ? (
+                  <section
+                    class="reading-panel"
+                    aria-label="Параллельный перевод"
+                  >
+                    <div class="eyebrow">Немецкий · Русский</div>
+                    {(active.content.t?.[fragment.c]?.[fragment.f] || []).map(
+                      (t, i) => {
+                        const text =
+                          plain(fragment.chunks).match(
+                            /[^.!?]+[.!?]+[»”"']*|[^.!?]+$/g,
+                          )?.[i] || "";
+                        return (
+                          <div class="parallel-row">
+                            <p lang="de">{cleanText(text, text, t)}</p>
+                            <p class="translation">{t}</p>
+                          </div>
+                        );
+                      },
+                    )}
+                  </section>
+                ) : (
+                  <div class="reading-columns">
+                    {mode === "frank" && (
+                      <section class="reading-panel" aria-label="С подсказками">
+                        <div class="eyebrow">С подсказками</div>
+                        <p lang="de">{textBlock(fragment.chunks, true)}</p>
+                      </section>
+                    )}
+                    {(mode === "clean" || settings.showClean) && (
+                      <section class="reading-panel" aria-label="Без подсказок">
+                        <div class="eyebrow">Без подсказок</div>
+                        <p lang="de">{textBlock(fragment.chunks)}</p>
+                      </section>
+                    )}
+                  </div>
+                )}
+                <div class="reader-actions">
                   <button
-                    class="icon"
-                    aria-label="Произнести слово"
+                    class="listen"
                     disabled={busy}
-                    onClick={() => void listen(selected.form, selIpa)}
+                    onClick={() => void listenFragment()}
                   >
                     <Icon name="sound" />
+                    {busy ? "Готовим звук…" : "Прослушать отрывок"}
+                  </button>
+                  <button
+                    disabled={index === 0}
+                    class="icon"
+                    aria-label="Предыдущий отрывок"
+                    onClick={() => navigate(-1)}
+                  >
+                    <Icon name="back" />
+                  </button>
+                  <button class="primary" onClick={() => navigate(1)}>
+                    {index === total - 1
+                      ? "Завершить чтение"
+                      : "Следующий отрывок"}
+                    <Icon name="next" />
                   </button>
                 </div>
-                <strong>{lemma?.[1] || "Нет отдельного перевода"}</strong>
-                <div class="context">
-                  <i lang="de">{selected.context}</i>
-                  {selected.hint && (
-                    <div style={{ color: "var(--teal)" }}>{selected.hint}</div>
-                  )}
+                <div class="reader-info">
+                  <span>← → для перехода</span>
+                  <span>·</span>
+                  <span>Место сохраняется автоматически</span>
                 </div>
-                <button
-                  class="primary"
-                  disabled={isSaved}
-                  onClick={() => void run(saveWord)}
+              </main>
+              {selected ? (
+                <aside
+                  class="panel word-panel"
+                  ref={wordRef}
+                  aria-label="Подсказка к слову"
                 >
-                  {isSaved ? (
-                    <>
-                      <Icon name="check" />
-                      Слово сохранено
-                    </>
-                  ) : (
-                    "В мои слова"
-                  )}
-                </button>
-              </aside>
-            ) : null}
-          </div>
-        </>
+                  <div class="row between">
+                    <div class="grow">
+                      <h2 lang="de">{lemma?.[0] || selected.form}</h2>
+                      <small class="muted">В тексте: {selected.form}</small>
+                    </div>
+                    <button
+                      class="icon close-word"
+                      aria-label="Закрыть подсказку"
+                      onClick={() => setSelected(null)}
+                    >
+                      <Icon name="close" />
+                    </button>
+                  </div>
+                  <div class="row">
+                    <span class="ipa">[{selIpa}]</span>
+                    <button
+                      class="icon"
+                      aria-label="Произнести слово"
+                      disabled={busy}
+                      onClick={() => void listen(selected.form, selIpa)}
+                    >
+                      <Icon name="sound" />
+                    </button>
+                  </div>
+                  <strong>{lemma?.[1] || "Нет отдельного перевода"}</strong>
+                  <div class="context">
+                    <i lang="de">{selected.context}</i>
+                    {selected.hint && (
+                      <div style={{ color: "var(--teal)" }}>
+                        {selected.hint}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    class="primary"
+                    disabled={isSaved}
+                    onClick={() => void run(saveWord)}
+                  >
+                    {isSaved ? (
+                      <>
+                        <Icon name="check" />
+                        Слово сохранено
+                      </>
+                    ) : (
+                      "В мои слова"
+                    )}
+                  </button>
+                </aside>
+              ) : null}
+            </div>
+          </>
+        )
       ) : (
         <>
           <header class="app-header">
@@ -1419,7 +1465,7 @@ function App() {
           </div>
         </Modal>
       )}
-      {message && (
+      {message && (!focusMode || message.error) && (
         <div
           class={"toast" + (message.error ? " error" : "")}
           role={message.error ? "alert" : "status"}

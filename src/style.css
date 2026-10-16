@@ -1228,3 +1228,112 @@ td input {
     padding: 8px 12px;
   }
 }
+
+.focus-view {
+  min-height: 100vh;
+  min-height: 100dvh;
+  touch-action: pan-y pinch-zoom;
+}
+.focus-reader {
+  width: min(100%, 900px);
+  margin: 0 auto;
+  padding: clamp(64px, 10vh, 110px) 40px 20vh;
+  min-height: 100vh;
+  min-height: 100dvh;
+  outline: none;
+  font-family: var(--reading);
+  font-size: var(--size);
+  line-height: 1.95;
+  overflow-wrap: anywhere;
+}
+.focus-reader p {
+  margin: 0 0 2em;
+  line-height: inherit;
+}
+.focus-reader > p + p {
+  margin-top: 3em;
+}
+.focus-reader .hint {
+  font-size: 0.8em;
+}
+.focus-parallel {
+  width: min(100%, 1120px);
+}
+.focus-sentence {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 40px;
+}
+.focus-translation {
+  font-family: "Golos Text", sans-serif;
+  font-size: 0.85em;
+  color: var(--teal);
+}
+.focus-toolbar {
+  position: fixed;
+  top: max(16px, env(safe-area-inset-top));
+  right: max(20px, env(safe-area-inset-right));
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 4px 24px #0001;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 100;
+}
+.focus-toolbar.is-visible,
+.focus-toolbar:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+}
+.focus-toolbar button {
+  border: 0;
+  background: transparent;
+}
+.focus-toolbar button:hover {
+  background: var(--bg);
+}
+.focus-counter {
+  font-size: 12px;
+  color: var(--muted);
+  min-width: 40px;
+  text-align: center;
+}
+.focus-exit {
+  font-size: 13px;
+}
+@media (max-width: 600px) {
+  .focus-entry {
+    width: 44px;
+    min-width: 44px;
+    padding: 10px;
+  }
+  .focus-entry span {
+    display: none;
+  }
+  .focus-reader {
+    padding: 76px 24px 20vh;
+  }
+  .focus-sentence {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    margin-bottom: 1.5em;
+  }
+  .focus-sentence p {
+    margin-bottom: 1em;
+  }
+  .focus-toolbar {
+    top: max(12px, env(safe-area-inset-top));
+    right: max(12px, env(safe-area-inset-right));
+    gap: 3px;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .focus-toolbar {
+    transition: opacity 0.18s ease;
+  }
+}
