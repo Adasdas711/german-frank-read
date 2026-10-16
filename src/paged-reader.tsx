@@ -1112,20 +1112,6 @@ export function PagedReader(props: Props) {
               openWord(word);
             }
           }}
-          onContextMenu={(event) => {
-            const word = (event.target as HTMLElement).closest<HTMLElement>(
-              "[data-book-char]",
-            );
-            if (word) {
-              event.preventDefault();
-              if (!longPressed.current) {
-                clearTimeout(lookupTimer.current);
-                longPressed.current = true;
-                suppressClick.current = true;
-                openWord(word);
-              }
-            }
-          }}
           style={{ visibility: layout.ready ? "visible" : "hidden" }}
           onFocusCapture={(event) => {
             const word = (event.target as HTMLElement).closest(

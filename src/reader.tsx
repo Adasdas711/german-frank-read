@@ -55,6 +55,7 @@ import demos from "./demos.json";
 import immensee from "./immensee.json";
 import "./style.css";
 import "./books.css";
+import "./pwa";
 
 const navigation = [
   ["home", "Home", "home"],
@@ -110,6 +111,81 @@ function App() {
     [wordBook, setWordBook] = useState("all"),
     [selecting, setSelecting] = useState(false),
     [selection, setSelection] = useState<Set<string>>(new Set());
+  const wordDrag = useRef<{
+    key: string;
+    x: number;
+    y: number;
+    lastY: number;
+    add: boolean;
+    moved: boolean;
+    visited: Set<string>;
+  } | null>(null);
+  const suppressWordClick = useRef(false);
+  useEffect(() => {
+    if (!selecting) return;
+    const move = (event: PointerEvent) => {
+      const drag = wordDrag.current;
+      if (!drag || event.pointerType !== "mouse") return;
+      if (!(event.buttons & 1)) {
+        wordDrag.current = null;
+        return;
+      }
+      if (
+        !drag.moved &&
+        Math.hypot(event.clientX - drag.x, event.clientY - drag.y) < 6
+      )
+        return;
+      drag.moved = true;
+      suppressWordClick.current = true;
+      event.preventDefault();
+      const keys = [drag.key];
+      for (const row of document.querySelectorAll<HTMLElement>(
+        ".word-row[data-word-key]",
+      )) {
+        const rect = row.getBoundingClientRect();
+        if (
+          event.clientX >= rect.left &&
+          event.clientX <= rect.right &&
+          Math.max(drag.lastY, event.clientY) >= rect.top &&
+          Math.min(drag.lastY, event.clientY) <= rect.bottom
+        )
+          keys.push(row.dataset.wordKey!);
+      }
+      drag.lastY = event.clientY;
+      const fresh = keys.filter((key) => !drag.visited.has(key));
+      fresh.forEach((key) => drag.visited.add(key));
+      if (fresh.length)
+        setSelection((previous) => {
+          const next = new Set(previous);
+          fresh.forEach((key) => (drag.add ? next.add(key) : next.delete(key)));
+          return next;
+        });
+    };
+    const end = () => {
+      wordDrag.current = null;
+    };
+    const click = (event: MouseEvent) => {
+      if (suppressWordClick.current && event.detail > 0) {
+        event.preventDefault();
+        event.stopPropagation();
+        suppressWordClick.current = false;
+      }
+    };
+    document.addEventListener("pointermove", move);
+    document.addEventListener("pointerup", end);
+    document.addEventListener("pointercancel", end);
+    document.addEventListener("click", click, true);
+    window.addEventListener("blur", end);
+    return () => {
+      end();
+      suppressWordClick.current = false;
+      document.removeEventListener("pointermove", move);
+      document.removeEventListener("pointerup", end);
+      document.removeEventListener("pointercancel", end);
+      document.removeEventListener("click", click, true);
+      window.removeEventListener("blur", end);
+    };
+  }, [selecting]);
   const [searchScope, setSearchScope] = useState("books"),
     [query, setQuery] = useState(""),
     [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -889,6 +965,24 @@ function App() {
           "word-row" + (selection.has(w.key) && selecting ? " selected" : "")
         }
         role="row"
+        data-word-key={w.key}
+        onPointerDown={(event) => {
+          suppressWordClick.current = false;
+          if (!selecting || event.pointerType !== "mouse" || event.button !== 0)
+            return;
+          wordDrag.current = {
+            key: w.key,
+            x: event.clientX,
+            y: event.clientY,
+            lastY: event.clientY,
+            add: !selection.has(w.key),
+            moved: false,
+            visited: new Set(),
+          };
+        }}
+        onDragStart={(event) => {
+          if (selecting) event.preventDefault();
+        }}
         key={w.key}
       >
         {selecting && (

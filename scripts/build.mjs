@@ -2,6 +2,7 @@ import { build, transformWithEsbuild } from "vite";
 import { viteSingleFile } from "vite-plugin-singlefile";
 import { readFile, writeFile, rm, mkdir, copyFile } from "node:fs/promises";
 import { gzipSync } from "node:zlib";
+import { createHash } from "node:crypto";
 await writeFile(
   "src/wasm-base64.txt",
   gzipSync(await readFile("node_modules/espeak-ng/dist/espeak-ng.wasm"), {
@@ -61,6 +62,11 @@ for (const [entry, name] of [
   html = html
     .replace(script[0], "")
     .replace("<head>", "<head><script>" + boot + "</script>");
+  if (entry === "reader")
+    html = html.replace(
+      "</head>",
+      '<link rel="manifest" href="./manifest.webmanifest"><meta name="theme-color" content="#1e2022"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="По Франку"><link rel="apple-touch-icon" href="./pwa/apple-touch-icon.png"></head>',
+    );
   const wasm = await readFile("src/wasm-base64.txt", "utf8");
   html = html.replace(
     "</body>",
@@ -83,3 +89,22 @@ for (const [entry, name] of [
     ((await readFile(name)).length / 1024 / 1024).toFixed(2) + " MiB",
   );
 }
+
+const version = createHash("sha256");
+for (const file of [
+  "index.html",
+  "fbook-builder.html",
+  "manifest.webmanifest",
+  "pwa/icon-192.png",
+  "pwa/icon-512.png",
+  "pwa/apple-touch-icon.png",
+  "scripts/service-worker.js",
+])
+  version.update(await readFile(file));
+await writeFile(
+  "sw.js",
+  (await readFile("scripts/service-worker.js", "utf8")).replace(
+    "__VERSION__",
+    version.digest("hex").slice(0, 16),
+  ),
+);

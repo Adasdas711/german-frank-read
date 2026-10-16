@@ -1,5 +1,13 @@
 // Runs before the application so even syntax/module errors have a visible report.
 (function () {
+  document.addEventListener(
+    "contextmenu",
+    function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    },
+    true,
+  );
   try {
     var theme = localStorage.getItem("franka-theme");
     document.documentElement.dataset.theme =
