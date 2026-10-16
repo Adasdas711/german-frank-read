@@ -1,5 +1,5 @@
 import { useT } from "./i18n";
-import { useEffect, useRef } from "preact/hooks";
+import { useEffect, useLayoutEffect, useRef } from "preact/hooks";
 export function Icon({ name, size = 20 }: { name: string; size?: number }) {
   const paths: Record<string, any> = {
     collection: (
@@ -235,6 +235,89 @@ export function ProgressBar({ value }: { value: number }) {
       aria-label={t("Reading")}
     >
       <div style={{ width: value + "%" }} />
+    </div>
+  );
+}
+
+export function ContextMenu({
+  x,
+  y,
+  label,
+  className = "",
+  onClose,
+  children,
+}: {
+  x: number;
+  y: number;
+  label: string;
+  className?: string;
+  onClose(): void;
+  children: any;
+}) {
+  const menu = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const node = menu.current;
+    if (!node) return;
+    const rect = node.getBoundingClientRect();
+    node.style.left =
+      Math.max(8, Math.min(x, innerWidth - rect.width - 8)) + "px";
+    node.style.top =
+      Math.max(8, Math.min(y, innerHeight - rect.height - 8)) + "px";
+  }, [x, y, children]);
+  useEffect(() => {
+    const node = menu.current;
+    const items = () =>
+      Array.from(
+        node?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ||
+          [],
+      );
+    items()[0]?.focus({ preventScroll: true });
+    const outside = (event: Event) => {
+      if (!node?.contains(event.target as Node)) onClose();
+    };
+    const key = (event: KeyboardEvent) => {
+      if (event.key === "Escape" || event.key === "Tab") {
+        onClose();
+        if (event.key === "Escape") event.preventDefault();
+      }
+      const buttons = items(),
+        index = buttons.indexOf(document.activeElement as HTMLButtonElement);
+      if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
+        event.preventDefault();
+        const next =
+          event.key === "Home"
+            ? 0
+            : event.key === "End"
+              ? buttons.length - 1
+              : (index +
+                  (event.key === "ArrowDown" ? 1 : -1) +
+                  buttons.length) %
+                buttons.length;
+        buttons[next]?.focus({ preventScroll: true });
+      }
+    };
+    document.addEventListener("pointerdown", outside);
+    document.addEventListener("keydown", key);
+    window.addEventListener("resize", onClose);
+    window.addEventListener("scroll", outside, true);
+    window.addEventListener("blur", onClose);
+    return () => {
+      document.removeEventListener("pointerdown", outside);
+      document.removeEventListener("keydown", key);
+      window.removeEventListener("resize", onClose);
+      window.removeEventListener("scroll", outside, true);
+      window.removeEventListener("blur", onClose);
+    };
+  }, [x, y]);
+  return (
+    <div
+      ref={menu}
+      role="menu"
+      aria-label={label}
+      class={"folder-context-menu glass " + className}
+      style={{ left: x, top: y }}
+    >
+      {children}
     </div>
   );
 }

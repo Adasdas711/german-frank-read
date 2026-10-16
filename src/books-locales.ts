@@ -5,6 +5,19 @@ const rows: [string, string, string][] = [
   ["{0} chapters", "{0} глав", "{0} Kapitel"],
 
   ["Levels", "Уровни", "Niveaus"],
+  ["Book options", "Действия с книгой", "Buchoptionen"],
+  ["Book options for {0}", "Действия с книгой «{0}»", "Optionen für {0}"],
+  ["Remove from Folder", "Убрать из папки", "Aus Sammlung entfernen"],
+  [
+    "Remove from folder {0}",
+    "Убрать из папки «{0}»",
+    "Aus Sammlung {0} entfernen",
+  ],
+  [
+    "Book removed from folder",
+    "Книга убрана из папки",
+    "Buch aus Sammlung entfernt",
+  ],
   ["Folder options", "Действия с папкой", "Ordneroptionen"],
   ["Delete Folder", "Удалить папку", "Ordner löschen"],
   ["My Collections", "Мои коллекции", "Meine Sammlungen"],

@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from "preact/hooks";
+import { useState } from "preact/hooks";
 import type { ComponentChildren } from "preact";
 import type { Book } from "./core";
 import type { BookCollection } from "./collections";
 import { useT } from "./i18n";
-import { Icon, Modal } from "./ui";
+import { Icon, Modal, ContextMenu } from "./ui";
 const COLLECTION = "application/x-franka-collection",
   BOOK = "application/x-franka-book";
 type MenuProps = {
@@ -420,47 +420,18 @@ export function FolderContextMenu({
   onDelete(): void;
   onClose(): void;
 }) {
-  const t = useT(),
-    menu = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    menu.current?.querySelector("button")?.focus();
-    const outside = (event: Event) => {
-      if (!menu.current?.contains(event.target as Node)) onClose();
-    };
-    const key = (event: KeyboardEvent) => {
-      if (event.key === "Escape" || event.key === "Tab") {
-        onClose();
-        if (event.key === "Escape") event.preventDefault();
-      }
-    };
-    document.addEventListener("pointerdown", outside);
-    document.addEventListener("keydown", key);
-    window.addEventListener("resize", onClose);
-    window.addEventListener("scroll", onClose, true);
-    window.addEventListener("blur", onClose);
-    return () => {
-      document.removeEventListener("pointerdown", outside);
-      document.removeEventListener("keydown", key);
-      window.removeEventListener("resize", onClose);
-      window.removeEventListener("scroll", onClose, true);
-      window.removeEventListener("blur", onClose);
-    };
-  }, [target]);
+  const t = useT();
   return (
-    <div
-      ref={menu}
-      class="folder-context-menu glass"
-      role="menu"
-      aria-label={t("Folder options")}
-      style={{
-        left: Math.max(8, Math.min(target.x, innerWidth - 232)),
-        top: Math.max(8, Math.min(target.y, innerHeight - 64)),
-      }}
+    <ContextMenu
+      x={target.x}
+      y={target.y}
+      label={t("Folder options")}
+      onClose={onClose}
     >
       <button role="menuitem" class="quiet danger" onClick={onDelete}>
         <Icon name="trash" size={16} />
         {t("Delete Folder")}
       </button>
-    </div>
+    </ContextMenu>
   );
 }

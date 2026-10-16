@@ -19,7 +19,7 @@ import {
 import * as store from "./storage";
 import type { Settings, Progress, SavedWord } from "./storage";
 import { LocaleContext, createTranslator, translateMessage } from "./i18n";
-import { Icon, Modal, Toggle, ProgressBar } from "./ui";
+import { Icon, Modal, Toggle, ProgressBar, ContextMenu } from "./ui";
 import { PagedReader, type PageEntry } from "./paged-reader";
 import { BookText, type WordSelection } from "./book-text";
 import { BookCover } from "./book-cover";
@@ -84,9 +84,16 @@ function App() {
   const [route, setRoute] = useState(location.hash.slice(2) || "home");
   const searchReturn = useRef(route === "search" ? "home" : route);
   const [folderMenu, setFolderMenu] = useState<FolderMenuTarget | null>(null);
+  const [bookMenu, setBookMenu] = useState<{
+    book: Book;
+    folder: string;
+    x: number;
+    y: number;
+  } | null>(null);
   useEffect(() => {
     if (route !== "search") searchReturn.current = route;
     setFolderMenu(null);
+    setBookMenu(null);
   }, [route]);
   const [overlay, setOverlay] = useState(""),
     [details, setDetails] = useState<Book | null>(null);
@@ -205,6 +212,7 @@ function App() {
     [viewportSize, setViewportSize] = useState(
       () => `${innerWidth}x${innerHeight}`,
     );
+  const readingShelf = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null),
     backupRef = useRef<HTMLInputElement>(null),
     searchRef = useRef<HTMLInputElement>(null);
@@ -238,6 +246,35 @@ function App() {
       location.hash = "/home";
     }
   }, [ready, page, bookId, decoded]);
+  useEffect(() => {
+    const node = readingShelf.current;
+    if (!node) return;
+    const wheel = (event: WheelEvent) => {
+      if (
+        event.ctrlKey ||
+        event.shiftKey ||
+        Math.abs(event.deltaX) >= Math.abs(event.deltaY)
+      )
+        return;
+      const delta =
+        event.deltaY *
+        (event.deltaMode === 1
+          ? 20
+          : event.deltaMode === 2
+            ? node.clientWidth
+            : 1);
+      if (
+        (delta > 0 &&
+          node.scrollLeft < node.scrollWidth - node.clientWidth - 1) ||
+        (delta < 0 && node.scrollLeft > 1)
+      ) {
+        event.preventDefault();
+        node.scrollBy({ left: delta });
+      }
+    };
+    node.addEventListener("wheel", wheel, { passive: false });
+    return () => node.removeEventListener("wheel", wheel);
+  }, [page, ready]);
   const currentProgress = progress.find((p) => p.book === bookId);
   const notify = (text: string, error = false) =>
     setMessage({
@@ -364,6 +401,8 @@ function App() {
         selecting &&
         !overlay &&
         !confirm &&
+        !bookMenu &&
+        !folderMenu &&
         !["INPUT", "SELECT", "TEXTAREA"].includes(
           (e.target as HTMLElement).tagName,
         )
@@ -380,7 +419,17 @@ function App() {
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [page, selecting, selection, wordBook, overlay, confirm, saved]);
+  }, [
+    page,
+    selecting,
+    selection,
+    wordBook,
+    overlay,
+    confirm,
+    saved,
+    bookMenu,
+    folderMenu,
+  ]);
   useEffect(() => {
     if (page !== "search" || !query.trim()) return;
     const id = setTimeout(() => {
@@ -939,6 +988,7 @@ function App() {
     event.preventDefault();
     event.stopPropagation();
     const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    setBookMenu(null);
     setFolderMenu({
       kind,
       id,
@@ -971,9 +1021,47 @@ function App() {
       },
     });
   };
+  const openBookMenu = (book: Book, event: MouseEvent, anchored = false) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    setFolderMenu(null);
+    setBookMenu({
+      book,
+      folder: page === "library" ? collectionFilter : "",
+      x: anchored ? rect.left : event.clientX || rect.left,
+      y: anchored ? rect.bottom : event.clientY || rect.bottom,
+    });
+  };
+  const foldersForBook = (
+    book: Book,
+    folder = page === "library" ? collectionFilter : "",
+  ) => {
+    const memberships = collections.filter((c) =>
+      c.bookIds.includes(book.manifest.id),
+    );
+    const current = memberships.find((c) => c.id === folder);
+    return current ? [current] : memberships;
+  };
+  const removeFromFolder = async (book: Book, folder: string) => {
+    await saveCollections(
+      collectionsRef.current.map((c) =>
+        c.id === folder
+          ? {
+              ...c,
+              bookIds: c.bookIds.filter((id) => id !== book.manifest.id),
+              updatedAt: new Date().toISOString(),
+            }
+          : c,
+      ),
+    );
+    notify(t("Book removed from folder"));
+  };
   const card = (b: Book) => (
     <article
       class="shelf-book"
+      data-book={b.manifest.id}
+      onContextMenu={(event) => openBookMenu(b, event)}
       key={b.manifest.id}
       draggable
       onDragStart={(e) => bookDrag(e, b.manifest.id)}
@@ -1001,8 +1089,8 @@ function App() {
         )}
         <button
           class="book-more"
-          aria-label={t("Read") + " " + b.manifest.title}
-          onClick={() => go(b)}
+          aria-label={t("Book options for {0}", { 0: b.manifest.title })}
+          onClick={(event) => openBookMenu(b, event, true)}
         >
           ···
         </button>
@@ -1067,6 +1155,9 @@ function App() {
         </button>
         <button
           class="word-book"
+          onContextMenu={(event) => {
+            if (b) openBookMenu(b, event);
+          }}
           aria-label={b?.manifest.title || t("Unknown book")}
           onClick={() => showBookWords(w.book)}
         >
@@ -1508,10 +1599,36 @@ function App() {
               <>
                 <section class="home-section">
                   <h2>{t("Reading")}</h2>
-                  <div class="continue-shelf">
+                  <div
+                    class="continue-shelf"
+                    ref={readingShelf}
+                    tabIndex={0}
+                    role="region"
+                    aria-label={t("Reading")}
+                    onKeyDown={(event) => {
+                      if (
+                        event.target !== event.currentTarget ||
+                        !["ArrowLeft", "ArrowRight"].includes(event.key)
+                      )
+                        return;
+                      event.preventDefault();
+                      event.currentTarget.scrollBy({
+                        left:
+                          event.currentTarget.clientWidth *
+                          0.8 *
+                          (event.key === "ArrowRight" ? 1 : -1),
+                        behavior: matchMedia("(prefers-reduced-motion: reduce)")
+                          .matches
+                          ? "instant"
+                          : "smooth",
+                      });
+                    }}
+                  >
                     {runningBooks.map((b, i) => (
                       <article
                         class="continue-card"
+                        data-book={b.manifest.id}
+                        onContextMenu={(event) => openBookMenu(b, event)}
                         key={b.manifest.id}
                         onClick={(e) => {
                           if (!(e.target as HTMLElement).closest("button"))
@@ -1884,6 +2001,7 @@ function App() {
                       {foundBooks.map((b) => (
                         <button
                           class="book-result"
+                          onContextMenu={(event) => openBookMenu(b, event)}
                           onClick={() => {
                             setDetails(b);
                             setOverlay("details");
@@ -2139,6 +2257,21 @@ function App() {
               <Icon name="collection" />
               {t("Move to Collection")}
             </button>
+            {foldersForBook(details).map((folder) => (
+              <button
+                onClick={() =>
+                  void run(() => removeFromFolder(details, folder.id))
+                }
+              >
+                <Icon name="collection" />
+                {t(
+                  foldersForBook(details).length > 1
+                    ? "Remove from folder {0}"
+                    : "Remove from Folder",
+                  { 0: folder.name },
+                )}
+              </button>
+            ))}
             <button class="danger quiet" onClick={() => removeBook(details)}>
               {t("Remove from Library")}
             </button>
@@ -2526,6 +2659,117 @@ function App() {
             else deleteLibraryFolder(target.id);
           }}
         />
+      )}
+      {bookMenu && (
+        <ContextMenu
+          x={bookMenu.x}
+          y={bookMenu.y}
+          label={t("Book options")}
+          className="book-context-menu"
+          onClose={() => setBookMenu(null)}
+        >
+          <button
+            role="menuitem"
+            class="quiet"
+            onClick={() => {
+              const book = bookMenu.book;
+              setBookMenu(null);
+              go(book);
+            }}
+          >
+            <Icon name="book" size={16} />
+            {t("Read")}
+          </button>
+          <button
+            role="menuitem"
+            class="quiet"
+            onClick={() => {
+              const book = bookMenu.book;
+              setBookMenu(null);
+              showBookWords(book.manifest.id);
+            }}
+          >
+            <Icon name="words" size={16} />
+            {t("Words · {0}", {
+              0: saved.filter((w) => w.book === bookMenu.book.manifest.id)
+                .length,
+            })}
+          </button>
+          <button
+            role="menuitem"
+            class="quiet"
+            onClick={() => {
+              download(
+                bookMenu.book.bytes,
+                slug(bookMenu.book.manifest.title) + ".fbook",
+              );
+              setBookMenu(null);
+            }}
+          >
+            <Icon name="upload" size={16} />
+            {t("Export .fbook file")}
+          </button>
+          <button
+            role="menuitem"
+            class="quiet"
+            onClick={() => {
+              openAnki(bookMenu.book.manifest.id);
+              setBookMenu(null);
+            }}
+          >
+            <Icon name="download" size={16} />
+            {t("Book words to Anki")}
+          </button>
+          <button
+            role="menuitem"
+            class="quiet"
+            onClick={() => {
+              setDetails(bookMenu.book);
+              setCollectionBook(bookMenu.book);
+              setOverlay("move-collection");
+              setBookMenu(null);
+            }}
+          >
+            <Icon name="collection" size={16} />
+            {t("Move to Collection")}
+          </button>
+          {foldersForBook(bookMenu.book, bookMenu.folder).map((folder) => (
+            <button
+              role="menuitem"
+              class="quiet"
+              onClick={() => {
+                const book = bookMenu.book;
+                setBookMenu(null);
+                void run(() => removeFromFolder(book, folder.id));
+              }}
+            >
+              <Icon name="collection" size={16} />
+              {t(
+                foldersForBook(bookMenu.book, bookMenu.folder).length > 1
+                  ? "Remove from folder {0}"
+                  : "Remove from Folder",
+                { 0: folder.name },
+              )}
+            </button>
+          ))}
+          {!foldersForBook(bookMenu.book, bookMenu.folder).length && (
+            <button role="menuitem" class="quiet" disabled>
+              <Icon name="collection" size={16} />
+              {t("Remove from Folder")}
+            </button>
+          )}
+          <button
+            role="menuitem"
+            class="quiet danger"
+            onClick={() => {
+              removeBook(bookMenu.book);
+              setBookMenu(null);
+            }}
+          >
+            <Icon name="trash" size={16} />
+            {t("Remove from Library")}
+          </button>
+        </ContextMenu>
       )}
       {message && (
         <div

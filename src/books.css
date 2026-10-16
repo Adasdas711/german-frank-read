@@ -284,12 +284,16 @@ button:disabled {
   margin-bottom: 20px;
 }
 .continue-shelf {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: nowrap;
   gap: 20px;
-  max-width: 1080px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  padding-bottom: 6px;
 }
 .continue-card {
+  flex: 0 0 min(420px, 88%);
+  scroll-snap-align: start;
   display: flex;
   gap: 17px;
   padding: 17px;
@@ -2213,40 +2217,6 @@ html.reading-pages body {
     font-size: 11px;
     margin-top: 9px;
   }
-  .continue-card:nth-child(n + 2) .book-cover.small {
-    width: 34px;
-    min-width: 34px;
-    flex-basis: 34px;
-    height: 51px;
-  }
-  .continue-card:nth-child(n + 2) .continue-copy > small:first-child,
-  .continue-card:nth-child(n + 2) .primary {
-    display: none;
-  }
-  .continue-card:nth-child(n + 2) .continue-copy {
-    position: relative;
-  }
-  .continue-card:nth-child(n + 2) .continue-copy:after {
-    content: "›";
-    font-size: 25px;
-    color: var(--muted);
-    position: absolute;
-    right: 0;
-    top: 13px;
-  }
-  .continue-card:nth-child(n + 2) {
-    cursor: pointer;
-  }
-  .continue-card:nth-child(n + 2) .continue-copy h3 {
-    font-size: 13px;
-  }
-  .continue-card:nth-child(n + 2) .continue-copy p {
-    font-size: 10px;
-    margin-bottom: 3px;
-  }
-  .continue-card:nth-child(n + 2) .continue-copy small {
-    font-size: 9px;
-  }
   .new-words-card {
     padding: 14px;
     gap: 10px;
@@ -2932,7 +2902,7 @@ html.reading-pages body {
 }
 .folder-context-menu {
   position: fixed;
-  z-index: 200;
+  z-index: 1600;
   width: 224px;
   padding: 5px;
   background: var(--panel);
@@ -2954,4 +2924,17 @@ html.reading-pages body {
 .collection-menu > .sidebar-item {
   display: flex;
   width: 100%;
+}
+
+.book-context-menu {
+  width: 270px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100dvh - 16px);
+  overflow-y: auto;
+}
+.book-context-menu > button {
+  text-align: left;
+}
+.continue-copy h3 {
+  overflow-wrap: anywhere;
 }
