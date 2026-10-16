@@ -41,9 +41,16 @@ try {
     await p.waitForTimeout(100);
     const show = async () => {
       await p.keyboard.press("Escape");
-      await p.mouse.click(width / 2, 60);
+      await p.mouse.click(width / 2, 10);
       await p.locator(".folio-toolbar.visible").waitFor();
     };
+    assert.equal(
+      await p
+        .locator(".folio-bottom")
+        .evaluate((n) => getComputedStyle(n).pointerEvents),
+      "none",
+      "hidden controls cannot intercept text taps",
+    );
     await show();
     const toolbar = await p.locator(".folio-toolbar").boundingBox(),
       dock = await p.locator(".folio-bottom").boundingBox(),
@@ -54,6 +61,10 @@ try {
       dock.width < 250 && dock.y + dock.height <= height && dock.x >= 0,
     );
     assert.equal(await p.locator(".folio-bottom button").count(), 0);
+    assert.ok(
+      Math.abs(dock.y + dock.height / 2 - toolbar.y - toolbar.height / 2) < 1,
+      name + " navigation and tools share one row",
+    );
     assert.match(
       (await p.locator(".folio-slider span").textContent()).trim(),
       /^\d+ of \d+$/,
@@ -61,6 +72,13 @@ try {
     assert.ok(
       book.y + book.height < toolbar.y || !bottom,
       name + " reserved toolbar space",
+    );
+    await p.getByLabel("Reading position", { exact: true }).click();
+    await p.waitForTimeout(80);
+    assert.ok(
+      +(await p.locator(".folio-slider span").textContent()).match(/\d+/)[0] >
+        1,
+      name + " slider navigates in the shared row",
     );
     await p.screenshot({ path: `.test-results/reader-dock/${name}.png` });
     if (await p.locator(".folio-toolbar .folio-aa").isVisible())
@@ -95,6 +113,23 @@ try {
         .getByRole("button", { name: "Finish reading", exact: true })
         .isVisible(),
     );
+    const chapters = p.locator(".chapter-entry");
+    assert.equal(await chapters.count(), 10);
+    for (const node of await chapters.all()) {
+      assert.ok(!/^\d+\./.test(await node.locator("strong").textContent()));
+      assert.match((await node.locator("small").textContent()).trim(), /^\d+$/);
+      assert.equal(await node.locator("em").count(), 0);
+      assert.ok(
+        await node.evaluate(
+          (n) =>
+            getComputedStyle(n.querySelector("strong")).display === "inline" &&
+            getComputedStyle(n.querySelector("small")).display === "inline",
+        ),
+      );
+    }
+    await p.screenshot({
+      path: `.test-results/reader-dock/contents-${name}.png`,
+    });
     if (name === "pc") {
       await p.keyboard.press("Escape");
       await p.evaluate(() => {

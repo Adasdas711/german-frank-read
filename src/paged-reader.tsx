@@ -964,7 +964,7 @@ export function PagedReader(props: Props) {
       onClick={(event) => {
         if (
           (event.target as HTMLElement).closest(
-            "button,a,input,select,label,.folio-popover,.word-panel,.reading-menu",
+            "button,a,input,select,label,.folio-toolbar,.folio-bottom,.folio-popover,.word-panel,.reading-menu",
           )
         )
           return;
@@ -997,7 +997,21 @@ export function PagedReader(props: Props) {
               <Icon name="menu" />
             </button>
           </div>
-          <span class="folio-toolbar-title">{manifest.title}</span>
+          <div class="folio-bottom">
+            <label class="folio-slider">
+              <span>
+                {t("{0} of {1}", { 0: pageNumber, 1: layout.leaves || 1 })}
+              </span>
+              <input
+                type="range"
+                min="0"
+                max={layout.count - 1}
+                value={page}
+                aria-label={t("Reading position")}
+                onInput={(e) => jumpPage(+e.currentTarget.value)}
+              />
+            </label>
+          </div>
           <div class="folio-toolbar-end">
             <div
               class="reader-mode-tabs tabs"
@@ -1137,24 +1151,6 @@ export function PagedReader(props: Props) {
           <div class="folio-page-number" aria-live="polite">
             {t("{0} of {1}", { 0: pageNumber, 1: layout.leaves || 1 })}
           </div>
-          <footer
-            class={"folio-bottom" + (controls || panel ? " visible" : "")}
-            onFocusCapture={() => setControls(true)}
-          >
-            <label class="folio-slider">
-              <span>
-                {t("{0} of {1}", { 0: pageNumber, 1: layout.leaves || 1 })}
-              </span>
-              <input
-                type="range"
-                min="0"
-                max={layout.count - 1}
-                value={page}
-                aria-label={t("Reading position")}
-                onInput={(e) => jumpPage(+e.currentTarget.value)}
-              />
-            </label>
-          </footer>
           {menu && (
             <section
               class="reading-menu glass"
@@ -1271,14 +1267,6 @@ export function PagedReader(props: Props) {
             >
               <div class="row between">
                 <h2>{t("Contents")}</h2>
-                <small>
-                  {t("{0} chapters", { 0: manifest.chapters.length })} ·{" "}
-                  {t("{0}% read", {
-                    0:
-                      props.progressPercent ??
-                      Math.round((page / Math.max(1, layout.count - 1)) * 100),
-                  })}
-                </small>
                 <button class="round" aria-label={t("Close")} onClick={hide}>
                   <Icon name="close" />
                 </button>
@@ -1326,18 +1314,16 @@ export function PagedReader(props: Props) {
                       >
                         <span>
                           <strong>
-                            {ci + 1}.{" "}
                             {chapter[0] || t("Chapter {0}", { 0: ci + 1 })}
                           </strong>
-                          <small>
-                            {t("Page {0}", { 0: chapterPages[ci] || 1 })}
+                          <small
+                            aria-label={t("Page {0}", {
+                              0: chapterPages[ci] || 1,
+                            })}
+                          >
+                            {chapterPages[ci] || 1}
                           </small>
                         </span>
-                        {current ? (
-                          <em>{t("NOW")}</em>
-                        ) : Number(at.split(".")[0]) > ci + 1 ? (
-                          <Icon name="check" size={14} />
-                        ) : null}
                       </button>
                     );
                   })}

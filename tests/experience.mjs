@@ -79,7 +79,7 @@ const fresh = async (viewport = { width: 1440, height: 960 }) => {
 };
 const show = async (page) => {
   await page.keyboard.press("Escape");
-  await page.mouse.click(page.viewportSize().width / 2, 60);
+  await page.mouse.click(page.viewportSize().width / 2, 10);
   await page.locator(".folio-toolbar.visible").waitFor();
 };
 const appearance = async (page) => {

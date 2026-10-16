@@ -1567,6 +1567,27 @@ html.reading-pages body {
   height: 10px;
   cursor: pointer;
 }
+.folio-toolbar .folio-bottom {
+  position: static;
+  transform: none;
+  flex: 1;
+  min-width: 0;
+  max-width: 220px;
+  opacity: 1;
+  pointer-events: inherit;
+  padding: 7px 12px;
+}
+.folio-toolbar .folio-slider {
+  min-width: 0;
+  width: 100%;
+}
+.folio-toolbar .folio-slider input {
+  width: 100%;
+  max-width: none;
+}
+.controls-visible .folio-running-title {
+  opacity: 0;
+}
 .folio-popover {
   position: absolute;
   top: 66px;
@@ -1647,6 +1668,34 @@ html.reading-pages body {
 }
 .page-entry[aria-current] {
   background: #8882;
+}
+.folio-popover.contents .chapter-entry {
+  min-height: 38px;
+  padding: 8px 10px;
+  gap: 0;
+}
+.chapter-entry > span {
+  min-width: 0;
+  line-height: 1.5;
+}
+.chapter-entry strong {
+  display: inline;
+  margin: 0;
+}
+.chapter-entry small {
+  display: inline;
+  white-space: nowrap;
+  color: var(--folio-muted);
+}
+.chapter-entry small::before {
+  content: " · ";
+}
+.folio-popover.contents .book-search {
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+.folio-popover.contents .tabs {
+  margin-bottom: 6px;
 }
 .reading-menu {
   position: absolute;
@@ -2568,20 +2617,20 @@ html.reading-pages body {
 @media (max-width: 1100px), (hover: none) and (pointer: coarse) {
   .books-reader .folio-toolbar {
     top: auto;
-    bottom: max(72px, calc(env(safe-area-inset-bottom) + 64px));
+    bottom: max(18px, calc(env(safe-area-inset-bottom) + 10px));
   }
   .books-reader .folio-viewport {
     top: 58px;
-    bottom: max(124px, calc(env(safe-area-inset-bottom) + 116px));
+    bottom: max(88px, calc(env(safe-area-inset-bottom) + 80px));
   }
   .books-reader .folio-popover {
     top: auto;
-    bottom: max(122px, calc(env(safe-area-inset-bottom) + 114px));
-    max-height: calc(100dvh - 148px - env(safe-area-inset-bottom));
+    bottom: max(82px, calc(env(safe-area-inset-bottom) + 74px));
+    max-height: calc(100dvh - 108px - env(safe-area-inset-bottom));
   }
   .books-reader .reading-menu {
-    bottom: max(122px, calc(env(safe-area-inset-bottom) + 114px));
-    max-height: calc(100dvh - 148px - env(safe-area-inset-bottom));
+    bottom: max(82px, calc(env(safe-area-inset-bottom) + 74px));
+    max-height: calc(100dvh - 108px - env(safe-area-inset-bottom));
     overflow-y: auto;
   }
   .books-reader .folio-bottom {
