@@ -356,5 +356,21 @@
   "Сплошной текст": "Fortlaufend",
   "Место в книге": "Leseposition",
   "Отрывок {0} из {1}": "Abschnitt {0} von {1}",
-  "Отрывок {0}": "Abschnitt {0}"
+  "Отрывок {0}": "Abschnitt {0}",
+  "Чтение книги": "Buch lesen",
+  "Текст книги": "Buchtext",
+  "Оглавление": "Inhalt",
+  "Параметры чтения": "Leseoptionen",
+  "Страницы": "Seiten",
+  "Предыдущая страница": "Vorherige Seite",
+  "Следующая страница": "Nächste Seite",
+  "Страница {0} из {1}": "Seite {0} von {1}",
+  "Библиотека": "Bibliothek",
+  "Немецкий": "Deutsch",
+  "по Франку": "nach Frank",
+  "Поиск в библиотеке": "Bibliothek durchsuchen",
+  "Поиск": "Suchen",
+  "Продолжить чтение": "Weiterlesen",
+  "Ваши книги": "Deine Bücher",
+  "Добавить книгу": "Buch hinzufügen"
 }

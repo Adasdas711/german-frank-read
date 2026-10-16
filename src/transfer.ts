@@ -51,6 +51,8 @@ export function parseBackup(bytes: Uint8Array) {
       typeof p.book !== "string" ||
       typeof p.at !== "string" ||
       !/^\d+\.\d+$/.test(p.at) ||
+      (p.offset !== undefined &&
+        (!Number.isSafeInteger(p.offset) || p.offset < 0)) ||
       !Number.isFinite(p.percent) ||
       p.percent < 0 ||
       p.percent > 100 ||

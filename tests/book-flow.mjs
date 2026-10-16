@@ -1,3 +1,4 @@
+import { selectReadingFlow } from "./select-reading-flow.mjs";
 import { chromium } from "playwright-core";
 import { createServer } from "node:http";
 import { readFile, mkdir } from "node:fs/promises";
@@ -64,6 +65,7 @@ try {
     console.log("PAGEERROR", error.message);
   });
   await page.goto("http://127.0.0.1:4178/german-frank-read/");
+  await selectReadingFlow(page);
   await page
     .getByRole("button", { name: "Читать дальше", exact: true })
     .waitFor();

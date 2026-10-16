@@ -1,3 +1,4 @@
+import { selectReadingFlow } from "./select-reading-flow.mjs";
 import { chromium } from "playwright-core";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import assert from "node:assert/strict";
@@ -65,6 +66,7 @@ const base =
 const wait = () => page.waitForTimeout(200);
 try {
   await page.goto(base);
+  await selectReadingFlow(page);
   await page
     .getByRole("button", { name: "Читать дальше", exact: true })
     .waitFor();

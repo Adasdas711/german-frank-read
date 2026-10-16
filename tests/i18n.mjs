@@ -1,3 +1,4 @@
+import { selectReadingFlow } from "./select-reading-flow.mjs";
 import { chromium } from "playwright-core";
 import { createServer } from "node:http";
 import { readFile, mkdir } from "node:fs/promises";
@@ -25,6 +26,7 @@ try {
     errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(base);
+  await selectReadingFlow(page);
   await page
     .getByRole("button", { name: "Читать дальше", exact: true })
     .click();
@@ -79,6 +81,8 @@ try {
       tx.objectStore("settings").put(
         {
           language: "de",
+          readingFlow: "blocks",
+          bookStyleVersion: 1,
           showClean: true,
           font: "sans",
           fontSize: 23,

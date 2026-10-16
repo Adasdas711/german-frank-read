@@ -3,7 +3,7 @@ import type { ComponentChildren } from "preact";
 import { useT } from "./i18n";
 import type { Content, Chunk } from "./core";
 
-export type ReadingFlow = "blocks" | "continuous";
+export type ReadingFlow = "pages" | "blocks" | "continuous";
 type Props = {
   content: Content;
   chapters: string[];

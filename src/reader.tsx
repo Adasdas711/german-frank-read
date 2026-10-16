@@ -23,6 +23,8 @@ import * as store from "./storage";
 import type { Progress, Settings, SavedWord } from "./storage";
 import { Icon, Modal, Toggle, ProgressBar } from "./ui";
 import { BookFlow, type ReadingFlow } from "./book-flow";
+import { PagedReader } from "./paged-reader";
+import { BookCover } from "./book-cover";
 import { FocusReader } from "./focus-reader";
 import { createTranslator, translateMessage, LocaleContext } from "./i18n";
 import { speak, stop, unlockAudio } from "./voice";
@@ -35,6 +37,7 @@ import {
 import demos from "./demos.json";
 import { ensureDemos } from "./demo-library";
 import "./style.css";
+import "./books.css";
 const nav = [
   ["home", "Читаю сейчас", "book"],
   ["texts", "Тексты", "texts"],
@@ -91,6 +94,16 @@ function App() {
     backupRef = useRef<HTMLInputElement>(null),
     wordRef = useRef<HTMLElement>(null),
     focusEntryRef = useRef<HTMLButtonElement>(null);
+  const progressRef = useRef(progress);
+  progressRef.current = progress;
+  const commitProgress = async (value: Progress) => {
+    progressRef.current = [
+      ...progressRef.current.filter((p) => p.book !== value.book),
+      value,
+    ];
+    setProgress(progressRef.current);
+    await store.put("progress", value.book, value);
+  };
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
   const t = createTranslator(settings.language);
@@ -114,7 +127,7 @@ function App() {
     setProgress(p);
     setSaved(w);
     const preferences = store.checkedSettings(s || store.defaults);
-    if (!s || s.readingDefaultsVersion !== 1)
+    if (!s || s.readingDefaultsVersion !== 1 || s.bookStyleVersion !== 1)
       await store.put("settings", "app", preferences);
     setSettings(preferences);
   };
@@ -223,10 +236,13 @@ function App() {
         return;
       }
       const index = addresses(data.content).indexOf(at),
-        old = progress.find((p) => p.book === bookId),
+        old = progressRef.current.find((p) => p.book === bookId),
         p = {
           book: bookId,
           at,
+          ...(old?.at === at && Number.isFinite(old.offset)
+            ? { offset: old.offset }
+            : {}),
           percent:
             old?.at === at
               ? old.percent
@@ -234,8 +250,7 @@ function App() {
           mode,
           updatedAt: new Date().toISOString(),
         };
-      await store.put("progress", bookId, p);
-      setProgress((prev) => [...prev.filter((p) => p.book !== bookId), p]);
+      await commitProgress(p);
       if (settingsRef.current.current !== bookId)
         await saveSettings({ current: bookId });
     });
@@ -342,6 +357,7 @@ function App() {
   };
   const changeFlow = (flow: ReadingFlow) => {
     setSelected(null);
+    setFocusMode(false);
     void run(() => saveSettings({ readingFlow: flow }));
   };
   const navigate = (delta: number) => {
@@ -372,6 +388,7 @@ function App() {
       if (
         page !== "read" ||
         focusMode ||
+        settings.readingFlow === "pages" ||
         confirm ||
         sizeOpen ||
         e.altKey ||
@@ -394,7 +411,7 @@ function App() {
     };
     window.addEventListener("keydown", listener);
     return () => window.removeEventListener("keydown", listener);
-  }, [active, at, mode, confirm, sizeOpen, focusMode]);
+  }, [active, at, mode, confirm, sizeOpen, focusMode, settings.readingFlow]);
   async function listen(text: string, ipa?: string) {
     unlockAudio();
     setBusy(true);
@@ -427,34 +444,50 @@ function App() {
     context: string,
     hint: string,
     address = at,
+    baseOffset = 0,
   ) {
-    return text.split(/([\p{L}\p{M}]+(?:[’'-][\p{L}\p{M}]+)*)/gu).map((t, i) =>
-      splitWords(t).length ? (
-        <button
-          key={i}
-          lang="de"
-          class={"word" + (selected?.form === t ? " chosen" : "")}
-          onClick={() => {
-            setSelected({ form: t, context, hint, at: address });
-          }}
-        >
-          {t}
-        </button>
-      ) : (
-        t
-      ),
-    );
+    let position = baseOffset;
+    return text
+      .split(/([\p{L}\p{M}]+(?:[’'-][\p{L}\p{M}]+)*)/gu)
+      .map((part, i) => {
+        const offset = position;
+        position += part.length;
+        return splitWords(part).length ? (
+          <button
+            key={i}
+            lang="de"
+            class={"word" + (selected?.form === part ? " chosen" : "")}
+            data-book-char={offset}
+            onClick={() =>
+              setSelected({ form: part, context, hint, at: address })
+            }
+          >
+            {part}
+          </button>
+        ) : (
+          part
+        );
+      });
   }
-  function textBlock(chunks: Chunk[], hints = false, address = at) {
+
+  function textBlock(
+    chunks: Chunk[],
+    hints = false,
+    address = at,
+    startOffset = 0,
+  ) {
+    let position = startOffset;
     return chunks.map((c) => {
+      const offset = position;
+      position += typeof c === "string" ? c.length : c[0].length;
       if (typeof c === "string")
-        return cleanText(c, plain(chunks), "", address);
+        return cleanText(c, plain(chunks), "", address, offset);
       const hint =
         active!.content.g[c[1]] +
         (c[2] != null ? " = " + active!.content.g[c[2]] : "");
       return (
         <span class={c[3] === 1 ? "uncertain" : ""}>
-          {cleanText(c[0], c[0], hint, address)}
+          {cleanText(c[0], c[0], hint, address, offset)}
           {hints && (
             <>
               {" "}
@@ -470,6 +503,14 @@ function App() {
   const renderBookFragment = useCallback(
     (chunks, address) => {
       const [ci, fi] = address.split(".").map((n) => +n - 1);
+      const sourceText = plain(chunks),
+        lines = sentences(sourceText);
+      let cursor = 0;
+      const starts = lines.map((line) => {
+        const start = sourceText.indexOf(line, cursor);
+        cursor = start + line.length;
+        return start;
+      });
       return mode === "parallel" ? (
         <section class="reading-panel" aria-label={t("Параллельный перевод")}>
           {(active.content.t?.[ci]?.[fi] || []).map((translation, i) => (
@@ -480,6 +521,7 @@ function App() {
                   sentences(plain(chunks))[i] || "",
                   translation,
                   address,
+                  starts[i] || 0,
                 )}
               </p>
               <p class="translation" lang="ru">
@@ -503,7 +545,14 @@ function App() {
               {mode === "frank" && (
                 <div class="eyebrow">{t("Без подсказок")}</div>
               )}
-              <p lang="de">{textBlock(chunks, false, address)}</p>
+              <p lang="de">
+                {textBlock(
+                  chunks,
+                  false,
+                  address,
+                  mode === "frank" ? plain(chunks).length + 1 : 0,
+                )}
+              </p>
             </section>
           )}
         </div>
@@ -572,6 +621,13 @@ function App() {
       p = progress.find((p) => p.book === m.id);
     return (
       <article class="panel book-card" key={m.id}>
+        <button
+          class="cover-open"
+          aria-label={t("Читать ") + m.title}
+          onClick={() => go(b)}
+        >
+          <BookCover manifest={m} />
+        </button>
         <div class="row between">
           <span class="badge">{m.level}</span>
           <span
@@ -594,13 +650,14 @@ function App() {
               {t("% прочитано · ")}
               {m.stats.fragments} {t(" отр.")}
             </small>
-            <small class="muted">
-              {(b.bytes.length / 1024).toFixed(1)} {t(" КБ")}
-            </small>
           </div>
         </div>
         <div class="row">
-          <button class="primary grow" onClick={() => go(b)}>
+          <button
+            class="primary grow"
+            aria-label={(p ? t("Продолжить ") : t("Читать ")) + m.title}
+            onClick={() => go(b)}
+          >
             {p ? t("Продолжить") : t("Читать")}
           </button>
           <button
@@ -633,6 +690,62 @@ function App() {
       </article>
     );
   }
+  const wordPanel = selected ? (
+    <aside
+      class="panel word-panel"
+      ref={wordRef}
+      aria-label={t("Подсказка к слову")}
+    >
+      <div class="row between">
+        <div class="grow">
+          <h2 lang="de">{lemma?.[0] || selected.form}</h2>
+          <small class="muted">
+            {t("В тексте: ")}
+            {selected.form}
+          </small>
+        </div>
+        <button
+          class="icon close-word"
+          aria-label={t("Закрыть подсказку")}
+          onClick={() => setSelected(null)}
+        >
+          <Icon name="close" />
+        </button>
+      </div>
+      <div class="row">
+        <span class="ipa">[{selIpa}]</span>
+        <button
+          class="icon"
+          aria-label={t("Произнести слово")}
+          disabled={busy}
+          onClick={() => void listen(selected.form, selIpa)}
+        >
+          <Icon name="sound" />
+        </button>
+      </div>
+      <strong>{lemma?.[1] || t("Нет отдельного перевода")}</strong>
+      <div class="context">
+        <i lang="de">{selected.context}</i>
+        {selected.hint && (
+          <div style={{ color: "var(--teal)" }}>{selected.hint}</div>
+        )}
+      </div>
+      <button
+        class="primary"
+        disabled={isSaved}
+        onClick={() => void run(saveWord)}
+      >
+        {isSaved ? (
+          <>
+            <Icon name="check" />
+            {t("Слово сохранено")}
+          </>
+        ) : (
+          t("В мои слова")
+        )}
+      </button>
+    </aside>
+  ) : null;
   if (!ready)
     return (
       <>
@@ -715,7 +828,77 @@ function App() {
         }}
       />
       {page === "read" && active && fragment ? (
-        focusMode ? (
+        settings.readingFlow === "pages" ? (
+          <PagedReader
+            manifest={active.manifest}
+            content={active.content}
+            settings={settings}
+            mode={mode}
+            at={at}
+            offset={
+              progress.find((p) => p.book === bookId && p.at === at)?.offset ||
+              0
+            }
+            onPosition={(address, offset) => {
+              const list = addresses(active.content),
+                index = list.indexOf(address);
+              void run(() =>
+                commitProgress({
+                  book: bookId,
+                  at: address,
+                  offset,
+                  mode,
+                  percent: Math.round(
+                    ((index +
+                      Math.min(
+                        1,
+                        offset /
+                          Math.max(
+                            1,
+                            plain(locate(active.content, address).chunks)
+                              .length,
+                          ),
+                      )) /
+                      list.length) *
+                      100,
+                  ),
+                  updatedAt: new Date().toISOString(),
+                }),
+              );
+              bookmarkScroll(address);
+            }}
+            onSettings={(changes) => {
+              if (changes.readingFlow) changeFlow(changes.readingFlow);
+              else void run(() => saveSettings(changes));
+            }}
+            onMode={(next) => {
+              setSelected(null);
+              location.hash = `/read/${bookId}/${at}/${next}`;
+            }}
+            onJump={(address) => {
+              setSelected(null);
+              void run(() =>
+                commitProgress({
+                  book: bookId,
+                  at: address,
+                  offset: 0,
+                  percent: Math.round(
+                    (addresses(active.content).indexOf(address) / total) * 100,
+                  ),
+                  mode,
+                  updatedAt: new Date().toISOString(),
+                }),
+              );
+              location.hash = `/read/${bookId}/${address}/${mode}`;
+            }}
+            onComplete={() => navigate(total - index)}
+            onListen={() => void listenFragment()}
+            busy={busy}
+            renderFragment={renderBookFragment}
+            wordPanel={wordPanel}
+            onDismissWord={() => setSelected(null)}
+          />
+        ) : focusMode ? (
           <FocusReader
             content={active.content}
             chapters={active.manifest.chapters.map((c) => c[0])}
@@ -810,6 +993,12 @@ function App() {
                   role="group"
                   aria-label={t("Вид чтения")}
                 >
+                  <button
+                    aria-pressed={false}
+                    onClick={() => changeFlow("pages")}
+                  >
+                    {t("Страницы")}
+                  </button>
                   <button
                     aria-pressed={settings.readingFlow === "blocks"}
                     onClick={() => changeFlow("blocks")}
@@ -953,139 +1142,136 @@ function App() {
                   <span>{t("Место сохраняется автоматически")}</span>
                 </div>
               </main>
-              {selected ? (
-                <aside
-                  class="panel word-panel"
-                  ref={wordRef}
-                  aria-label={t("Подсказка к слову")}
-                >
-                  <div class="row between">
-                    <div class="grow">
-                      <h2 lang="de">{lemma?.[0] || selected.form}</h2>
-                      <small class="muted">
-                        {t("В тексте: ")}
-                        {selected.form}
-                      </small>
-                    </div>
-                    <button
-                      class="icon close-word"
-                      aria-label={t("Закрыть подсказку")}
-                      onClick={() => setSelected(null)}
-                    >
-                      <Icon name="close" />
-                    </button>
-                  </div>
-                  <div class="row">
-                    <span class="ipa">[{selIpa}]</span>
-                    <button
-                      class="icon"
-                      aria-label={t("Произнести слово")}
-                      disabled={busy}
-                      onClick={() => void listen(selected.form, selIpa)}
-                    >
-                      <Icon name="sound" />
-                    </button>
-                  </div>
-                  <strong>{lemma?.[1] || t("Нет отдельного перевода")}</strong>
-                  <div class="context">
-                    <i lang="de">{selected.context}</i>
-                    {selected.hint && (
-                      <div style={{ color: "var(--teal)" }}>
-                        {selected.hint}
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    class="primary"
-                    disabled={isSaved}
-                    onClick={() => void run(saveWord)}
-                  >
-                    {isSaved ? (
-                      <>
-                        <Icon name="check" />
-                        {t("Слово сохранено")}
-                      </>
-                    ) : (
-                      t("В мои слова")
-                    )}
-                  </button>
-                </aside>
-              ) : null}
+              {wordPanel}
             </div>
           </>
         )
       ) : (
-        <>
-          <header class="app-header">
-            <div class="header-inner">
-              <a class="brand" href={href("home")}>
-                {t("Немецкий по Франку")}
-              </a>
-              <nav class="nav" aria-label={t("Разделы")}>
-                {nav.map(([v, label, icon]) => (
-                  <a
-                    href={href(v)}
-                    aria-current={page === v ? "page" : undefined}
-                  >
-                    <Icon name={icon} />
-                    {t(label)}
-                  </a>
-                ))}
-              </nav>
-              <a
-                class="settings-link icon"
-                href={href("settings")}
-                aria-label={t("Настройки")}
-              >
-                <Icon name="settings" />
-              </a>
-            </div>
-          </header>
+        <div class={"books-shell route-" + page}>
+          <aside class="library-sidebar" aria-label={t("Библиотека")}>
+            <a class="library-brand" href={href("home")}>
+              <span class="library-logo">
+                <Icon name="book" size={25} />
+              </span>
+              <span>
+                {t("Немецкий")}
+                <small>{t("по Франку")}</small>
+              </span>
+            </a>
+            <label class="library-search">
+              <Icon name="search" size={18} />
+              <input
+                aria-label={t("Поиск в библиотеке")}
+                placeholder={t("Поиск")}
+                value={page === "words" ? "" : query}
+                onInput={(event) => {
+                  setQuery(event.currentTarget.value);
+                  if (page !== "texts") location.hash = "/texts";
+                }}
+              />
+            </label>
+            <div class="sidebar-label">{t("Библиотека")}</div>
+            <nav class="nav" aria-label={t("Разделы")}>
+              {nav.map(([value, label, icon]) => (
+                <a
+                  href={href(value)}
+                  aria-current={page === value ? "page" : undefined}
+                >
+                  <Icon name={icon} />
+                  <span>{t(label)}</span>
+                </a>
+              ))}
+            </nav>
+            <div class="sidebar-spacer" />
+            <button
+              class="sidebar-add"
+              onClick={() => fileRef.current?.click()}
+            >
+              <Icon name="upload" />
+              {t("Добавить книгу")}
+            </button>
+            <a
+              class="settings-link"
+              href={href("settings")}
+              aria-label={t("Настройки")}
+            >
+              <Icon name="settings" />
+              <span>{t("Настройки")}</span>
+            </a>
+          </aside>
           <main class="page">
             {page === "home" && (
               <>
                 {current ? (
-                  (() => {
-                    const data = readBook(current.bytes),
-                      p = locate(data.content, cp?.at || "1.1"),
-                      idx = addresses(data.content).indexOf(cp?.at || "1.1");
-                    return (
-                      <>
-                        <section class="hero" aria-label={t("Читаю сейчас")}>
-                          <div class="hero-copy">
-                            <div class="row">
-                              <span class="eyebrow">{t("Читаю сейчас")}</span>
-                              <span class="badge">
-                                {t("Уровень ")}
-                                {current.manifest.level}
+                  <section
+                    class="hero library-home"
+                    aria-label={t("Читаю сейчас")}
+                  >
+                    <div class="library-title-row">
+                      <h1>{t("Читаю сейчас")}</h1>
+                      <button
+                        class="icon"
+                        aria-label={t("Добавить книгу")}
+                        onClick={() => fileRef.current?.click()}
+                      >
+                        <Icon name="upload" />
+                      </button>
+                    </div>
+                    <h2>{t("Продолжить чтение")}</h2>
+                    <div class="continue-shelf">
+                      {[
+                        current,
+                        ...books
+                          .filter((b) => b.manifest.id !== current.manifest.id)
+                          .sort((a, b) =>
+                            (
+                              progress.find((p) => p.book === b.manifest.id)
+                                ?.updatedAt || ""
+                            ).localeCompare(
+                              progress.find((p) => p.book === a.manifest.id)
+                                ?.updatedAt || "",
+                            ),
+                          ),
+                      ]
+                        .slice(0, 2)
+                        .map((book, i) => {
+                          const p = progress.find(
+                            (p) => p.book === book.manifest.id,
+                          );
+                          return (
+                            <button
+                              class="continue-card"
+                              aria-label={
+                                i === 0
+                                  ? t("Читать дальше")
+                                  : t("Читать ") + book.manifest.title
+                              }
+                              onClick={() => go(book)}
+                            >
+                              <BookCover manifest={book.manifest} small />
+                              <span class="continue-copy">
+                                <strong>{book.manifest.title}</strong>
+                                <span>{book.manifest.author}</span>
+                                <small>
+                                  {book.manifest.level} · {p?.percent || 0}%
+                                </small>
+                                <span class="continue-action">
+                                  {t("Читать дальше")}{" "}
+                                  <Icon name="next" size={14} />
+                                </span>
                               </span>
-                            </div>
-                            <h2>{current.manifest.title}</h2>
-                            <div class="muted">
-                              {current.manifest.author} ·{" "}
-                              {current.manifest.titleRu}
-                            </div>
-                            <div>
-                              <ProgressBar value={cp?.percent || 0} />
-                              <small class="muted">
-                                {t("Отрывок ")}
-                                {idx + 1} {t(" из")}{" "}
-                                {current.manifest.stats.fragments}
-                                {cp?.percent === 100 ? t(" · Прочитано") : ""}
-                              </small>
-                            </div>
-                            <blockquote>
-                              „{plain(p.chunks).slice(0, 175)}…“
-                            </blockquote>
-                          </div>
-                          <button class="btn teal" onClick={() => go(current)}>
-                            {t("Читать дальше")}
-                            <Icon name="next" />
-                          </button>
-                        </section>
-                      </>
-                    );
-                  })()
+                            </button>
+                          );
+                        })}
+                    </div>
+                    <div class="library-section-title">
+                      <h2>{t("Ваши книги")}</h2>
+                      <a href={href("texts")}>
+                        {t("Все книги")} <Icon name="next" size={16} />
+                      </a>
+                    </div>
+                    <div class="book-grid">{books.map(bookCard)}</div>
+                  </section>
                 ) : (
                   <div class="panel empty">
                     <Icon name="book" size={40} />
@@ -1399,13 +1585,10 @@ function App() {
                         id="reading-flow"
                         value={settings.readingFlow}
                         onChange={(event) =>
-                          changeFlow(
-                            event.currentTarget.value === "continuous"
-                              ? "continuous"
-                              : "blocks",
-                          )
+                          changeFlow(event.currentTarget.value as ReadingFlow)
                         }
                       >
+                        <option value="pages">{t("Страницы")}</option>
                         <option value="blocks">{t("По отрывкам")}</option>
                         <option value="continuous">
                           {t("Сплошной текст")}
@@ -1620,7 +1803,7 @@ function App() {
               </div>
             )}
           </main>
-        </>
+        </div>
       )}
       {sizeOpen && (
         <Modal title={t("Размер текста")} onClose={() => setSizeOpen(false)}>

@@ -1,3 +1,4 @@
+import { selectReadingFlow } from "./select-reading-flow.mjs";
 import { chromium } from "playwright-core";
 import { createServer } from "node:http";
 import { readFile, mkdir } from "node:fs/promises";
@@ -20,6 +21,7 @@ try {
   page.on("pageerror", (e) => errors.push(e.message));
   const base = "http://127.0.0.1:4175/german-frank-read/";
   await page.goto(base);
+  await selectReadingFlow(page);
   await page
     .getByRole("button", { name: "Читать дальше", exact: true })
     .waitFor();
@@ -69,18 +71,13 @@ try {
             ),
         );
         if (route === "home") {
-          assert.equal(
-            await page
-              .locator(
-                ".dashboard-aside,.home-shelf,.workspace-header,.home-heading,.workspace-topbar,.book-cover",
-              )
-              .count(),
-            0,
-            "No added sections on the original home screen",
+          assert.ok(
+            (await page.locator(".book-cover").count()) >= 3,
+            "Library displays real book covers",
           );
           if (width > 900) {
             const nav = await page.locator(".nav").boundingBox();
-            assert.ok(nav.y < 100, "Desktop navigation must be at the top");
+            assert.ok(nav.x < 260, "Desktop navigation is in the sidebar");
           }
         }
         if (route.startsWith("read/")) {

@@ -161,6 +161,38 @@ describe("builder", () => {
   });
 });
 describe("backup validation", () => {
+  it("preserves source-word bookmarks and rejects invalid character offsets", () => {
+    const backup = {
+      backup: "franka",
+      version: 2,
+      words: [],
+      progress: [
+        {
+          book: sample.manifest.id,
+          at: "1.2",
+          offset: 42,
+          percent: 8,
+          mode: "frank",
+          updatedAt: "2026-10-16T00:00:00.000Z",
+        },
+      ],
+    };
+    expect(
+      parseBackup(strToU8(JSON.stringify(backup))).data.progress[0].offset,
+    ).toBe(42);
+    for (const offset of [-1, 1.5, Number.MAX_SAFE_INTEGER + 1])
+      expect(() =>
+        parseBackup(
+          strToU8(
+            JSON.stringify({
+              ...backup,
+              progress: [{ ...backup.progress[0], offset }],
+            }),
+          ),
+        ),
+      ).toThrow(/прогресс/);
+  });
+
   it("rejects unrelated and invalid backups", () => {
     expect(() => parseBackup(strToU8("{}"))).toThrow(/формат/);
     expect(() =>
@@ -214,12 +246,16 @@ describe("reader preferences", () => {
     const { defaults, checkedSettings } = await import("../src/storage");
     expect(defaults.language).toBe("ru");
     expect(defaults.showClean).toBe(false);
-    expect(checkedSettings({}).readingFlow).toBe("blocks");
-    expect(checkedSettings({ readingFlow: "continuous" }).readingFlow).toBe(
-      "continuous",
+    expect(checkedSettings({ readingFlow: "blocks" }).readingFlow).toBe(
+      "pages",
     );
+    expect(checkedSettings({}).readingFlow).toBe("pages");
+    expect(
+      checkedSettings({ readingFlow: "continuous", bookStyleVersion: 1 })
+        .readingFlow,
+    ).toBe("continuous");
     expect(checkedSettings({ readingFlow: "unexpected" }).readingFlow).toBe(
-      "blocks",
+      "pages",
     );
     expect(checkedSettings({ language: "en" }).language).toBe("ru");
     const migrated = checkedSettings({

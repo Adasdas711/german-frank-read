@@ -4,6 +4,7 @@ import type { Language } from "./i18n";
 export type Progress = {
   book: string;
   at: string;
+  offset?: number;
   percent: number;
   mode: string;
   updatedAt: string;
@@ -26,6 +27,7 @@ export type Settings = {
   theme: string;
   showClean: boolean;
   readingFlow: ReadingFlow;
+  bookStyleVersion: 1;
   language: Language;
   readingDefaultsVersion: 1;
   voice: string;
@@ -37,7 +39,8 @@ export const defaults: Settings = {
   fontSize: 19,
   theme: "system",
   showClean: false,
-  readingFlow: "blocks",
+  readingFlow: "pages",
+  bookStyleVersion: 1,
   language: "ru",
   readingDefaultsVersion: 1,
   voice: "espeak",
@@ -159,7 +162,12 @@ export function checkedSettings(s: any): Settings {
         ? s.showClean
         : false,
     language: s?.language === "de" ? "de" : "ru",
-    readingFlow: s?.readingFlow === "continuous" ? "continuous" : "blocks",
+    readingFlow:
+      s?.bookStyleVersion === 1 &&
+      ["pages", "continuous", "blocks"].includes(s?.readingFlow)
+        ? s.readingFlow
+        : "pages",
+    bookStyleVersion: 1,
     readingDefaultsVersion: 1,
     voice: ["espeak", "system"].includes(s?.voice) ? s.voice : "espeak",
     rate: Number.isFinite(s?.rate) ? Math.max(0.5, Math.min(1.5, s.rate)) : 1,
