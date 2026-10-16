@@ -1,5 +1,6 @@
 import type { Book } from "./core";
 import type { Language } from "./i18n";
+import { checkedCollections, moveBookToCollection } from "./collections";
 export type Progress = {
   book: string;
   at: string;
@@ -189,9 +190,39 @@ export async function clearAll() {
     // Keep the empty-library marker and reset preferences atomically. A reload
     // during erasure must never re-install the demonstration books.
     t.objectStore("settings").put(true, "initialized");
+    t.objectStore("settings").put(true, "immensee-initialized");
     t.objectStore("settings").put(defaults, "app");
     t.oncomplete = () => res();
     t.onerror = () => rej(t.error);
+  });
+}
+
+export async function deleteBook(bookId: string) {
+  const d = await db();
+  await new Promise<void>((resolve, reject) => {
+    const tx = d.transaction(["books", "progress", "settings"], "readwrite");
+    tx.objectStore("books").delete(bookId);
+    tx.objectStore("progress").delete(bookId);
+    const settings = tx.objectStore("settings"),
+      request = settings.get("collections");
+    request.onsuccess = () => {
+      try {
+        settings.put(
+          moveBookToCollection(
+            checkedCollections(request.result),
+            bookId,
+            null,
+          ),
+          "collections",
+        );
+      } catch (error) {
+        tx.abort();
+        reject(error);
+      }
+    };
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
   });
 }
 export function checkedSettings(s: any): Settings {
@@ -287,6 +318,7 @@ export async function backup(includeBooks = false) {
     exportedAt: new Date().toISOString(),
     progress: await all("progress"),
     words: await all("words"),
+    collections: (await get("settings", "collections")) || [],
     settings: await get("settings", "app"),
   };
 }

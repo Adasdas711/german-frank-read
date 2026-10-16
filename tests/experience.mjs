@@ -127,7 +127,7 @@ const visibleWord = (page) =>
 try {
   const { context, page } = await fresh();
   assert.equal((await value(page, "settings", "app")).language, "en");
-  assert.equal(await page.locator(".book-cover").count(), 5);
+  assert.equal(await page.locator(".book-cover").count(), 6);
   await page.screenshot({ path: ".test-results/experience/home-mac.png" });
   const homeStatus = await page
     .locator(".continue-card")
@@ -387,10 +387,10 @@ try {
     buffer: Buffer.from(newBook),
   });
   await page.getByRole("button", { name: "Add to Library" }).waitFor();
-  assert.equal((await all(page, "books")).length, 3);
+  assert.equal((await all(page, "books")).length, 4);
   await page.getByRole("button", { name: "Add to Library" }).click();
   await page.getByText("Book added", { exact: true }).waitFor();
-  assert.equal((await all(page, "books")).length, 4);
+  assert.equal((await all(page, "books")).length, 5);
   await page.locator('input[type=file][accept=".fbook"]').setInputFiles({
     name: "new.fbook",
     mimeType: "application/zip",

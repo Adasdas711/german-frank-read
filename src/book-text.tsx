@@ -38,6 +38,23 @@ export function BookText({
     }
     return { context: source, translation: translations.join(" ") };
   };
+  const sourceHint = (offset: number) => {
+    let start = 0;
+    for (const chunk of chunks) {
+      const value = typeof chunk === "string" ? chunk : chunk[0];
+      if (
+        offset >= start &&
+        offset < start + value.length &&
+        typeof chunk !== "string"
+      )
+        return (
+          content.g[chunk[1]] +
+          (chunk[2] != null ? " = " + content.g[chunk[2]] : "")
+        );
+      start += value.length;
+    }
+    return "";
+  };
   const text = (s: string, base: number, hint = "") => {
     let pos = base;
     return s
@@ -55,7 +72,7 @@ export function BookText({
               onWord?.({
                 form: part,
                 at: address,
-                hint,
+                hint: hint || sourceHint(offset % (source.length + 1)),
                 ...phrase(offset % (source.length + 1)),
               })
             }

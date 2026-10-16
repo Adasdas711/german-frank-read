@@ -210,7 +210,10 @@ describe("backup validation", () => {
   });
   it("accepts a valid empty backup and a zip with books", () => {
     const backup = { backup: "franka", version: 2, words: [], progress: [] };
-    expect(parseBackup(strToU8(JSON.stringify(backup))).data).toEqual(backup);
+    expect(parseBackup(strToU8(JSON.stringify(backup))).data).toEqual({
+      ...backup,
+      collections: [],
+    });
     const z = zipSync({
       "backup.json": strToU8(JSON.stringify(backup)),
       [sample.manifest.id + ".fbook"]: bytes,
@@ -378,5 +381,116 @@ describe("Books v2 settings and search", () => {
     expect(translate("ru", "Page {0} of {1}", { 0: 2, 1: 18 })).toBe(
       "Страница 2 из 18",
     );
+  });
+});
+
+describe("Personal collections and complete Immensee", () => {
+  it("moves collections and books without modifying the library", async () => {
+    const {
+      moveCollection,
+      moveBookToCollection,
+      checkedCollections,
+      mergeCollections,
+    } = await import("../src/collections");
+    const list = [
+      { id: "a", name: "Stories", bookIds: ["one"], updatedAt: "2026-01-01" },
+      { id: "b", name: "German", bookIds: ["two"], updatedAt: "2026-01-02" },
+      { id: "c", name: "Next", bookIds: [], updatedAt: "2026-01-03" },
+    ];
+    expect(moveCollection(list, "c", "a").map((c) => c.id)).toEqual([
+      "c",
+      "a",
+      "b",
+    ]);
+    expect(moveCollection(list, "a", null).map((c) => c.id)).toEqual([
+      "b",
+      "c",
+      "a",
+    ]);
+    const moved = moveBookToCollection(list, "one", "b");
+    expect(moved[0].bookIds).toEqual([]);
+    expect(moved[1].bookIds).toEqual(["two", "one"]);
+    expect(list[0].bookIds).toEqual(["one"]);
+    expect(
+      moveBookToCollection(moved, "one", null).flatMap((c) => c.bookIds),
+    ).toEqual(["two"]);
+    expect(() => checkedCollections([{ ...list[0], name: " " }])).toThrow();
+    expect(() => checkedCollections([list[0], list[0]])).toThrow();
+    expect(
+      mergeCollections(list, [
+        { ...list[1], name: "Updated", updatedAt: "2026-02-01" },
+      ])[0].name,
+    ).toBe("Updated");
+    const full = Array.from({ length: 200 }, (_, i) => ({
+      ...list[0],
+      id: String(i),
+    }));
+    expect(() => mergeCollections(full, list)).toThrow(
+      "Collection limit reached",
+    );
+  });
+  it("accepts old backups and validates and restores collection records", () => {
+    const data = {
+      backup: "franka",
+      version: 2,
+      progress: [],
+      words: [],
+      collections: [
+        {
+          id: "a",
+          name: "Stories",
+          bookIds: ["book"],
+          updatedAt: "2026-01-01",
+        },
+      ],
+    };
+    expect(parseBackup(strToU8(JSON.stringify(data))).data.collections).toEqual(
+      data.collections,
+    );
+    expect(() =>
+      parseBackup(
+        strToU8(
+          JSON.stringify({
+            ...data,
+            collections: [{ ...data.collections[0], bookIds: [99] }],
+          }),
+        ),
+      ),
+    ).toThrow("Invalid collections backup");
+  });
+  it("ships the full supplied story, with 10 actual chapters, source hints and working IPA", async () => {
+    const { toPhonemes } = await import("../src/ipa");
+    const book = readBook(new Uint8Array(readFileSync("books/immensee.fbook")));
+    const source = JSON.parse(readFileSync("src/immensee-source.json", "utf8"));
+    expect(book.manifest.title).toBe("Immensee");
+    expect(book.manifest.chapters).toHaveLength(10);
+    expect(book.manifest.stats.words).toBe(9484);
+    expect(book.manifest.stats.fragments).toBe(111);
+    expect(plain(book.content.c[0][0])).toMatch(
+      /^An einem Spätherbstnachmittage/,
+    );
+    expect(plain(book.content.c[9].at(-1)!)).toMatch(
+      /Kraft seiner Jugend geübt hatte\.$/,
+    );
+    for (const [ci, chapter] of book.content.c.entries())
+      for (const [fi, chunks] of chapter.entries())
+        expect(plain(chunks)).toBe(
+          source.chapters[ci].fragments[fi].chunks
+            .map((c) => (typeof c === "string" ? c : c[0]))
+            .join(""),
+        );
+    expect(
+      book.content.c
+        .flat()
+        .flat()
+        .filter((c) => Array.isArray(c)),
+    ).toHaveLength(1406);
+    for (const [form, [ipa]] of Object.entries(book.content.f)) {
+      expect(ipa, form).not.toContain("?");
+      expect(() => toPhonemes(ipa), form).not.toThrow();
+    }
+    expect(book.content.l.length).toBeGreaterThan(800);
+    expect(book.manifest.source).toContain("Theodor Storm. Immensee.pdf");
+    expect(book.manifest.license).toContain("2018");
   });
 });

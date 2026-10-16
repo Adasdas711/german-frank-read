@@ -55,9 +55,9 @@ const messagePrefixes = (dictionary: Record<string, string>) =>
     .filter(([key]) => key.length > 8 && !key.includes("{"))
     .sort((a, b) => b[0].length - a[0].length);
 export function translateMessage(language: Language, text: string): string {
-  if (language === "ru" || !/[А-Яа-яЁё]/.test(text)) return text;
   const direct = translate(language, text);
   if (direct !== text) return direct;
+  if (language === "ru" || !/[А-Яа-яЁё]/.test(text)) return text;
   for (const p of messagePatterns(language === "en" ? english : german)) {
     const match = p.regex.exec(text);
     if (match) {

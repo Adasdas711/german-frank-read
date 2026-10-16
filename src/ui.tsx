@@ -2,6 +2,14 @@ import { useT } from "./i18n";
 import { useEffect, useRef } from "preact/hooks";
 export function Icon({ name, size = 20 }: { name: string; size?: number }) {
   const paths: Record<string, any> = {
+    collection: (
+      <>
+        <rect x="3" y="5" width="18" height="16" rx="2" />
+        <path d="M3 9h18M7 3h10" />
+      </>
+    ),
+    up: <path d="m6 15 6-6 6 6" />,
+    down: <path d="m6 9 6 6 6-6" />,
     hints: (
       <>
         <path d="M5 5h14M7 9h10M9 13h6M5 17h14M4 3l16 18" />

@@ -2536,3 +2536,218 @@ html.reading-pages body {
   position: relative;
   visibility: visible !important;
 }
+
+/* Personal collections: the sidebar and the compact library view share the data. */
+.collection-menu {
+  margin-top: 3px;
+}
+.collection-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 18px;
+  margin-bottom: 5px;
+}
+.library-sidebar .collection-heading h3 {
+  margin: 0 10px;
+}
+.collection-heading .round {
+  width: 25px;
+  min-width: 25px;
+  height: 25px;
+  min-height: 25px;
+  padding: 4px;
+  background: transparent;
+}
+.collection-nav-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border-radius: 9px;
+  min-width: 0;
+}
+.collection-nav-row > .sidebar-item {
+  flex: 1;
+  min-width: 0;
+  padding-right: 4px;
+}
+.collection-nav-row > .sidebar-item > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  text-align: left;
+}
+.collection-nav-row small {
+  font-size: 10px;
+  color: var(--muted);
+}
+.collection-nav-row.drop-target {
+  background: var(--soft);
+  outline: 1px solid var(--teal);
+}
+.collection-manage {
+  background: transparent;
+  width: 26px;
+  min-width: 26px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0 4px;
+  color: var(--muted);
+  font-size: 18px;
+}
+.new-collection {
+  color: var(--teal);
+  font-size: 11px;
+  width: 100%;
+}
+.collection-strip {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: -5px 0 27px;
+  flex-wrap: wrap;
+}
+.collection-strip > span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.collection-chips {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 3px;
+}
+.collection-chips > .pill {
+  white-space: nowrap;
+  font-size: 11px;
+  min-height: 30px;
+  padding: 5px 12px;
+}
+.collection-chips > .pill.selected {
+  background: var(--soft);
+  color: var(--teal);
+}
+.collection-chips > .round {
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
+  font-size: 18px;
+  padding: 6px;
+}
+.collection-name-label {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  font-size: 12px;
+}
+.collection-name-label > input {
+  width: 100%;
+  border: 0;
+  border-radius: 11px;
+  padding: 12px;
+  background: #8882;
+  font-size: 15px;
+}
+.collection-order {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 12px;
+  flex-wrap: wrap;
+}
+.collection-order > span {
+  flex: 1;
+  font-size: 11px;
+  min-width: 90px;
+}
+.collection-order > button {
+  font-size: 11px;
+  padding: 6px 10px;
+  min-height: 31px;
+  border: 0;
+  border-radius: 20px;
+  background: #8882;
+}
+.collection-book-list {
+  max-height: 38dvh;
+  overflow-y: auto;
+}
+.collection-book-list > label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 15px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  cursor: pointer;
+}
+.collection-book-list input {
+  accent-color: var(--teal);
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  padding: 0;
+  margin: 0;
+}
+.collection-book-list small {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  margin-top: 3px;
+}
+.collection-book-list + button {
+  margin-top: 6px;
+}
+.move-collection-list > button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  border-radius: 0;
+  width: 100%;
+  justify-content: flex-start;
+  padding: 13px 15px;
+  font-size: 13px;
+}
+.move-collection-list > button > span {
+  flex: 1;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.move-collection-list > button[aria-pressed="true"] {
+  color: var(--teal);
+}
+.library-heading h1 {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 700px) {
+  .collection-strip {
+    gap: 9px;
+    margin: -3px 0 24px;
+  }
+  .collection-strip > span {
+    width: 100%;
+    font-size: 10px;
+  }
+  .collection-order {
+    gap: 6px;
+    padding: 10px;
+  }
+  .collection-order > button {
+    font-size: 10px;
+    padding: 6px 8px;
+  }
+  .collection-name-label > input {
+    font-size: 16px;
+  }
+  .collection-book-list {
+    max-height: 34dvh;
+  }
+}

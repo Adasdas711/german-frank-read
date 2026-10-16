@@ -135,7 +135,7 @@ try {
     .setInputFiles(".test-results/built.fbook");
   await page.getByRole("button", { name: "Add to Library" }).click();
   await page.getByText("Book added", { exact: true }).waitFor();
-  assert.equal(await page.locator(".shelf-book").count(), 4);
+  assert.equal(await page.locator(".shelf-book").count(), 5);
   await page.locator('input[type=file][accept=".fbook"]').setInputFiles({
     name: "bad.fbook",
     mimeType: "application/octet-stream",

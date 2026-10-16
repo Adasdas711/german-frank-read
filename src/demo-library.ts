@@ -2,8 +2,11 @@ import { addresses, readBook, type Book } from "./core";
 import * as store from "./storage";
 import type { Progress } from "./storage";
 
-export async function ensureDemos(packedBooks: string[]) {
-  const initialized = await store.get("settings", "initialized");
+export async function ensureDemos(
+  packedBooks: string[],
+  initializedKey = "initialized",
+) {
+  const initialized = await store.get("settings", initializedKey);
   for (const packed of packedBooks) {
     const bytes = Uint8Array.from(atob(packed), (c) => c.charCodeAt(0));
     const book = readBook(bytes);
@@ -24,7 +27,14 @@ export async function ensureDemos(packedBooks: string[]) {
       const transaction = db.transaction(["books", "progress"], "readwrite");
       transaction
         .objectStore("books")
-        .put({ manifest: book.manifest, bytes }, book.manifest.id);
+        .put(
+          {
+            manifest: book.manifest,
+            bytes,
+            addedAt: old?.addedAt || new Date().toISOString(),
+          },
+          book.manifest.id,
+        );
       if (progress && index >= 0)
         transaction.objectStore("progress").put(
           {
@@ -38,5 +48,5 @@ export async function ensureDemos(packedBooks: string[]) {
       transaction.onabort = () => reject(transaction.error);
     });
   }
-  if (!initialized) await store.put("settings", "initialized", true);
+  if (!initialized) await store.put("settings", initializedKey, true);
 }

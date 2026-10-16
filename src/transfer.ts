@@ -3,6 +3,7 @@ import * as store from "./storage";
 import { safeUnzip, readBook, escape, csv, download, slug } from "./core";
 import type { Book } from "./core";
 import type { SavedWord, Progress } from "./storage";
+import { checkedCollections, mergeCollections } from "./collections";
 export async function exportBackup(withBooks: boolean) {
   const data = await store.backup(),
     date = new Date().toISOString().slice(0, 10);
@@ -80,6 +81,7 @@ export function parseBackup(bytes: Uint8Array) {
       !Number.isFinite(Date.parse(w.savedAt))
     )
       throw Error("Повреждённое слово в копии.");
+  data.collections = checkedCollections(data.collections);
   return { data, books };
 }
 export async function importBackup(
@@ -123,6 +125,24 @@ export async function importBackup(
             { ...w, key, form: w.form || w.lemma, inAnki: !!w.inAnki },
             key,
           );
+      };
+    }
+    if (data.collections?.length) {
+      const settings = t.objectStore("settings"),
+        request = settings.get("collections");
+      request.onsuccess = () => {
+        try {
+          settings.put(
+            mergeCollections(
+              checkedCollections(request.result),
+              data.collections,
+            ),
+            "collections",
+          );
+        } catch (error) {
+          t.abort();
+          rej(error);
+        }
       };
     }
     if (replaceSettings && data.settings)

@@ -15,7 +15,9 @@
     "test:demos": "node tests/demos.mjs",
     "build:demos": "node scripts/demo.mjs",
     "test:pages": "node tests/pages.mjs",
-    "test:experience": "node tests/experience.mjs"
+    "test:experience": "node tests/experience.mjs",
+    "build:immensee": "node --experimental-strip-types scripts/immensee.mjs",
+    "test:collections": "node tests/collections.mjs"
   },
   "dependencies": {
     "espeak-ng": "1.0.2",

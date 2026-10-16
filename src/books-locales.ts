@@ -1,5 +1,65 @@
 // The book's own text is never passed through this dictionary.
 const rows: [string, string, string][] = [
+  ["Chapters", "Главы", "Kapitel"],
+  ["Chapter {0}", "Глава {0}", "Kapitel {0}"],
+  ["{0} chapters", "{0} глав", "{0} Kapitel"],
+
+  ["My Collections", "Мои коллекции", "Meine Sammlungen"],
+  ["New Collection", "Новая коллекция", "Neue Sammlung"],
+  ["Edit Collection", "Изменить коллекцию", "Sammlung bearbeiten"],
+  ["Manage Collection", "Управление коллекцией", "Sammlung verwalten"],
+  [
+    "Manage collection {0}",
+    "Управление коллекцией {0}",
+    "Sammlung {0} verwalten",
+  ],
+  ["Collection name", "Название коллекции", "Name der Sammlung"],
+  ["Order in menu", "Порядок в меню", "Reihenfolge im Menü"],
+  ["Move Up", "Выше", "Nach oben"],
+  ["Move Down", "Ниже", "Nach unten"],
+  [
+    "Books in this collection",
+    "Книги в коллекции",
+    "Bücher in dieser Sammlung",
+  ],
+  ["Delete Collection", "Удалить коллекцию", "Sammlung löschen"],
+  [
+    "Delete collection {0}?",
+    "Удалить коллекцию «{0}»?",
+    "Sammlung {0} löschen?",
+  ],
+  [
+    "The books will stay in your library.",
+    "Книги останутся в библиотеке.",
+    "Die Bücher bleiben in deiner Bibliothek.",
+  ],
+  ["Move to Collection", "Переместить в коллекцию", "In Sammlung verschieben"],
+  ["All Books only", "Только общая библиотека", "Nur in der Bibliothek"],
+  ["Move", "Переместить", "Verschieben"],
+  ["Collection created", "Коллекция создана", "Sammlung erstellt"],
+  ["Collection updated", "Коллекция обновлена", "Sammlung aktualisiert"],
+  ["Book moved", "Книга перемещена", "Buch verschoben"],
+  [
+    "This collection is empty",
+    "В этой коллекции пока нет книг",
+    "Diese Sammlung ist leer",
+  ],
+  [
+    "Choose books in the collection settings or move a book from its details.",
+    "Выберите книги в настройках коллекции или перенесите книгу из её карточки.",
+    "Wähle Bücher in den Sammlungseinstellungen oder verschiebe sie über die Buchdetails.",
+  ],
+  [
+    "Invalid collections backup",
+    "Повреждены коллекции в резервной копии",
+    "Ungültige Sammlungen in der Sicherung",
+  ],
+  [
+    "Collection limit reached",
+    "Можно создать до 200 коллекций",
+    "Bis zu 200 Sammlungen sind möglich",
+  ],
+
   ["{0} words · {1} new", "{0} слов · новых: {1}", "{0} Wörter · {1} neu"],
   ["{0} of {1} selected", "Выбрано: {0} из {1}", "{0} von {1} ausgewählt"],
   ["German with Frank", "Немецкий по Франку", "Deutsch mit Frank"],

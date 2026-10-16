@@ -37,7 +37,7 @@ export type Content = {
   t?: string[][][];
   x?: Record<string, Record<string, string>>;
 };
-export type Book = { manifest: Manifest; bytes: Uint8Array };
+export type Book = { manifest: Manifest; bytes: Uint8Array; addedAt?: string };
 export const plain = (chunks: Chunk[]) =>
   chunks.map((c) => (typeof c === "string" ? c : c[0])).join("");
 export const words = (s: string): string[] => s.match(WORD) || [];

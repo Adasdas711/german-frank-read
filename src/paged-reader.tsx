@@ -69,6 +69,7 @@ export function PagedReader(props: Props) {
     [menu, setMenu] = useState(false),
     [bookmarkView, setBookmarkView] = useState(false);
   const [pageIndex, setPageIndex] = useState<PageEntry[]>([]);
+  const [chapterPages, setChapterPages] = useState<number[]>([]);
   const [pageSources, setPageSources] = useState<string[]>([]);
   const emittedIndex = useRef("");
   const [controls, setControls] = useState(false),
@@ -187,9 +188,15 @@ export function PagedReader(props: Props) {
       words.find((word) => Number(word.dataset.bookChar) >= sourceOffset) ||
       words.at(-1) ||
       fragment;
+    const target =
+      fi === 0 && sourceOffset === 0
+        ? fragment
+            .closest(".folio-chapter")
+            ?.querySelector(".folio-chapter-title") || word
+        : word;
     return Math.min(
       geometry.count - 1,
-      Math.floor(columnOf(word, geometry) / geometry.columns),
+      Math.floor(columnOf(target, geometry) / geometry.columns),
     );
   };
   // Measure columns after fonts/layout changes. The bookmark is a source-text offset,
@@ -317,13 +324,17 @@ export function PagedReader(props: Props) {
             )
             .join("\n"),
         );
-        const json = JSON.stringify([entries, measuredSources]);
+        const chapterStarts = [
+          ...text.current.querySelectorAll(".folio-chapter-title"),
+        ].map((heading) => columnOf(heading, next) + 1);
+        const json = JSON.stringify([entries, measuredSources, chapterStarts]);
         if (
           document.fonts.status === "loaded" &&
           json !== emittedIndex.current
         ) {
           emittedIndex.current = json;
           setPageIndex(entries);
+          setChapterPages(chapterStarts);
           setPageSources(measuredSources);
           state.current.props.onIndex?.(entries);
         }
@@ -1022,12 +1033,12 @@ export function PagedReader(props: Props) {
             <section
               class="folio-popover contents glass"
               role="dialog"
-              aria-label={t("Pages")}
+              aria-label={t("Contents")}
             >
               <div class="row between">
-                <h2>{t("Pages")}</h2>
+                <h2>{t("Contents")}</h2>
                 <small>
-                  {t("{0} pages", { 0: pageIndex.length })} ·{" "}
+                  {t("{0} chapters", { 0: manifest.chapters.length })} ·{" "}
                   {t("{0}% read", {
                     0:
                       props.progressPercent ??
@@ -1050,7 +1061,7 @@ export function PagedReader(props: Props) {
                   aria-pressed={!bookmarkView}
                   onClick={() => setBookmarkView(false)}
                 >
-                  {t("Pages")}
+                  {t("Chapters")}
                 </button>
                 <button
                   aria-pressed={bookmarkView}
@@ -1059,54 +1070,88 @@ export function PagedReader(props: Props) {
                   {t("Bookmarks")}
                 </button>
               </div>
-              <nav>
-                {pageIndex.map((entry, i) => {
-                  const isBookmarked = props.bookmarks?.some((b) => {
-                    const start = pageIndex[i],
-                      end = pageIndex[i + 1];
-                    const key = (x: { at: string; offset: number }) => {
-                      const [c, f] = x.at.split(".").map(Number);
-                      return c * 1e12 + f * 1e7 + x.offset;
-                    };
-                    return key(b) >= key(start) && (!end || key(b) < key(end));
-                  });
-                  if (bookmarkView && !isBookmarked) return null;
-                  if (bookQuery) {
-                    const needle = bookQuery.toLocaleLowerCase();
-                    if (!pageSources[i]?.toLocaleLowerCase().includes(needle))
-                      return null;
-                  }
-                  return (
-                    <button
-                      class="page-entry"
-                      aria-current={
-                        Math.floor(i / layout.columns) === page
-                          ? "location"
-                          : undefined
-                      }
-                      onClick={() => {
-                        jumpPage(Math.floor(i / layout.columns));
-                        hide();
-                      }}
-                    >
-                      <span>
-                        <strong>{t("Page {0}", { 0: i + 1 })}</strong>
-                        <small>
-                          {bookQuery
-                            ? searchSnippet(pageSources[i], bookQuery)
-                            : entry.preview}
-                        </small>
-                      </span>
-                      {isBookmarked ? (
-                        <Icon name="bookmark" size={14} />
-                      ) : i < page * layout.columns ? (
-                        <Icon name="check" size={14} />
-                      ) : Math.floor(i / layout.columns) === page ? (
-                        <em>{t("NOW")}</em>
-                      ) : null}
-                    </button>
-                  );
-                })}
+              <nav aria-label={t("Chapters")}>
+                {!bookmarkView &&
+                  !bookQuery.trim() &&
+                  manifest.chapters.map((chapter, ci) => {
+                    const current = Number(at.split(".")[0]) === ci + 1;
+                    return (
+                      <button
+                        class="page-entry chapter-entry"
+                        data-chapter={ci + 1}
+                        aria-current={current ? "location" : undefined}
+                        onClick={() => {
+                          props.onJump(`${ci + 1}.1`);
+                          hide();
+                        }}
+                      >
+                        <span>
+                          <strong>
+                            {ci + 1}.{" "}
+                            {chapter[0] || t("Chapter {0}", { 0: ci + 1 })}
+                          </strong>
+                          <small>
+                            {t("Page {0}", { 0: chapterPages[ci] || 1 })}
+                          </small>
+                        </span>
+                        {current ? (
+                          <em>{t("NOW")}</em>
+                        ) : Number(at.split(".")[0]) > ci + 1 ? (
+                          <Icon name="check" size={14} />
+                        ) : null}
+                      </button>
+                    );
+                  })}
+                {(bookmarkView || bookQuery.trim()) &&
+                  pageIndex.map((entry, i) => {
+                    const isBookmarked = props.bookmarks?.some((b) => {
+                      const start = pageIndex[i],
+                        end = pageIndex[i + 1];
+                      const key = (x: { at: string; offset: number }) => {
+                        const [c, f] = x.at.split(".").map(Number);
+                        return c * 1e12 + f * 1e7 + x.offset;
+                      };
+                      return (
+                        key(b) >= key(start) && (!end || key(b) < key(end))
+                      );
+                    });
+                    if (bookmarkView && !isBookmarked) return null;
+                    if (bookQuery) {
+                      const needle = bookQuery.toLocaleLowerCase();
+                      if (!pageSources[i]?.toLocaleLowerCase().includes(needle))
+                        return null;
+                    }
+                    return (
+                      <button
+                        class="page-entry"
+                        aria-current={
+                          Math.floor(i / layout.columns) === page
+                            ? "location"
+                            : undefined
+                        }
+                        onClick={() => {
+                          jumpPage(Math.floor(i / layout.columns));
+                          hide();
+                        }}
+                      >
+                        <span>
+                          <strong>{t("Page {0}", { 0: i + 1 })}</strong>
+                          <small>
+                            {bookQuery
+                              ? searchSnippet(pageSources[i], bookQuery)
+                              : entry.preview}
+                          </small>
+                        </span>
+                        {isBookmarked ? (
+                          <Icon name="bookmark" size={14} />
+                        ) : i < page * layout.columns ? (
+                          <Icon name="check" size={14} />
+                        ) : Math.floor(i / layout.columns) === page ? (
+                          <em>{t("NOW")}</em>
+                        ) : null}
+                      </button>
+                    );
+                  })}
                 {bookmarkView && !props.bookmarks?.length && (
                   <p class="muted">{t("No bookmarks yet")}</p>
                 )}

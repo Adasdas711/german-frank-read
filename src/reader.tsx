@@ -23,6 +23,19 @@ import { Icon, Modal, Toggle, ProgressBar } from "./ui";
 import { PagedReader, type PageEntry } from "./paged-reader";
 import { BookText, type WordSelection } from "./book-text";
 import { BookCover } from "./book-cover";
+import {
+  CollectionMenu,
+  CollectionStrip,
+  CollectionEditor,
+  MoveBookDialog,
+  bookDrag,
+} from "./collection-ui";
+import {
+  checkedCollections,
+  moveCollection,
+  moveBookToCollection,
+  type BookCollection,
+} from "./collections";
 import { ThemesPanel } from "./themes-panel";
 import {
   exportBackup,
@@ -39,6 +52,7 @@ import {
   positionKey,
 } from "./library-model";
 import demos from "./demos.json";
+import immensee from "./immensee.json";
 import "./style.css";
 import "./books.css";
 
@@ -84,6 +98,14 @@ function App() {
   const [word, setWord] = useState<WordSelection | null>(null),
     [busy, setBusy] = useState(false);
   const [libraryFilter, setLibraryFilter] = useState("all");
+  const [collections, setCollections] = useState<BookCollection[]>([]),
+    [collectionFilter, setCollectionFilter] = useState("");
+  const [editingCollection, setEditingCollection] =
+      useState<BookCollection | null>(null),
+    [collectionBook, setCollectionBook] = useState<Book | null>(null);
+  const collectionsRef = useRef(collections);
+  collectionsRef.current = collections;
+
   const [wordTab, setWordTab] = useState("all"),
     [wordBook, setWordBook] = useState("all"),
     [selecting, setSelecting] = useState(false),
@@ -151,14 +173,26 @@ function App() {
     setSettings(next);
     await store.put("settings", "app", next);
   }, []);
+  const saveCollections = useCallback(async (list: BookCollection[]) => {
+    const checked = checkedCollections(list);
+    collectionsRef.current = checked;
+    setCollections(checked);
+    await store.put("settings", "collections", checked);
+  }, []);
+  useEffect(() => {
+    if (collectionFilter && !collections.some((c) => c.id === collectionFilter))
+      setCollectionFilter("");
+  }, [collections, collectionFilter]);
   const refresh = async () => {
-    const [b, p, w, s] = await Promise.all([
+    const [b, p, w, s, c] = await Promise.all([
       store.all<Book>("books"),
       store.all<Progress>("progress"),
       store.all<SavedWord>("words"),
       store.get<Settings>("settings", "app"),
+      store.get<BookCollection[]>("settings", "collections"),
     ]);
     setBooks(b);
+    setCollections(checkedCollections(c));
     setProgress(p);
     const prefs = store.checkedSettings(s);
     setSettings(prefs);
@@ -179,6 +213,7 @@ function App() {
   useEffect(() => {
     void (async () => {
       await ensureDemos(demos);
+      await ensureDemos([immensee], "immensee-initialized");
       await refresh();
       setReady(true);
       window.__frankaBoot?.finish();
@@ -597,8 +632,7 @@ function App() {
       text:
         b.manifest.title + ". " + t("Saved words will stay on this device."),
       action: async () => {
-        await store.remove("books", b.manifest.id);
-        await store.remove("progress", b.manifest.id);
+        await store.deleteBook(b.manifest.id);
         await refresh();
         setOverlay("");
         setDetails(null);
@@ -730,8 +764,88 @@ function App() {
       )}
     </>
   );
+  const createCollection = () => {
+    if (collectionsRef.current.length >= 200) {
+      notify(t("Collection limit reached"), true);
+      return;
+    }
+    setEditingCollection(null);
+    setCollectionBook(null);
+    setOverlay("collection-editor");
+  };
+  const manageCollection = (c: BookCollection) => {
+    setEditingCollection(c);
+    setCollectionBook(null);
+    setOverlay("collection-editor");
+  };
+  const selectCollection = (id: string) => {
+    setCollectionFilter(id);
+    setLibraryFilter("all");
+    navigate("library");
+  };
+  const reorderCollection = (id: string, before: string | null) =>
+    void run(() =>
+      saveCollections(moveCollection(collectionsRef.current, id, before)),
+    );
+  const shiftCollection = (direction: number) => {
+    if (!editingCollection) return;
+    const list = collectionsRef.current,
+      index = list.findIndex((c) => c.id === editingCollection.id);
+    if (index + direction < 0 || index + direction >= list.length) return;
+    const before =
+      direction < 0 ? list[index - 1].id : list[index + 2]?.id || null;
+    reorderCollection(editingCollection.id, before);
+  };
+  const saveCollection = async (name: string, bookIds: string[]) => {
+    await run(async () => {
+      if (!editingCollection && collectionsRef.current.length >= 200)
+        throw Error("Collection limit reached");
+      const now = new Date().toISOString(),
+        old = editingCollection,
+        id = old?.id || crypto.randomUUID();
+      let list = old
+        ? collectionsRef.current.map((c) =>
+            c.id === id ? { ...c, name, bookIds, updatedAt: now } : c,
+          )
+        : [...collectionsRef.current, { id, name, bookIds, updatedAt: now }];
+      if (!old && collectionBook)
+        list = moveBookToCollection(list, collectionBook.manifest.id, id);
+      await saveCollections(list);
+      setCollectionFilter(id);
+      setLibraryFilter("all");
+      setOverlay(collectionBook ? "details" : "");
+      if (!collectionBook) location.hash = "/library";
+      notify(t(old ? "Collection updated" : "Collection created"));
+    });
+  };
+  const moveBook = async (bookId: string, target: string | null) => {
+    await saveCollections(
+      moveBookToCollection(collectionsRef.current, bookId, target),
+    );
+    notify(t("Book moved"));
+  };
+  const deleteCollection = () => {
+    if (!editingCollection) return;
+    const id = editingCollection.id;
+    setConfirm({
+      title: t("Delete collection {0}?", { 0: editingCollection.name }),
+      text: t("The books will stay in your library."),
+      action: async () => {
+        await saveCollections(
+          collectionsRef.current.filter((c) => c.id !== id),
+        );
+        if (collectionFilter === id) setCollectionFilter("");
+        setOverlay("");
+      },
+    });
+  };
   const card = (b: Book) => (
-    <article class="shelf-book" key={b.manifest.id}>
+    <article
+      class="shelf-book"
+      key={b.manifest.id}
+      draggable
+      onDragStart={(e) => bookDrag(e, b.manifest.id)}
+    >
       <button
         class="cover-open"
         aria-label={b.manifest.title}
@@ -812,7 +926,10 @@ function App() {
   const ankiCount = chosenAnki.length;
   const title =
     page === "library"
-      ? t(libraryFilter === "all" ? "All Books" : filterLabel(libraryFilter))
+      ? collectionFilter
+        ? collections.find((c) => c.id === collectionFilter)?.name ||
+          t("All Books")
+        : t(libraryFilter === "all" ? "All Books" : filterLabel(libraryFilter))
       : page === "words"
         ? t(wordTab === "book" ? "Words by Book" : "All words")
         : t(page === "search" ? "Search" : "Home");
@@ -835,15 +952,25 @@ function App() {
       ((b as any).addedAt || "").localeCompare((a as any).addedAt || ""),
     )
     .slice(0, 4);
-  const filteredBooks = books.filter(
-    (b) =>
-      libraryFilter === "all" ||
-      libraryFilter === b.manifest.level ||
-      (libraryFilter === "reading" &&
-        progress.some((p) => p.book === b.manifest.id && p.percent < 100)) ||
-      (libraryFilter === "finished" &&
-        progress.some((p) => p.book === b.manifest.id && p.percent === 100)),
-  );
+  const filteredBooks = collectionFilter
+    ? books.filter((b) =>
+        collections
+          .find((c) => c.id === collectionFilter)
+          ?.bookIds.includes(b.manifest.id),
+      )
+    : books.filter(
+        (b) =>
+          libraryFilter === "all" ||
+          libraryFilter === b.manifest.level ||
+          (libraryFilter === "reading" &&
+            progress.some(
+              (p) => p.book === b.manifest.id && p.percent < 100,
+            )) ||
+          (libraryFilter === "finished" &&
+            progress.some(
+              (p) => p.book === b.manifest.id && p.percent === 100,
+            )),
+      );
   const foundBooks = books.filter((b) =>
     [b.manifest.title, b.manifest.author, b.manifest.level]
       .join(" ")
@@ -1021,12 +1148,15 @@ function App() {
               <button
                 class={
                   "sidebar-item" +
-                  (page === "library" && libraryFilter === value
+                  (page === "library" &&
+                  !collectionFilter &&
+                  libraryFilter === value
                     ? " active"
                     : "")
                 }
                 onClick={() => {
                   setLibraryFilter(value);
+                  setCollectionFilter("");
                   navigate("library");
                 }}
               >
@@ -1076,6 +1206,16 @@ function App() {
               <Icon name="download" size={17} />
               {t("Export to Anki")}
             </button>
+            <CollectionMenu
+              collections={collections}
+              books={books}
+              active={page === "library" ? collectionFilter : ""}
+              onSelect={selectCollection}
+              onCreate={createCollection}
+              onManage={manageCollection}
+              onReorder={reorderCollection}
+              onMoveBook={(id, target) => void run(() => moveBook(id, target))}
+            />
             <div class="sidebar-spacer" />
             <button
               class="sidebar-item"
@@ -1255,18 +1395,57 @@ function App() {
                   {filters.map((value) => (
                     <button
                       role="tab"
-                      aria-selected={value === libraryFilter}
-                      onClick={() => setLibraryFilter(value)}
+                      aria-selected={
+                        !collectionFilter && value === libraryFilter
+                      }
+                      onClick={() => {
+                        setCollectionFilter("");
+                        setLibraryFilter(value);
+                      }}
                     >
                       {t(value === "all" ? "All" : filterLabel(value))}
                     </button>
                   ))}
                 </div>
+                <CollectionStrip
+                  collections={collections}
+                  active={collectionFilter}
+                  onSelect={selectCollection}
+                  onCreate={createCollection}
+                  onManage={manageCollection}
+                />
                 <div class="book-grid">{filteredBooks.map(card)}</div>
                 {!filteredBooks.length && (
                   <div class="empty-state">
                     <Icon name="book" size={36} />
-                    <p>{t("No books match this filter")}</p>
+                    <p>
+                      {t(
+                        collectionFilter
+                          ? "This collection is empty"
+                          : "No books match this filter",
+                      )}
+                    </p>
+                    {collectionFilter && (
+                      <>
+                        <p>
+                          {t(
+                            "Choose books in the collection settings or move a book from its details.",
+                          )}
+                        </p>
+                        <button
+                          class="pill glass"
+                          onClick={() =>
+                            manageCollection(
+                              collections.find(
+                                (c) => c.id === collectionFilter,
+                              )!,
+                            )
+                          }
+                        >
+                          {t("Manage Collection")}
+                        </button>
+                      </>
+                    )}
                   </div>
                 )}
               </>
@@ -1643,6 +1822,33 @@ function App() {
           }
         />
       )}
+      {overlay === "collection-editor" && (
+        <CollectionEditor
+          collection={editingCollection}
+          collections={collections}
+          books={books}
+          initialBooks={collectionBook ? [collectionBook.manifest.id] : []}
+          onSave={saveCollection}
+          onClose={() => setOverlay(collectionBook ? "move-collection" : "")}
+          onReorder={shiftCollection}
+          onDelete={deleteCollection}
+        />
+      )}
+      {overlay === "move-collection" && collectionBook && (
+        <MoveBookDialog
+          book={collectionBook}
+          collections={collections}
+          onClose={() => setOverlay("details")}
+          onCreate={() => {
+            setEditingCollection(null);
+            setOverlay("collection-editor");
+          }}
+          onSave={async (target) => {
+            await run(() => moveBook(collectionBook.manifest.id, target));
+            setOverlay("details");
+          }}
+        />
+      )}
       {overlay === "details" && details && (
         <Modal title={details.manifest.title} onClose={() => setOverlay("")}>
           <div class="book-details">
@@ -1706,6 +1912,15 @@ function App() {
             <button onClick={() => openAnki(details.manifest.id)}>
               <Icon name="download" />
               {t("Book words to Anki")}
+            </button>
+            <button
+              onClick={() => {
+                setCollectionBook(details);
+                setOverlay("move-collection");
+              }}
+            >
+              <Icon name="collection" />
+              {t("Move to Collection")}
             </button>
             <button class="danger quiet" onClick={() => removeBook(details)}>
               {t("Remove from Library")}
@@ -1997,6 +2212,8 @@ function App() {
                 action: async () => {
                   await store.clearAll();
                   setBooks([]);
+                  setCollections([]);
+                  setCollectionFilter("");
                   setProgress([]);
                   setSaved([]);
                   setIndexCache({});
