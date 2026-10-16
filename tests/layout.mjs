@@ -83,6 +83,45 @@ try {
             assert.ok(nav.y < 100, "Desktop navigation must be at the top");
           }
         }
+        if (route.startsWith("read/")) {
+          for (const mode of ["Франк", "Чистый", "Параллель"]) {
+            await page.getByRole("tab", { name: mode, exact: true }).click();
+            await page.waitForFunction(
+              (mode) =>
+                [...document.querySelectorAll("[role=tab]")].some(
+                  (t) =>
+                    t.textContent === mode &&
+                    t.getAttribute("aria-selected") === "true",
+                ),
+              mode,
+            );
+            assert.equal(
+              await page.locator(".word-panel").count(),
+              0,
+              "No word panel before interaction: " + mode,
+            );
+            assert.equal(
+              await page
+                .getByText("Нажмите на слово, чтобы увидеть подсказку", {
+                  exact: true,
+                })
+                .count(),
+              0,
+              "No instruction text",
+            );
+            await page.locator(".reading-panel .word").first().click();
+            await page
+              .getByRole("complementary", {
+                name: "Подсказка к слову",
+                exact: true,
+              })
+              .waitFor();
+            await page
+              .getByRole("button", { name: "Закрыть подсказку", exact: true })
+              .click();
+            await page.locator(".word-panel").waitFor({ state: "detached" });
+          }
+        }
         const metrics = await page.evaluate(() => ({
           root: getComputedStyle(document.documentElement).backgroundColor,
           body: getComputedStyle(document.body).backgroundColor,

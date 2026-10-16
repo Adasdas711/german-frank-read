@@ -680,11 +680,7 @@ function App() {
                   >
                     Текст без подсказок
                   </Toggle>
-                ) : (
-                  <small class="muted">
-                    Нажмите на слово, чтобы увидеть подсказку
-                  </small>
-                )}
+                ) : null}
               </div>
               {mode === "parallel" ? (
                 <section
@@ -812,15 +808,7 @@ function App() {
                   )}
                 </button>
               </aside>
-            ) : (
-              <aside class="panel word-panel">
-                <div class="eyebrow">Слово за словом</div>
-                <p class="muted" style={{ margin: 0 }}>
-                  Нажмите на немецкое слово — здесь появятся произношение,
-                  перевод и контекст.
-                </p>
-              </aside>
-            )}
+            ) : null}
           </div>
         </>
       ) : (
