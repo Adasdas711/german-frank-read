@@ -1,5 +1,9 @@
 // Runs before the application so even syntax/module errors have a visible report.
 (function () {
+  try {
+    var theme = localStorage.getItem('franka-theme');
+    document.documentElement.dataset.theme = ['light','dark','system'].indexOf(theme) >= 0 ? theme : 'system';
+  } catch (_) { document.documentElement.dataset.theme = 'system'; }
   var complete = false;
   var timer = setTimeout(function () {
     fail('Запуск занял слишком много времени. Проверьте доступ к хранилищу браузера и обновите страницу.');

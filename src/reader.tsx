@@ -36,7 +36,13 @@ function App() {
     [books, setBooks] = useState<Book[]>([]),
     [progress, setProgress] = useState<Progress[]>([]),
     [saved, setSaved] = useState<SavedWord[]>([]),
-    [settings, setSettings] = useState<Settings>(store.defaults),
+    [settings, setSettings] = useState<Settings>(() => {
+      const cached = document.documentElement.dataset.theme;
+      return {
+        ...store.defaults,
+        theme: ["light", "dark", "system"].includes(cached) ? cached : "system",
+      };
+    }),
     [route, setRoute] = useState(location.hash.slice(2) || "home");
   const [message, setMessage] = useState<{
       text: string;
@@ -126,6 +132,20 @@ function App() {
   useEffect(() => {
     const root = document.documentElement;
     root.dataset.theme = settings.theme;
+    try {
+      localStorage.setItem("franka-theme", settings.theme);
+    } catch {
+      /* IndexedDB remains the source of truth. */
+    }
+    const media = matchMedia("(prefers-color-scheme: dark)");
+    const updateBrowserColor = () => {
+      const meta = document.querySelector<HTMLMetaElement>(
+        'meta[name="theme-color"]',
+      );
+      if (meta) meta.content = getComputedStyle(root).backgroundColor;
+    };
+    updateBrowserColor();
+    media.addEventListener("change", updateBrowserColor);
     root.style.setProperty("--size", settings.fontSize + "px");
     root.style.setProperty(
       "--reading",
@@ -135,6 +155,7 @@ function App() {
           ? "'Golos Text', sans-serif"
           : "system-ui, sans-serif",
     );
+    return () => media.removeEventListener("change", updateBrowserColor);
   }, [settings]);
   const saveSettings = async (p: Partial<Settings>) => {
     const next = { ...settings, ...p };
@@ -804,11 +825,21 @@ function App() {
         </>
       ) : (
         <>
-          <header class="app-header">
+          <header class="app-header workspace-header">
             <div class="header-inner">
-              <a class="brand" href={href("home")}>
-                Немецкий по Франку
+              <a
+                class="brand"
+                href={href("home")}
+                aria-label="Немецкий по Франку"
+              >
+                <span class="brand-mark">
+                  <Icon name="book" size={24} />
+                </span>
+                <span>
+                  Немецкий<small>по Франку</small>
+                </span>
               </a>
+              <div class="sidebar-label eyebrow">Моя библиотека</div>
               <nav class="nav" aria-label="Разделы">
                 {nav.map(([v, label, icon]) => (
                   <a
@@ -816,22 +847,62 @@ function App() {
                     aria-current={page === v ? "page" : undefined}
                   >
                     <Icon name={icon} />
-                    {label}
+                    <span>{label}</span>
+                    {page === v && <span class="nav-dot" aria-hidden="true" />}
                   </a>
                 ))}
               </nav>
+              <div class="sidebar-footer">
+                <span class="local-indicator" />
+                <div>
+                  На этом устройстве<small>Книги, слова и ваш прогресс</small>
+                </div>
+              </div>
               <a
-                class="settings-link icon"
+                class="settings-link"
                 href={href("settings")}
                 aria-label="Настройки"
+                aria-current={page === "settings" ? "page" : undefined}
               >
                 <Icon name="settings" />
+                <span>Настройки</span>
               </a>
             </div>
           </header>
-          <main class="page">
+          <main class="page workspace-page">
+            <div class="workspace-topbar">
+              <span class="eyebrow">Чтение · Немецкий язык</span>
+              <button
+                class="icon theme-button"
+                aria-label="Переключить тему"
+                onClick={() => {
+                  const dark =
+                    settings.theme === "dark" ||
+                    (settings.theme === "system" &&
+                      matchMedia("(prefers-color-scheme: dark)").matches);
+                  void run(() =>
+                    saveSettings({ theme: dark ? "light" : "dark" }),
+                  );
+                }}
+              >
+                <Icon name={settings.theme === "dark" ? "sun" : "moon"} />
+              </button>
+            </div>
             {page === "home" && (
               <>
+                <div class="home-heading">
+                  <div>
+                    <span class="eyebrow">Снова к хорошей книге</span>
+                    <h1>Продолжим читать?</h1>
+                    <p class="muted">
+                      Откройте книгу и продолжайте с сохранённого места.
+                    </p>
+                  </div>
+                  <button class="btn" onClick={() => fileRef.current?.click()}>
+                    <Icon name="upload" />
+                    Добавить книгу
+                  </button>
+                </div>
                 {current ? (
                   (() => {
                     const data = readBook(current.bytes),
@@ -839,40 +910,172 @@ function App() {
                       idx = addresses(data.content).indexOf(cp?.at || "1.1");
                     return (
                       <>
-                        <section class="hero" aria-label="Читаю сейчас">
-                          <div class="hero-copy">
-                            <div class="row">
-                              <span class="eyebrow">Читаю сейчас</span>
-                              <span class="badge">
-                                Уровень {current.manifest.level}
+                        <div class="dashboard-grid">
+                          <div class="stack">
+                            <section class="hero" aria-label="Читаю сейчас">
+                              <div class="book-cover" aria-hidden="true">
+                                <span class="cover-edition">
+                                  DEUTSCHE LITERATUR
+                                </span>
+                                <span class="cover-rule" />
+                                <span class="cover-title">
+                                  {current.manifest.title
+                                    .replace(/^(Die|Der|Das)\s+/i, "")
+                                    .charAt(0)}
+                                </span>
+                                <span class="cover-author">
+                                  {current.manifest.author}
+                                </span>
+                                <Icon name="book" size={28} />
+                              </div>
+                              <div class="hero-copy">
+                                <div class="row">
+                                  <span class="eyebrow">Читаю сейчас</span>
+                                  <span class="badge">
+                                    {current.manifest.level}
+                                  </span>
+                                </div>
+                                <h2>{current.manifest.title}</h2>
+                                <div class="muted book-byline">
+                                  {current.manifest.author}
+                                </div>
+                                <div class="book-subtitle muted">
+                                  {current.manifest.titleRu}
+                                </div>
+                                <div class="reading-progress">
+                                  <div class="row between">
+                                    <small>
+                                      Отрывок {idx + 1} из{" "}
+                                      {current.manifest.stats.fragments}
+                                    </small>
+                                    <small class="muted">
+                                      {cp?.percent || 0}%
+                                    </small>
+                                  </div>
+                                  <ProgressBar value={cp?.percent || 0} />
+                                </div>
+                                <div class="hero-actions">
+                                  <button
+                                    class="primary"
+                                    onClick={() => go(current)}
+                                  >
+                                    Читать дальше
+                                    <Icon name="next" />
+                                  </button>
+                                  <small class="muted">Место сохранено</small>
+                                </div>
+                              </div>
+                            </section>
+                            <section class="next-fragment">
+                              <div class="row between">
+                                <span class="eyebrow">
+                                  {cp?.percent === 100
+                                    ? "Знакомый отрывок"
+                                    : "На чём остановились"}
+                                </span>
+                                <span class="fragment-address">
+                                  {idx + 1} / {current.manifest.stats.fragments}
+                                </span>
+                              </div>
+                              <blockquote lang="de">
+                                {plain(p.chunks).slice(0, 220)}
+                                {plain(p.chunks).length > 220 ? "…" : ""}
+                              </blockquote>
+                              <span class="muted">
+                                Подсказки и перевод — внутри книги
                               </span>
-                            </div>
-                            <h2>{current.manifest.title}</h2>
-                            <div class="muted">
-                              {current.manifest.author} ·{" "}
-                              {current.manifest.titleRu}
-                            </div>
-                            <div>
-                              <ProgressBar value={cp?.percent || 0} />
-                              <small class="muted">
-                                Отрывок {idx + 1} из{" "}
-                                {current.manifest.stats.fragments}
-                                {cp?.percent === 100 ? " · Прочитано" : ""}
-                              </small>
-                            </div>
-                            <blockquote>
-                              „{plain(p.chunks).slice(0, 175)}…“
-                            </blockquote>
+                            </section>
                           </div>
-                          <button class="btn teal" onClick={() => go(current)}>
-                            Читать дальше
-                            <Icon name="next" />
-                          </button>
+                          <aside class="dashboard-aside">
+                            <section class="panel method-card">
+                              <span class="eyebrow">Метод Франка</span>
+                              <h2>
+                                Читайте. Понимайте.
+                                <br /> Запоминайте.
+                              </h2>
+                              <ol>
+                                <li>
+                                  <span>01</span>
+                                  <div>
+                                    <strong>С подсказками</strong>
+                                    <small>Уловите смысл без словаря</small>
+                                  </div>
+                                </li>
+                                <li>
+                                  <span>02</span>
+                                  <div>
+                                    <strong>Без перевода</strong>
+                                    <small>Прочитайте отрывок ещё раз</small>
+                                  </div>
+                                </li>
+                                <li>
+                                  <span>03</span>
+                                  <div>
+                                    <strong>Своими словами</strong>
+                                    <small>Сохраните то, что пригодится</small>
+                                  </div>
+                                </li>
+                              </ol>
+                            </section>
+                            <a class="vocabulary-card" href={href("words")}>
+                              <Icon name="words" size={24} />
+                              <div>
+                                <strong>
+                                  {saved.length}{" "}
+                                  {saved.length === 1 ? "слово" : "слов"}
+                                </strong>
+                                <span>В вашем словаре</span>
+                              </div>
+                              <Icon name="next" />
+                            </a>
+                          </aside>
+                        </div>
+                        <section class="home-shelf">
+                          <div class="row between shelf-heading">
+                            <div>
+                              <span class="eyebrow">Всегда под рукой</span>
+                              <h2>На вашей полке</h2>
+                            </div>
+                            <a href={href("texts")}>
+                              Все тексты
+                              <Icon name="next" size={16} />
+                            </a>
+                          </div>
+                          <div class="shelf-grid">
+                            {books.slice(0, 3).map((book, i) => (
+                              <button
+                                class={"shelf-book shelf-color-" + i}
+                                onClick={() => go(book)}
+                              >
+                                <span class="shelf-spine" aria-hidden="true" />
+                                <span class="shelf-book-copy">
+                                  <span class="row between">
+                                    <span class="badge">
+                                      {book.manifest.level}
+                                    </span>
+                                    <small class="muted">
+                                      {book.manifest.stats.fragments} отр.
+                                    </small>
+                                  </span>
+                                  <strong lang="de">
+                                    {book.manifest.title}
+                                  </strong>
+                                  <small class="muted">
+                                    {book.manifest.author}
+                                  </small>
+                                </span>
+                                <Icon name="next" size={18} />
+                              </button>
+                            ))}
+                          </div>
                         </section>
-                        <p class="hint-note">
-                          Встроены короткие демонстрационные отрывки. Полные
-                          книги можно добавить в разделе «Тексты».
-                        </p>
+                        <div class="demo-note">
+                          <Icon name="texts" size={18} />
+                          <span>
+                            На полке — демонстрационные отрывки. Добавляйте
+                            полные книги в формате .fbook.
+                          </span>
+                        </div>
                       </>
                     );
                   })()
@@ -892,9 +1095,10 @@ function App() {
                     </button>
                   </div>
                 )}
-                <p class="bottom-note">
-                  Чтение в своём темпе. Без аккаунтов и интернета.
-                </p>
+                <footer class="workspace-footer">
+                  <span>Чтение в своём темпе</span>
+                  <span>Без аккаунтов · Всё на устройстве</span>
+                </footer>
               </>
             )}
             {page === "texts" && (
