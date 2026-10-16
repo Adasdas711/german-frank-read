@@ -1,5 +1,2647 @@
 [
-{"id":"6f1c2a9e-3b7d-4f0a-9c55-2e8b1d4a7c10","meta":{"title":"Die Bremer Stadtmusikanten","titleRu":"Бременские музыканты · начало сказки","author":"Brüder Grimm","level":"A2","source":"Brüder Grimm, Kinder- und Hausmärchen, KHM 27 (1857); демонстрационный отрывок","license":"public-domain"},"chapters":[{"n":1,"title":"Der Esel · Осёл","fragments":[{"chunks":[["Es hatte ein Mann einen Esel","был у одного человека осёл; букв. имел один человек осла"],", ",["der schon lange Jahre","который уже долгие годы"]," ",["unverdrossen die Säcke in die Mühle getragen hatte","неустанно носил мешки на мельницу"],", ",["dessen Kräfte aber nun zu Ende gingen","но силы которого теперь подходили к концу"],", ",["so daß er zur Arbeit immer untauglicher ward","так что для работы он становился всё менее пригоден"],"."],"translation":["Был у одного человека осёл, который долгие годы без устали носил мешки на мельницу, но теперь силы его иссякали, и он становился всё менее пригоден к работе."]},{"chunks":[["Da dachte der Herr daran","тогда подумал хозяин о том"],", ",["ihn aus dem Futter zu schaffen","чтобы его с корма снять","перестать кормить"],". ",["Aber der Esel merkte","но осёл заметил"],", ",["daß kein guter Wind wehte","что недобрый ветер дует","дело плохо"],", ",["lief fort","убежал"]," ",["und machte sich auf den Weg nach Bremen","и отправился в путь в Бремен"],"; ",["dort, meinte er","там, думал он"],", ",["könnte er ja Stadtmusikant werden","мог бы он ведь городским музыкантом стать"],"."],"translation":["Тогда хозяин решил больше его не кормить.","Но осёл почуял недоброе, убежал и отправился в Бремен: там, думал он, можно стать городским музыкантом."]},{"chunks":[["Als er ein Weilchen fortgegangen war","когда он немного прошёл"],", ",["fand er einen Jagdhund auf dem Wege liegen","он нашёл лежащую на дороге охотничью собаку"],", ",["der jappte wie einer","которая тяжело дышала, словно кто-то"],", ",["der sich müde gelaufen hat","кто набегался до усталости"],"."],"translation":["Пройдя немного, он увидел на дороге охотничью собаку, которая тяжело дышала, словно набегалась до изнеможения."]}]}],"lemmas":[["der Esel","осёл","n"],["merken","замечать, чуять","v"],["das Futter","корм","n"],["der Herr","хозяин","n"],["der Weg","путь, дорога","n"],["die Mühle","мельница","n"],["tragen","нести","v"],["die Kraft","сила","n"],["unverdrossen","неустанно","adv"],["der Jagdhund","охотничья собака","n"],["laufen","бежать","v"]],"forms":{"merkte":"merken","Säcke":"der Sack","getragen":"tragen","Kräfte":"die Kraft","Wege":"der Weg","gelaufen":"laufen"}},
-{"id":"a2d660a2-2354-4f3a-b302-2937bd6e31bf","meta":{"title":"Rotkäppchen","titleRu":"Красная Шапочка · начало сказки","author":"Brüder Grimm","level":"A2","source":"Brüder Grimm, Kinder- und Hausmärchen, KHM 26 (1857); демонстрационный отрывок","license":"public-domain"},"chapters":[{"n":1,"title":"Das Mädchen · Девочка","fragments":[{"chunks":[["Es war einmal eine kleine süße Dirne","жила-была маленькая милая девочка"],", ",["die hatte jedermann lieb","которую все любили"],", ",["der sie nur ansah","кто только её видел"],", ",["am allerliebsten aber ihre Großmutter","но больше всех — её бабушка"],", ",["die wußte gar nicht","которая совсем не знала"],", ",["was sie alles dem Kinde geben sollte","что ещё подарить ребёнку"],"."],"translation":["Жила-была милая маленькая девочка, которую любили все, кто её видел, а больше всех — бабушка, которая и не знала, что ещё подарить внучке."]},{"chunks":[["Einmal schenkte sie ihm ein Käppchen von rotem Sammet","однажды она подарила ей шапочку из красного бархата"],", ",["und weil ihm das so wohl stand","и поскольку та ей так шла"]," ",["und es nichts anders mehr tragen wollte","и она больше ничего другого носить не хотела"],", ",["hieß es nur das Rotkäppchen","её называли только Красной Шапочкой"],"."],"translation":["Однажды бабушка подарила ей шапочку из красного бархата, и поскольку та ей очень шла и девочка ничего другого носить не хотела, её стали звать Красной Шапочкой."]}]}],"lemmas":[["die Großmutter","бабушка","n"],["schenken","дарить","v"],["das Käppchen","шапочка","n"],["der Sammet","бархат (стар.)","n"],["lieb","милый, любимый","adj"]],"forms":{"schenkte":"schenken","Käppchen":"das Käppchen"}},
-{"id":"90aa7c85-a77f-4b44-833f-1d54812cab1b","meta":{"title":"Die Verwandlung","titleRu":"Превращение · первый абзац","author":"Franz Kafka","level":"B2","source":"Franz Kafka, Die Verwandlung (1915); демонстрационный отрывок","license":"public-domain"},"chapters":[{"n":1,"title":"I · Пробуждение","fragments":[{"chunks":[["Als Gregor Samsa eines Morgens","когда Грегор Замза однажды утром"]," ",["aus unruhigen Träumen erwachte","проснулся после тревожных снов"],", ",["fand er sich in seinem Bett","он обнаружил себя в своей постели"]," ",["zu einem ungeheuren Ungeziefer verwandelt","превращённым в огромное насекомое"],"."],"translation":["Проснувшись однажды утром после тревожных снов, Грегор Замза обнаружил, что он у себя в постели превратился в страшное насекомое."]}]}],"lemmas":[["erwachen","просыпаться","v"],["das Ungeziefer","паразит, вредное насекомое","n"],["der Traum","сон, мечта","n"],["verwandeln","превращать","v"]],"forms":{"erwachte":"erwachen","Träumen":"der Traum","verwandelt":"verwandeln"}}
+  {
+    "id": "6f1c2a9e-3b7d-4f0a-9c55-2e8b1d4a7c10",
+    "meta": {
+      "title": "Die Bremer Stadtmusikanten",
+      "titleRu": "Бременские музыканты · расширенный отрывок",
+      "author": "Brüder Grimm",
+      "level": "A2",
+      "source": "Brüder Grimm, Kinder- und Hausmärchen, KHM 27 (1857); демонстрационный отрывок",
+      "license": "public-domain"
+    },
+    "chapters": [
+      {
+        "n": 1,
+        "title": "Auf dem Weg nach Bremen · По дороге в Бремен",
+        "fragments": [
+          {
+            "chunks": [
+              [
+                "Es hatte ein Mann einen Esel",
+                "был у одного человека осёл; букв. имел один человек осла"
+              ],
+              ", ",
+              [
+                "der schon lange Jahre",
+                "который уже долгие годы"
+              ],
+              " ",
+              [
+                "unverdrossen die Säcke in die Mühle getragen hatte",
+                "неустанно носил мешки на мельницу"
+              ],
+              ", ",
+              [
+                "dessen Kräfte aber nun zu Ende gingen",
+                "но силы которого теперь подходили к концу"
+              ],
+              ", ",
+              [
+                "so daß er zur Arbeit immer untauglicher ward",
+                "так что для работы он становился всё менее пригоден"
+              ],
+              "."
+            ],
+            "translation": [
+              "Был у одного человека осёл, который долгие годы без устали носил мешки на мельницу, но теперь силы его иссякали, и он становился всё менее пригоден к работе."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Da dachte der Herr daran",
+                "тогда подумал хозяин о том"
+              ],
+              ", ",
+              [
+                "ihn aus dem Futter zu schaffen",
+                "чтобы его с корма снять",
+                "перестать кормить"
+              ],
+              ". ",
+              [
+                "Aber der Esel merkte",
+                "но осёл заметил"
+              ],
+              ", ",
+              [
+                "daß kein guter Wind wehte",
+                "что недобрый ветер дует",
+                "дело плохо"
+              ],
+              ", ",
+              [
+                "lief fort",
+                "убежал"
+              ],
+              " ",
+              [
+                "und machte sich auf den Weg nach Bremen",
+                "и отправился в путь в Бремен"
+              ],
+              "; ",
+              [
+                "dort, meinte er",
+                "там, думал он"
+              ],
+              ", ",
+              [
+                "könnte er ja Stadtmusikant werden",
+                "мог бы он ведь городским музыкантом стать"
+              ],
+              "."
+            ],
+            "translation": [
+              "Тогда хозяин решил больше его не кормить.",
+              "Но осёл почуял недоброе, убежал и отправился в Бремен: там, думал он, можно стать городским музыкантом."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Als er ein Weilchen fortgegangen war",
+                "когда он немного прошёл"
+              ],
+              ", ",
+              [
+                "fand er einen Jagdhund auf dem Wege liegen",
+                "он нашёл лежащую на дороге охотничью собаку"
+              ],
+              ", ",
+              [
+                "der jappte wie einer",
+                "которая тяжело дышала, словно кто-то"
+              ],
+              ", ",
+              [
+                "der sich müde gelaufen hat",
+                "кто набегался до усталости"
+              ],
+              "."
+            ],
+            "translation": [
+              "Пройдя немного, он увидел на дороге охотничью собаку, которая тяжело дышала, словно набегалась до изнеможения."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "\"Was japst du so, Packan?\"",
+                "«Что ты так тяжело дышишь, Хватай?»"
+              ],
+              " ",
+              [
+                "fragte der Esel.",
+                "спросил осёл"
+              ]
+            ],
+            "translation": [
+              "— Что ты так тяжело дышишь, Хватай?",
+              "— спросил осёл."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "\"Ach\", sagte der Hund,",
+                "«Ах», — сказал пёс"
+              ],
+              " ",
+              [
+                "\"weil ich alt bin",
+                "«поскольку я стар"
+              ],
+              " ",
+              [
+                "und jeden Tag schwächer werde,",
+                "и с каждым днём становлюсь слабее"
+              ],
+              " ",
+              [
+                "auch auf der Jagd nicht mehr fort kann,",
+                "и на охоте больше не могу поспевать"
+              ],
+              " ",
+              [
+                "hat mich mein Herr wollen totschlagen,",
+                "мой хозяин хотел меня убить"
+              ],
+              " ",
+              [
+                "da hab ich Reißaus genommen;",
+                "тогда я пустился наутёк"
+              ],
+              " ",
+              [
+                "aber womit soll ich nun mein Brot verdienen?\"",
+                "но чем же мне теперь зарабатывать на хлеб?»"
+              ]
+            ],
+            "translation": [
+              "— Ах, — сказал пёс, — я старею, с каждым днём слабею и больше не могу поспевать на охоте, поэтому хозяин хотел меня убить, и я убежал; но как мне теперь зарабатывать на хлеб?"
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "\"Weißt du was\", sprach der Esel,",
+                "«Знаешь что», — сказал осёл"
+              ],
+              " ",
+              [
+                "\"ich gehe nach Bremen",
+                "«я иду в Бремен"
+              ],
+              " ",
+              [
+                "und werde dort Stadtmusikant,",
+                "и стану там городским музыкантом"
+              ],
+              " ",
+              [
+                "geh mit",
+                "иди со мной"
+              ],
+              " ",
+              [
+                "und laß dich auch bei der Musik annehmen.",
+                "и тоже наймись в музыканты"
+              ],
+              " ",
+              [
+                "Ich spiele die Laute,",
+                "я буду играть на лютне"
+              ],
+              " ",
+              [
+                "und du schlägst die Pauken.\"",
+                "а ты будешь бить в литавры»"
+              ]
+            ],
+            "translation": [
+              "— Знаешь что, — сказал осёл, — я иду в Бремен и стану там городским музыкантом; пойдём со мной и тоже наймись в музыканты.",
+              "Я буду играть на лютне, а ты — бить в литавры."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Der Hund wars zufrieden,",
+                "пёс был этим доволен"
+              ],
+              " ",
+              [
+                "und sie gingen weiter.",
+                "и они пошли дальше"
+              ],
+              " ",
+              [
+                "Es dauerte nicht lange,",
+                "прошло немного времени"
+              ],
+              " ",
+              [
+                "so saß da eine Katze an dem Weg",
+                "и вот у дороги сидела кошка"
+              ],
+              " ",
+              [
+                "und machte ein Gesicht wie drei Tage Regenwetter.",
+                "с таким лицом, словно три дня шёл дождь"
+              ]
+            ],
+            "translation": [
+              "Пёс согласился, и они пошли дальше.",
+              "Вскоре они увидели у дороги кошку с такой кислой мордой, словно три дня подряд шёл дождь."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "\"Nun, was ist dir in die Quere gekommen,",
+                "«Ну, что у тебя случилось; букв. что пересекло тебе дорогу"
+              ],
+              " ",
+              [
+                "alter Bartputzer?\"",
+                "старый усатый умывальщик?»"
+              ],
+              " ",
+              [
+                "sprach der Esel.",
+                "сказал осёл"
+              ]
+            ],
+            "translation": [
+              "— Ну, что у тебя стряслось, старый усатый умывальщик?",
+              "— спросил осёл."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "\"Wer kann da lustig sein,",
+                "«Кто же может веселиться"
+              ],
+              " ",
+              [
+                "wenns einem an den Kragen geht\",",
+                "когда дело касается собственной шкуры»"
+              ],
+              " ",
+              [
+                "antwortete die Katze,",
+                "ответила кошка"
+              ],
+              " ",
+              [
+                "\"weil ich nun zu Jahren komme,",
+                "«поскольку я уже старею"
+              ],
+              " ",
+              [
+                "meine Zähne stumpf werden",
+                "мои зубы тупятся"
+              ],
+              " ",
+              [
+                "und ich lieber hinter dem Ofen sitze und spinne,",
+                "и я предпочитаю сидеть за печкой и мурлыкать"
+              ],
+              " ",
+              [
+                "als nach Mäusen herumjage,",
+                "а не гоняться за мышами"
+              ],
+              " ",
+              [
+                "hat mich meine Frau ersäufen wollen;",
+                "моя хозяйка хотела меня утопить"
+              ],
+              " ",
+              [
+                "ich habe mich zwar noch fortgemacht,",
+                "я, правда, успела улизнуть"
+              ],
+              " ",
+              [
+                "aber nun ist guter Rat teuer.",
+                "но теперь трудно найти выход; букв. хороший совет дорог"
+              ],
+              " ",
+              [
+                "Wo soll ich nun hin?\"",
+                "куда же мне теперь идти?»"
+              ]
+            ],
+            "translation": [
+              "— Как тут веселиться, когда речь о собственной шкуре, — ответила кошка, — я старею, зубы тупятся, и мне больше нравится сидеть за печкой и мурлыкать, чем гоняться за мышами, поэтому хозяйка хотела меня утопить; я успела убежать, но теперь не знаю, что делать.",
+              "Куда мне теперь податься?"
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "\"Geh mit uns nach Bremen,",
+                "«Иди с нами в Бремен"
+              ],
+              " ",
+              [
+                "du verstehst dich doch auf die Nachtmusik,",
+                "ты ведь знаешь толк в ночной музыке"
+              ],
+              " ",
+              [
+                "da kannst du ein Stadtmusikant werden.\"",
+                "там ты сможешь стать городским музыкантом»"
+              ],
+              " ",
+              [
+                "Die Katze hielt das für gut",
+                "кошка сочла это хорошей мыслью"
+              ],
+              " ",
+              [
+                "und ging mit.",
+                "и пошла с ними"
+              ]
+            ],
+            "translation": [
+              "— Иди с нами в Бремен: ты ведь умеешь устраивать ночные концерты, там сможешь стать городским музыкантом.",
+              "Кошке понравилась эта мысль, и она пошла с ними."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Darauf kamen die drei Landesflüchtigen",
+                "затем трое беглецов"
+              ],
+              " ",
+              [
+                "an einem Hof vorbei,",
+                "проходили мимо одного двора"
+              ],
+              " ",
+              [
+                "da saß auf dem Tor der Haushahn",
+                "и вот на воротах сидел домашний петух"
+              ],
+              " ",
+              [
+                "und schrie aus Leibeskräften.",
+                "и кричал изо всех сил"
+              ]
+            ],
+            "translation": [
+              "Затем трое беглецов проходили мимо двора, где на воротах сидел петух и кричал изо всех сил."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "\"Du schreist einem durch Mark und Bein\",",
+                "«От твоего крика до костей пробирает; букв. сквозь костный мозг и кость»"
+              ],
+              " ",
+              [
+                "sprach der Esel,",
+                "сказал осёл"
+              ],
+              " ",
+              [
+                "\"was hast du vor?\"",
+                "«что ты задумал?»"
+              ]
+            ],
+            "translation": [
+              "— От твоего крика до костей пробирает, — сказал осёл, — что ты задумал?"
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "\"Da hab ich gut Wetter prophezeit\",",
+                "«Я предсказал хорошую погоду»"
+              ],
+              " ",
+              [
+                "sprach der Hahn,",
+                "сказал петух"
+              ],
+              " ",
+              [
+                "\"weil unserer lieben Frauen Tag ist,",
+                "«потому что нынче день Богоматери"
+              ],
+              " ",
+              [
+                "wo sie dem Christkindlein die Hemdchen gewaschen hat",
+                "когда она выстирала рубашечки младенца Христа"
+              ],
+              " ",
+              [
+                "und sie trocknen will;",
+                "и хочет их высушить"
+              ],
+              " ",
+              [
+                "aber weil morgen zum Sonntag Gäste kommen,",
+                "но поскольку завтра, в воскресенье, придут гости"
+              ],
+              " ",
+              [
+                "so hat die Hausfrau doch kein Erbarmen",
+                "хозяйка не знает жалости"
+              ],
+              " ",
+              [
+                "und hat der Köchin gesagt,",
+                "и сказала кухарке"
+              ],
+              " ",
+              [
+                "sie wollte mich morgen in der Suppe essen,",
+                "что завтра хочет съесть меня в супе"
+              ],
+              " ",
+              [
+                "und da soll ich mir heut abend den Kopf abschneiden lassen.",
+                "и вот сегодня вечером мне должны отрезать голову"
+              ],
+              " ",
+              [
+                "Nun schrei ich aus vollem Hals,",
+                "теперь я кричу во всё горло"
+              ],
+              " ",
+              [
+                "solang ich noch kann.\"",
+                "пока ещё могу»"
+              ]
+            ],
+            "translation": [
+              "— Я предсказал хорошую погоду, — сказал петух, — потому что сегодня день Богоматери: она выстирала рубашечки младенца Христа и хочет их высушить; но завтра воскресенье, придут гости, и бессердечная хозяйка велела кухарке сварить из меня суп, так что сегодня вечером мне отрежут голову.",
+              "Вот я и кричу во всё горло, пока ещё могу."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "\"Ei was, du Rotkopf\",",
+                "«Да брось ты, красноголовый»"
+              ],
+              " ",
+              [
+                "sagte der Esel,",
+                "сказал осёл"
+              ],
+              " ",
+              [
+                "\"zieh lieber mit uns fort,",
+                "«лучше отправляйся с нами"
+              ],
+              " ",
+              [
+                "wir gehen nach Bremen,",
+                "мы идём в Бремен"
+              ],
+              " ",
+              [
+                "etwas Besseres als den Tod findest du überall;",
+                "что-нибудь получше смерти ты найдёшь повсюду"
+              ],
+              " ",
+              [
+                "du hast eine gute Stimme,",
+                "у тебя хороший голос"
+              ],
+              " ",
+              [
+                "und wenn wir zusammen musizieren,",
+                "и если мы будем музицировать вместе"
+              ],
+              " ",
+              [
+                "so muß es eine Art haben.\"",
+                "то непременно получится что-нибудь стоящее»"
+              ]
+            ],
+            "translation": [
+              "— Да брось ты, красноголовый, — сказал осёл, — лучше иди с нами в Бремен: что-нибудь получше смерти везде найдёшь; голос у тебя хороший, и если мы заиграем вместе, обязательно что-нибудь получится."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Der Hahn ließ sich den Vorschlag gefallen,",
+                "петуху понравилось это предложение"
+              ],
+              " ",
+              [
+                "und sie gingen alle viere zusammen fort.",
+                "и все четверо отправились дальше вместе"
+              ],
+              " ",
+              [
+                "Sie konnten aber die Stadt Bremen",
+                "но до города Бремена они"
+              ],
+              " ",
+              [
+                "in einem Tag nicht erreichen",
+                "за один день добраться не могли"
+              ],
+              " ",
+              [
+                "und kamen abends in einen Wald,",
+                "и вечером пришли в лес"
+              ],
+              " ",
+              [
+                "wo sie übernachten wollten.",
+                "где хотели переночевать"
+              ]
+            ],
+            "translation": [
+              "Петух согласился, и все четверо отправились дальше вместе.",
+              "За день они не смогли добраться до Бремена и вечером пришли в лес, где решили переночевать."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Der Esel und der Hund legten sich",
+                "осёл и пёс улеглись"
+              ],
+              " ",
+              [
+                "unter einen großen Baum,",
+                "под большим деревом"
+              ],
+              " ",
+              [
+                "die Katze und der Hahn machten sich in die Äste,",
+                "кошка и петух забрались на ветви"
+              ],
+              " ",
+              [
+                "der Hahn aber flog bis in die Spitze,",
+                "а петух взлетел на самую верхушку"
+              ],
+              " ",
+              [
+                "wo es am sichersten für ihn war.",
+                "где ему было безопаснее всего"
+              ]
+            ],
+            "translation": [
+              "Осёл и пёс улеглись под большим деревом, кошка и петух забрались на ветви, а петух взлетел на самую верхушку, где ему было безопаснее всего."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Ehe er einschlief,",
+                "прежде чем заснуть"
+              ],
+              " ",
+              [
+                "sah er sich noch einmal nach allen vier Winden um;",
+                "он ещё раз огляделся во все четыре стороны"
+              ],
+              " ",
+              [
+                "da deuchte ihn,",
+                "и ему почудилось"
+              ],
+              " ",
+              [
+                "er sähe in der Ferne ein Fünkchen brennen;",
+                "будто вдали горит огонёк"
+              ],
+              " ",
+              [
+                "und rief seinen Gesellen zu,",
+                "и он крикнул своим товарищам"
+              ],
+              " ",
+              [
+                "es müßte nicht gar weit ein Haus sein,",
+                "что где-то совсем недалеко должен быть дом"
+              ],
+              " ",
+              [
+                "denn es scheine ein Licht.",
+                "потому что там светится огонёк"
+              ]
+            ],
+            "translation": [
+              "Прежде чем заснуть, он ещё раз огляделся во все стороны, заметил вдали огонёк и крикнул товарищам, что неподалёку, должно быть, есть дом, ведь там горит свет."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Sprach der Esel:",
+                "сказал осёл"
+              ],
+              " ",
+              [
+                "\"So müssen wir uns aufmachen",
+                "«Тогда нам надо подняться"
+              ],
+              " ",
+              [
+                "und noch hingehen,",
+                "и сходить туда"
+              ],
+              " ",
+              [
+                "denn hier ist die Herberge schlecht.\"",
+                "потому что здесь плохой ночлег»"
+              ],
+              " ",
+              [
+                "Der Hund meinte:",
+                "пёс заметил"
+              ],
+              " ",
+              [
+                "\"Ein paar Knochen und etwas Fleisch dran",
+                "«Пара косточек с остатками мяса"
+              ],
+              " ",
+              [
+                "täten ihm auch gut.\"",
+                "и ему бы не повредила»"
+              ]
+            ],
+            "translation": [
+              "Осёл сказал: «Тогда надо встать и пойти туда, потому что ночлег здесь плохой».",
+              "Пёс заметил, что пара косточек с остатками мяса и ему бы не повредила."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Also machten sie sich auf den Weg",
+                "Итак, они отправились в путь"
+              ],
+              " ",
+              [
+                "nach der Gegend, wo das Licht war,",
+                "в ту сторону, где был свет"
+              ],
+              " ",
+              [
+                "und sahen es bald heller schimmern,",
+                "и вскоре увидели, что он светит ярче"
+              ],
+              " ",
+              [
+                "und es ward immer größer,",
+                "и он становился всё больше"
+              ],
+              " ",
+              [
+                "bis sie vor ein hellerleuchtetes Räuberhaus kamen.",
+                "пока они не подошли к ярко освещённому разбойничьему дому"
+              ]
+            ],
+            "translation": [
+              "Они пошли туда, откуда светил огонёк; он сиял всё ярче и становился всё больше, пока они не подошли к ярко освещённому дому разбойников."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Der Esel, als der größte,",
+                "осёл, как самый высокий"
+              ],
+              " ",
+              [
+                "näherte sich dem Fenster",
+                "приблизился к окну"
+              ],
+              " ",
+              [
+                "und schaute hinein.",
+                "и заглянул внутрь"
+              ],
+              " ",
+              [
+                "\"Was siehst du, Grauschimmel?\"",
+                "«Что ты видишь, Серый?»"
+              ],
+              " ",
+              [
+                "fragte der Hahn.",
+                "спросил петух"
+              ]
+            ],
+            "translation": [
+              "Осёл, как самый высокий, подошёл к окну и заглянул внутрь.",
+              "— Что ты видишь, Серый?",
+              "— спросил петух."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "\"Was ich sehe?\"",
+                "«Что я вижу?»"
+              ],
+              " ",
+              [
+                "antwortete der Esel,",
+                "ответил осёл"
+              ],
+              " ",
+              [
+                "\"einen gedeckten Tisch",
+                "«накрытый стол"
+              ],
+              " ",
+              [
+                "mit schönem Essen und Trinken,",
+                "с хорошей едой и питьём"
+              ],
+              " ",
+              [
+                "und Räuber sitzen daran",
+                "и за ним сидят разбойники"
+              ],
+              " ",
+              [
+                "und lassens sich wohl sein.\"",
+                "и пируют в своё удовольствие»"
+              ]
+            ],
+            "translation": [
+              "— Что я вижу?",
+              "— ответил осёл, — накрытый стол с хорошей едой и питьём, а за ним сидят разбойники и пируют."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "\"Das wäre was für uns\",",
+                "«Вот это было бы для нас»"
+              ],
+              " ",
+              [
+                "sprach der Hahn.",
+                "сказал петух"
+              ],
+              " ",
+              [
+                "\"Ja, ja, ach, wären wir da!\"",
+                "«Да, да, ах, были бы мы там!»"
+              ],
+              " ",
+              [
+                "sagte der Esel.",
+                "сказал осёл"
+              ]
+            ],
+            "translation": [
+              "— Вот бы и нам туда, — сказал петух.",
+              "— Да, да, ах, были бы мы там!",
+              "— сказал осёл."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Da ratschlagten die Tiere miteinander,",
+                "тогда животные стали советоваться друг с другом"
+              ],
+              " ",
+              [
+                "wie sie es anfangen müßten,",
+                "как им следует взяться за дело"
+              ],
+              " ",
+              [
+                "um die Räuber hinauszujagen,",
+                "чтобы выгнать разбойников"
+              ],
+              " ",
+              [
+                "und endlich fanden sie ein Mittel.",
+                "и наконец нашли способ"
+              ]
+            ],
+            "translation": [
+              "Животные стали советоваться, как им выгнать разбойников, и наконец нашли способ."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Der Esel mußte sich mit den Vorderfüßen",
+                "осёл должен был передними ногами"
+              ],
+              " ",
+              [
+                "auf das Fenster stellen,",
+                "встать на окно"
+              ],
+              " ",
+              [
+                "der Hund auf des Esels Rücken springen,",
+                "пёс — прыгнуть ослу на спину"
+              ],
+              " ",
+              [
+                "die Katze auf den Hund klettern,",
+                "кошка — забраться на пса"
+              ],
+              " ",
+              [
+                "und endlich flog der Hahn hinauf",
+                "и наконец петух взлетел наверх"
+              ],
+              " ",
+              [
+                "und setzte sich der Katze auf den Kopf.",
+                "и уселся кошке на голову"
+              ]
+            ],
+            "translation": [
+              "Осёл встал передними ногами на окно, пёс прыгнул ему на спину, кошка забралась на пса, а петух взлетел и уселся кошке на голову."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Wie das geschehen war,",
+                "когда это было сделано"
+              ],
+              " ",
+              [
+                "fingen sie auf ein Zeichen insgesamt an,",
+                "они все вместе по знаку начали"
+              ],
+              " ",
+              [
+                "ihre Musik zu machen:",
+                "исполнять свою музыку"
+              ],
+              " ",
+              [
+                "der Esel schrie,",
+                "осёл заревел"
+              ],
+              " ",
+              [
+                "der Hund bellte,",
+                "пёс залаял"
+              ],
+              " ",
+              [
+                "die Katze miaute,",
+                "кошка замяукала"
+              ],
+              " ",
+              [
+                "und der Hahn krähte;",
+                "а петух закукарекал"
+              ],
+              " ",
+              [
+                "dann stürzten sie durch das Fenster",
+                "затем они бросились через окно"
+              ],
+              " ",
+              [
+                "in die Stube hinein,",
+                "внутрь комнаты"
+              ],
+              " ",
+              [
+                "daß die Scheiben klirrten.",
+                "так что стёкла зазвенели"
+              ]
+            ],
+            "translation": [
+              "По условному знаку все разом заиграли: осёл заревел, пёс залаял, кошка замяукала, петух закукарекал; затем они ворвались через окно в комнату, так что стёкла зазвенели."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Die Räuber fuhren bei dem entsetzlichen Geschrei in die Höhe,",
+                "разбойники вскочили от страшного крика"
+              ],
+              " ",
+              [
+                "meinten nicht anders,",
+                "думая только одно"
+              ],
+              " ",
+              [
+                "als ein Gespenst käme herein,",
+                "что к ним ворвалось привидение"
+              ],
+              " ",
+              [
+                "und flohen in größter Furcht",
+                "и в величайшем страхе убежали"
+              ],
+              " ",
+              [
+                "in den Wald hinaus.",
+                "в лес"
+              ]
+            ],
+            "translation": [
+              "Услышав страшный крик, разбойники вскочили, решили, что в дом ворвалось привидение, и в ужасе убежали в лес."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Nun setzten sich die vier Gesellen an den Tisch,",
+                "теперь четверо товарищей уселись за стол"
+              ],
+              " ",
+              [
+                "nahmen mit dem vorlieb,",
+                "довольствовались тем"
+              ],
+              " ",
+              [
+                "was übriggeblieben war,",
+                "что осталось"
+              ],
+              " ",
+              [
+                "und aßen,",
+                "и ели"
+              ],
+              " ",
+              [
+                "als wenn sie vier Wochen hungern sollten.",
+                "словно им предстояло голодать четыре недели"
+              ]
+            ],
+            "translation": [
+              "Четверо товарищей уселись за стол, довольствовались тем, что осталось, и ели так, словно им предстояло четыре недели голодать."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Wie die vier Spielleute fertig waren,",
+                "когда четверо музыкантов закончили"
+              ],
+              " ",
+              [
+                "löschten sie das Licht aus",
+                "они погасили свет"
+              ],
+              " ",
+              [
+                "und suchten sich eine Schlafstätte,",
+                "и стали искать себе место для сна"
+              ],
+              " ",
+              [
+                "jeder nach seiner Natur und Bequemlichkeit.",
+                "каждый по своей природе и как ему было удобнее"
+              ]
+            ],
+            "translation": [
+              "Наевшись, четверо музыкантов погасили свет и стали устраиваться на ночлег, каждый по своему нраву и удобству."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Der Esel legte sich auf den Mist,",
+                "осёл улёгся на навозную кучу"
+              ],
+              " ",
+              [
+                "der Hund hinter die Türe,",
+                "пёс — за дверью"
+              ],
+              " ",
+              [
+                "die Katze auf den Herd bei die warme Asche,",
+                "кошка — на очаг возле тёплой золы"
+              ],
+              " ",
+              [
+                "und der Hahn setzte sich auf den Hahnenbalken;",
+                "а петух уселся на насест"
+              ],
+              " ",
+              [
+                "und weil sie müde waren von ihrem langen Weg,",
+                "и поскольку они устали от долгой дороги"
+              ],
+              " ",
+              [
+                "schliefen sie auch bald ein.",
+                "то вскоре заснули"
+              ]
+            ],
+            "translation": [
+              "Осёл улёгся на навозной куче, пёс — за дверью, кошка — на очаге возле тёплой золы, а петух устроился на насесте; устав от долгой дороги, все вскоре заснули."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Als Mitternacht vorbei war",
+                "когда миновала полночь"
+              ],
+              " ",
+              [
+                "und die Räuber von weitem sahen,",
+                "и разбойники издали увидели"
+              ],
+              " ",
+              [
+                "daß kein Licht mehr im Haus brannte,",
+                "что в доме больше не горит свет"
+              ],
+              " ",
+              [
+                "auch alles ruhig schien,",
+                "и всё казалось спокойным"
+              ],
+              " ",
+              [
+                "sprach der Hauptmann:",
+                "атаман сказал"
+              ],
+              " ",
+              [
+                "\"Wir hätten uns doch nicht sollen ins Bockshorn jagen lassen\",",
+                "«Не следовало нам позволять так себя запугать»"
+              ],
+              " ",
+              [
+                "und hieß einen hingehen",
+                "и велел одному пойти"
+              ],
+              " ",
+              [
+                "und das Haus untersuchen.",
+                "и осмотреть дом"
+              ]
+            ],
+            "translation": [
+              "После полуночи разбойники увидели издали, что в доме погас свет и всё спокойно; атаман сказал: «Не следовало нам так пугаться», — и велел одному из них осмотреть дом."
+            ]
+          }
+        ]
+      }
+    ],
+    "lemmas": [
+      [
+        "der Esel",
+        "осёл",
+        "n"
+      ],
+      [
+        "merken",
+        "замечать, чуять",
+        "v"
+      ],
+      [
+        "das Futter",
+        "корм",
+        "n"
+      ],
+      [
+        "der Herr",
+        "хозяин",
+        "n"
+      ],
+      [
+        "der Weg",
+        "путь, дорога",
+        "n"
+      ],
+      [
+        "die Mühle",
+        "мельница",
+        "n"
+      ],
+      [
+        "tragen",
+        "нести",
+        "v"
+      ],
+      [
+        "die Kraft",
+        "сила",
+        "n"
+      ],
+      [
+        "unverdrossen",
+        "неустанно",
+        "adv"
+      ],
+      [
+        "der Jagdhund",
+        "охотничья собака",
+        "n"
+      ],
+      [
+        "laufen",
+        "бежать",
+        "v"
+      ],
+      [
+        "der Hund",
+        "пёс",
+        "n"
+      ],
+      [
+        "die Katze",
+        "кошка",
+        "n"
+      ],
+      [
+        "der Hahn",
+        "петух",
+        "n"
+      ],
+      [
+        "der Räuber",
+        "разбойник",
+        "n"
+      ],
+      [
+        "der Wald",
+        "лес",
+        "n"
+      ],
+      [
+        "die Laute",
+        "лютня",
+        "n"
+      ],
+      [
+        "die Pauke",
+        "литавра",
+        "n"
+      ],
+      [
+        "die Nachtmusik",
+        "ночная музыка",
+        "n"
+      ],
+      [
+        "das Erbarmen",
+        "сострадание",
+        "n"
+      ],
+      [
+        "die Stimme",
+        "голос",
+        "n"
+      ],
+      [
+        "der Vorschlag",
+        "предложение",
+        "n"
+      ],
+      [
+        "der Baum",
+        "дерево",
+        "n"
+      ],
+      [
+        "der Ast",
+        "ветвь",
+        "n"
+      ],
+      [
+        "das Fenster",
+        "окно",
+        "n"
+      ],
+      [
+        "das Gespenst",
+        "привидение",
+        "n"
+      ],
+      [
+        "der Hauptmann",
+        "атаман",
+        "n"
+      ],
+      [
+        "das Licht",
+        "свет",
+        "n"
+      ],
+      [
+        "die Schlafstätte",
+        "место для сна",
+        "n"
+      ],
+      [
+        "die Asche",
+        "зола",
+        "n"
+      ],
+      [
+        "bellen",
+        "лаять",
+        "v"
+      ],
+      [
+        "krähen",
+        "кукарекать",
+        "v"
+      ],
+      [
+        "erreichen",
+        "достигать",
+        "v"
+      ],
+      [
+        "übernachten",
+        "ночевать",
+        "v"
+      ],
+      [
+        "fliehen",
+        "убегать",
+        "v"
+      ],
+      [
+        "gehen",
+        "идти",
+        "v"
+      ],
+      [
+        "der Spielmann",
+        "бродячий музыкант",
+        "n"
+      ]
+    ],
+    "forms": {
+      "merkte": "merken",
+      "Säcke": "der Sack",
+      "getragen": "tragen",
+      "Kräfte": "die Kraft",
+      "Wege": "der Weg",
+      "gelaufen": "laufen",
+      "Pauken": "die Pauke",
+      "Äste": "der Ast",
+      "Spielleute": "der Spielmann",
+      "bellte": "bellen",
+      "krähte": "krähen",
+      "flohen": "fliehen",
+      "gingen": "gehen"
+    },
+    "ipa": {
+      "durch": "dʊʁç",
+      "Furcht": "fʊʁçt"
+    }
+  },
+  {
+    "id": "a2d660a2-2354-4f3a-b302-2937bd6e31bf",
+    "meta": {
+      "title": "Rotkäppchen",
+      "titleRu": "Красная Шапочка · расширенный отрывок",
+      "author": "Brüder Grimm",
+      "level": "A2",
+      "source": "Brüder Grimm, Kinder- und Hausmärchen, KHM 26 (1857); демонстрационный отрывок",
+      "license": "public-domain"
+    },
+    "chapters": [
+      {
+        "n": 1,
+        "title": "Auf dem Weg zur Großmutter · По дороге к бабушке",
+        "fragments": [
+          {
+            "chunks": [
+              [
+                "Es war einmal eine kleine süße Dirne",
+                "жила-была маленькая милая девочка"
+              ],
+              ", ",
+              [
+                "die hatte jedermann lieb",
+                "которую все любили"
+              ],
+              ", ",
+              [
+                "der sie nur ansah",
+                "кто только её видел"
+              ],
+              ", ",
+              [
+                "am allerliebsten aber ihre Großmutter",
+                "но больше всех — её бабушка"
+              ],
+              ", ",
+              [
+                "die wußte gar nicht",
+                "которая совсем не знала"
+              ],
+              ", ",
+              [
+                "was sie alles dem Kinde geben sollte",
+                "что ещё подарить ребёнку"
+              ],
+              "."
+            ],
+            "translation": [
+              "Жила-была милая маленькая девочка, которую любили все, кто её видел, а больше всех — бабушка, которая и не знала, что ещё подарить внучке."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Einmal schenkte sie ihm ein Käppchen von rotem Sammet",
+                "однажды она подарила ей шапочку из красного бархата"
+              ],
+              ", ",
+              [
+                "und weil ihm das so wohl stand",
+                "и поскольку та ей так шла"
+              ],
+              " ",
+              [
+                "und es nichts anders mehr tragen wollte",
+                "и она больше ничего другого носить не хотела"
+              ],
+              ", ",
+              [
+                "hieß es nur das Rotkäppchen",
+                "её называли только Красной Шапочкой"
+              ],
+              "."
+            ],
+            "translation": [
+              "Однажды бабушка подарила ей шапочку из красного бархата, и поскольку та ей очень шла и девочка ничего другого носить не хотела, её стали звать Красной Шапочкой."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Eines Tages sprach seine Mutter zu ihm:",
+                "однажды мать сказала ей"
+              ],
+              " ",
+              [
+                "\"Komm, Rotkäppchen,",
+                "«Подойди, Красная Шапочка"
+              ],
+              " ",
+              [
+                "da hast du ein Stück Kuchen",
+                "вот тебе кусок пирога"
+              ],
+              " ",
+              [
+                "und eine Flasche Wein,",
+                "и бутылка вина"
+              ],
+              " ",
+              [
+                "bring das der Großmutter hinaus;",
+                "отнеси это бабушке"
+              ],
+              " ",
+              [
+                "sie ist krank und schwach",
+                "она больна и слаба"
+              ],
+              " ",
+              [
+                "und wird sich daran laben.",
+                "и подкрепится этим"
+              ]
+            ],
+            "translation": [
+              "Однажды мать сказала ей: «Подойди, Красная Шапочка, вот тебе кусок пирога и бутылка вина, отнеси их бабушке: она больна и слаба, пусть подкрепится."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Mach dich auf, bevor es heiß wird,",
+                "отправляйся, пока не стало жарко"
+              ],
+              " ",
+              [
+                "und wenn du hinauskommst,",
+                "и когда выйдешь"
+              ],
+              " ",
+              [
+                "so geh hübsch sittsam",
+                "иди спокойно и чинно"
+              ],
+              " ",
+              [
+                "und lauf nicht vom Weg ab,",
+                "и не сбегай с дороги"
+              ],
+              " ",
+              [
+                "sonst fällst du und zerbrichst das Glas,",
+                "иначе упадёшь и разобьёшь бутылку"
+              ],
+              " ",
+              [
+                "und die Großmutter hat nichts.",
+                "и бабушке ничего не достанется"
+              ]
+            ],
+            "translation": [
+              "Отправляйся, пока не стало жарко, иди чинно и не сворачивай с дороги, иначе упадёшь, разобьёшь бутылку и бабушке ничего не достанется."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Und wenn du in ihre Stube kommst,",
+                "и когда войдёшь к ней в комнату"
+              ],
+              " ",
+              [
+                "so vergiß nicht guten Morgen zu sagen",
+                "не забудь пожелать доброго утра"
+              ],
+              " ",
+              [
+                "und guck nicht erst in alle Ecken herum.\"",
+                "и не заглядывай сперва во все углы»"
+              ]
+            ],
+            "translation": [
+              "А когда войдёшь к ней в комнату, не забудь поздороваться и не заглядывай сначала во все углы»."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "\"Ich will schon alles gut machen\",",
+                "«Уж я всё сделаю как надо»"
+              ],
+              " ",
+              [
+                "sagte Rotkäppchen zur Mutter,",
+                "сказала Красная Шапочка матери"
+              ],
+              " ",
+              [
+                "und gab ihr die Hand darauf.",
+                "и дала ей в том руку; то есть пообещала"
+              ]
+            ],
+            "translation": [
+              "— Уж я всё сделаю как надо, — сказала Красная Шапочка матери и дала ей слово."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Die Großmutter aber wohnte draußen im Wald,",
+                "бабушка же жила в лесу"
+              ],
+              " ",
+              [
+                "eine halbe Stunde vom Dorf.",
+                "в получасе ходьбы от деревни"
+              ],
+              " ",
+              [
+                "Wie nun Rotkäppchen in den Wald kam,",
+                "когда Красная Шапочка вошла в лес"
+              ],
+              " ",
+              [
+                "begegnete ihm der Wolf.",
+                "ей встретился волк"
+              ]
+            ],
+            "translation": [
+              "Бабушка жила в лесу, в получасе ходьбы от деревни.",
+              "Когда Красная Шапочка вошла в лес, ей встретился волк."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Rotkäppchen aber wußte nicht,",
+                "но Красная Шапочка не знала"
+              ],
+              " ",
+              [
+                "was das für ein böses Tier war,",
+                "что это был за злой зверь"
+              ],
+              " ",
+              [
+                "und fürchtete sich nicht vor ihm.",
+                "и не боялась его"
+              ]
+            ],
+            "translation": [
+              "Красная Шапочка не знала, какой это злой зверь, и совсем его не боялась."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "\"Guten Tag, Rotkäppchen\",",
+                "«Добрый день, Красная Шапочка»"
+              ],
+              " ",
+              [
+                "sprach er.",
+                "сказал он"
+              ],
+              " ",
+              [
+                "\"Schönen Dank, Wolf.\"",
+                "«Большое спасибо, волк»"
+              ]
+            ],
+            "translation": [
+              "— Добрый день, Красная Шапочка, — сказал он.",
+              "— Большое спасибо, волк."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "\"Wo hinaus so früh, Rotkäppchen?\"",
+                "«Куда это ты так рано, Красная Шапочка?»"
+              ],
+              " ",
+              [
+                "\"Zur Großmutter.\"",
+                "«К бабушке»"
+              ],
+              " ",
+              [
+                "\"Was trägst du unter der Schürze?\"",
+                "«Что ты несёшь под передником?»"
+              ]
+            ],
+            "translation": [
+              "— Куда это ты так рано, Красная Шапочка?",
+              "— К бабушке.",
+              "— Что ты несёшь под передником?"
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "\"Kuchen und Wein:",
+                "«Пирог и вино"
+              ],
+              " ",
+              [
+                "gestern haben wir gebacken,",
+                "вчера мы пекли"
+              ],
+              " ",
+              [
+                "da soll sich die kranke und schwache Großmutter",
+                "вот пусть больная и слабая бабушка"
+              ],
+              " ",
+              [
+                "etwas zugut tun",
+                "немного полакомится"
+              ],
+              " ",
+              [
+                "und sich damit stärken.\"",
+                "и подкрепится этим»"
+              ]
+            ],
+            "translation": [
+              "— Пирог и вино: вчера мы пекли, пусть больная и слабая бабушка полакомится и подкрепится."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "\"Rotkäppchen, wo wohnt deine Großmutter?\"",
+                "«Красная Шапочка, где живёт твоя бабушка?»"
+              ],
+              " ",
+              [
+                "\"Noch eine gute Viertelstunde weiter im Wald,",
+                "«Ещё добрую четверть часа дальше в лесу"
+              ],
+              " ",
+              [
+                "unter den drei großen Eichbäumen,",
+                "под тремя большими дубами"
+              ],
+              " ",
+              [
+                "da steht ihr Haus,",
+                "там стоит её дом"
+              ],
+              " ",
+              [
+                "unten sind die Nußhecken,",
+                "ниже находятся ореховые кусты"
+              ],
+              " ",
+              [
+                "das wirst du ja wissen\",",
+                "ты ведь, наверно, знаешь это»"
+              ],
+              " ",
+              [
+                "sagte Rotkäppchen.",
+                "сказала Красная Шапочка"
+              ]
+            ],
+            "translation": [
+              "— Красная Шапочка, где живёт твоя бабушка?",
+              "— Ещё добрую четверть часа вглубь леса, её дом стоит под тремя большими дубами, а ниже — ореховые кусты; ты наверняка это знаешь, — сказала Красная Шапочка."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Der Wolf dachte bei sich:",
+                "волк подумал про себя"
+              ],
+              " ",
+              [
+                "\"Das junge zarte Ding,",
+                "«Эта юная нежная крошка"
+              ],
+              " ",
+              [
+                "das ist ein fetter Bissen,",
+                "это лакомый кусочек; букв. жирный кусок"
+              ],
+              " ",
+              [
+                "der wird noch besser schmecken als die Alte:",
+                "она будет ещё вкуснее старухи"
+              ],
+              " ",
+              [
+                "du mußt es listig anfangen,",
+                "надо действовать хитро"
+              ],
+              " ",
+              [
+                "damit du beide erschnappst.\"",
+                "чтобы поймать обеих»"
+              ]
+            ],
+            "translation": [
+              "Волк подумал: «Эта нежная малышка — лакомый кусочек, она будет ещё вкуснее старухи; надо действовать хитро, чтобы заполучить обеих»."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Da ging er ein Weilchen",
+                "тогда он некоторое время шёл"
+              ],
+              " ",
+              [
+                "neben Rotkäppchen her,",
+                "рядом с Красной Шапочкой"
+              ],
+              " ",
+              [
+                "dann sprach er:",
+                "затем он сказал"
+              ],
+              " ",
+              [
+                "\"Rotkäppchen, sieh einmal die schönen Blumen,",
+                "«Красная Шапочка, посмотри на прекрасные цветы"
+              ],
+              " ",
+              [
+                "die ringsumher stehen,",
+                "которые растут кругом"
+              ],
+              " ",
+              [
+                "warum guckst du dich nicht um?",
+                "почему ты не оглядываешься?"
+              ]
+            ],
+            "translation": [
+              "Он немного прошёл рядом с Красной Шапочкой, а затем сказал: «Посмотри, какие красивые цветы растут кругом, почему же ты не оглядываешься?"
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Ich glaube, du hörst gar nicht,",
+                "думаю, ты совсем не слышишь"
+              ],
+              " ",
+              [
+                "wie die Vöglein so lieblich singen?",
+                "как чудесно поют птички?"
+              ],
+              " ",
+              [
+                "Du gehst ja für dich hin,",
+                "ты ведь идёшь, погрузившись в себя"
+              ],
+              " ",
+              [
+                "als wenn du zur Schule gingst,",
+                "словно направляешься в школу"
+              ],
+              " ",
+              [
+                "und ist so lustig hausen in dem Wald.\"",
+                "а в лесу так весело живётся»"
+              ]
+            ],
+            "translation": [
+              "Ты, кажется, совсем не слышишь, как чудесно поют птички?",
+              "Ты идёшь, словно в школу, а ведь в лесу так весело»."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Rotkäppchen schlug die Augen auf,",
+                "Красная Шапочка подняла глаза"
+              ],
+              " ",
+              [
+                "und als es sah,",
+                "и когда увидела"
+              ],
+              " ",
+              [
+                "wie die Sonnenstrahlen durch die Bäume",
+                "как солнечные лучи сквозь деревья"
+              ],
+              " ",
+              [
+                "hin und her tanzten",
+                "танцевали туда и сюда"
+              ],
+              " ",
+              [
+                "und alles voll schöner Blumen stand,",
+                "и повсюду росли прекрасные цветы"
+              ],
+              " ",
+              [
+                "dachte es:",
+                "она подумала"
+              ],
+              " ",
+              [
+                "\"Wenn ich der Großmutter einen frischen Strauß mitbringe,",
+                "«Если я принесу бабушке свежий букет"
+              ],
+              " ",
+              [
+                "der wird ihr auch Freude machen;",
+                "он тоже её обрадует"
+              ],
+              " ",
+              [
+                "es ist so früh am Tag,",
+                "день ещё только начался"
+              ],
+              " ",
+              [
+                "daß ich doch zu rechter Zeit ankomme\",",
+                "так что я всё равно приду вовремя»"
+              ],
+              " ",
+              [
+                "lief vom Wege ab in den Wald hinein",
+                "сбежала с дороги в лес"
+              ],
+              " ",
+              [
+                "und suchte Blumen.",
+                "и стала искать цветы"
+              ]
+            ],
+            "translation": [
+              "Красная Шапочка подняла глаза, увидела танцующие среди деревьев солнечные лучи и множество прекрасных цветов и подумала: «Если я принесу бабушке свежий букет, она обрадуется; ещё так рано, что я всё равно успею», — свернула с дороги в лес и стала собирать цветы."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Und wenn es eine gebrochen hatte,",
+                "и когда она срывала один цветок"
+              ],
+              " ",
+              [
+                "meinte es,",
+                "ей казалось"
+              ],
+              " ",
+              [
+                "weiter hinaus stände eine schönere,",
+                "что чуть дальше растёт ещё более красивый"
+              ],
+              " ",
+              [
+                "und lief darnach",
+                "и она бежала за ним"
+              ],
+              " ",
+              [
+                "und geriet immer tiefer in den Wald hinein.",
+                "и забиралась всё глубже в лес"
+              ]
+            ],
+            "translation": [
+              "Сорвав один цветок, она замечала чуть дальше другой, ещё красивее, бежала к нему и заходила всё глубже в лес."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Der Wolf aber ging geradeswegs",
+                "а волк пошёл прямо"
+              ],
+              " ",
+              [
+                "nach dem Haus der Großmutter",
+                "к дому бабушки"
+              ],
+              " ",
+              [
+                "und klopfte an die Türe.",
+                "и постучал в дверь"
+              ],
+              " ",
+              [
+                "\"Wer ist draußen?\"",
+                "«Кто там снаружи?»"
+              ]
+            ],
+            "translation": [
+              "Волк же пошёл прямо к бабушкиному дому и постучал в дверь.",
+              "— Кто там?"
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "\"Rotkäppchen, das bringt Kuchen und Wein,",
+                "«Красная Шапочка, принесла пирог и вино"
+              ],
+              " ",
+              [
+                "mach auf.\"",
+                "открой»"
+              ],
+              " ",
+              [
+                "\"Drück nur auf die Klinke\",",
+                "«Только нажми на ручку»"
+              ],
+              " ",
+              [
+                "rief die Großmutter,",
+                "крикнула бабушка"
+              ],
+              " ",
+              [
+                "\"ich bin zu schwach",
+                "«я слишком слаба"
+              ],
+              " ",
+              [
+                "und kann nicht aufstehen.\"",
+                "и не могу встать»"
+              ]
+            ],
+            "translation": [
+              "— Красная Шапочка, принесла пирог и вино, открой.",
+              "— Нажми на ручку, — крикнула бабушка, — я слишком слаба и не могу встать."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Der Wolf drückte auf die Klinke,",
+                "волк нажал на ручку"
+              ],
+              " ",
+              [
+                "die Türe sprang auf,",
+                "дверь распахнулась"
+              ],
+              " ",
+              [
+                "und er ging, ohne ein Wort zu sprechen,",
+                "и он пошёл, не говоря ни слова"
+              ],
+              " ",
+              [
+                "gerade zum Bett der Großmutter",
+                "прямо к кровати бабушки"
+              ],
+              " ",
+              [
+                "und verschluckte sie.",
+                "и проглотил её"
+              ]
+            ],
+            "translation": [
+              "Волк нажал на ручку, дверь распахнулась, и он, не говоря ни слова, подошёл прямо к бабушкиной кровати и проглотил её."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Dann tat er ihre Kleider an,",
+                "затем он надел её платье"
+              ],
+              " ",
+              [
+                "setzte ihre Haube auf,",
+                "надел её чепец"
+              ],
+              " ",
+              [
+                "legte sich in ihr Bett",
+                "лёг в её постель"
+              ],
+              " ",
+              [
+                "und zog die Vorhänge vor.",
+                "и задёрнул занавески"
+              ]
+            ],
+            "translation": [
+              "Затем он надел бабушкино платье и чепец, лёг в её постель и задёрнул занавески."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Rotkäppchen aber war nach den Blumen herumgelaufen,",
+                "Красная Шапочка тем временем бегала за цветами"
+              ],
+              " ",
+              [
+                "und als es so viel zusammen hatte,",
+                "и когда она набрала столько"
+              ],
+              " ",
+              [
+                "daß es keine mehr tragen konnte,",
+                "что больше не могла унести"
+              ],
+              " ",
+              [
+                "fiel ihm die Großmutter wieder ein,",
+                "она снова вспомнила о бабушке"
+              ],
+              " ",
+              [
+                "und es machte sich auf den Weg zu ihr.",
+                "и отправилась к ней"
+              ]
+            ],
+            "translation": [
+              "Красная Шапочка тем временем бегала за цветами и, когда набрала столько, что больше уже не могла унести, вспомнила о бабушке и отправилась к ней."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Es wunderte sich,",
+                "она удивилась"
+              ],
+              " ",
+              [
+                "daß die Türe aufstand,",
+                "что дверь была открыта"
+              ],
+              " ",
+              [
+                "und wie es in die Stube trat,",
+                "и когда вошла в комнату"
+              ],
+              " ",
+              [
+                "so kam es ihm so seltsam darin vor,",
+                "всё показалось ей таким странным"
+              ],
+              " ",
+              [
+                "daß es dachte:",
+                "что она подумала"
+              ],
+              " ",
+              [
+                "\"Ei, du mein Gott,",
+                "«Ах, боже мой"
+              ],
+              " ",
+              [
+                "wie ängstlich wird mirs heute zumut,",
+                "как мне сегодня тревожно"
+              ],
+              " ",
+              [
+                "und bin sonst so gerne bei der Großmutter!\"",
+                "а ведь обычно я так люблю бывать у бабушки!»"
+              ]
+            ],
+            "translation": [
+              "Она удивилась открытой двери, а войдя в комнату, почувствовала что-то такое странное, что подумала: «Боже мой, как мне сегодня тревожно, а ведь обычно я так люблю бывать у бабушки!»"
+            ]
+          }
+        ]
+      }
+    ],
+    "lemmas": [
+      [
+        "die Großmutter",
+        "бабушка",
+        "n"
+      ],
+      [
+        "schenken",
+        "дарить",
+        "v"
+      ],
+      [
+        "das Käppchen",
+        "шапочка",
+        "n"
+      ],
+      [
+        "der Sammet",
+        "бархат (стар.)",
+        "n"
+      ],
+      [
+        "lieb",
+        "милый, любимый",
+        "adj"
+      ],
+      [
+        "der Wolf",
+        "волк",
+        "n"
+      ],
+      [
+        "der Kuchen",
+        "пирог",
+        "n"
+      ],
+      [
+        "der Wein",
+        "вино",
+        "n"
+      ],
+      [
+        "die Flasche",
+        "бутылка",
+        "n"
+      ],
+      [
+        "der Wald",
+        "лес",
+        "n"
+      ],
+      [
+        "die Schürze",
+        "передник",
+        "n"
+      ],
+      [
+        "die Eiche",
+        "дуб",
+        "n"
+      ],
+      [
+        "der Strauß",
+        "букет",
+        "n"
+      ],
+      [
+        "die Klinke",
+        "дверная ручка",
+        "n"
+      ],
+      [
+        "die Haube",
+        "чепец",
+        "n"
+      ],
+      [
+        "die Türe",
+        "дверь",
+        "n"
+      ],
+      [
+        "das Bett",
+        "кровать",
+        "n"
+      ],
+      [
+        "die Blume",
+        "цветок",
+        "n"
+      ],
+      [
+        "der Sonnenstrahl",
+        "солнечный луч",
+        "n"
+      ],
+      [
+        "vergessen",
+        "забывать",
+        "v"
+      ],
+      [
+        "begegnen",
+        "встречать",
+        "v"
+      ],
+      [
+        "fürchten",
+        "бояться",
+        "v"
+      ],
+      [
+        "klopfen",
+        "стучать",
+        "v"
+      ],
+      [
+        "verschlucken",
+        "проглатывать",
+        "v"
+      ],
+      [
+        "schwach",
+        "слабый",
+        "adj"
+      ],
+      [
+        "ängstlich",
+        "тревожный",
+        "adj"
+      ]
+    ],
+    "forms": {
+      "schenkte": "schenken",
+      "Käppchen": "das Käppchen",
+      "Eichbäumen": "die Eiche",
+      "Blumen": "die Blume",
+      "Sonnenstrahlen": "der Sonnenstrahl",
+      "vergiß": "vergessen",
+      "begegnete": "begegnen",
+      "fürchtete": "fürchten",
+      "klopfte": "klopfen",
+      "verschluckte": "verschlucken"
+    },
+    "ipa": {
+      "durch": "dʊʁç"
+    }
+  },
+  {
+    "id": "90aa7c85-a77f-4b44-833f-1d54812cab1b",
+    "meta": {
+      "title": "Die Verwandlung",
+      "titleRu": "Превращение · начало первой главы",
+      "author": "Franz Kafka",
+      "level": "B2",
+      "source": "Franz Kafka, Die Verwandlung (1915); демонстрационный отрывок",
+      "license": "public-domain"
+    },
+    "chapters": [
+      {
+        "n": 1,
+        "title": "I · Пробуждение",
+        "fragments": [
+          {
+            "chunks": [
+              [
+                "Als Gregor Samsa eines Morgens",
+                "когда Грегор Замза однажды утром"
+              ],
+              " ",
+              [
+                "aus unruhigen Träumen erwachte",
+                "проснулся после тревожных снов"
+              ],
+              ", ",
+              [
+                "fand er sich in seinem Bett",
+                "он обнаружил себя в своей постели"
+              ],
+              " ",
+              [
+                "zu einem ungeheuren Ungeziefer verwandelt",
+                "превращённым в огромное насекомое"
+              ],
+              "."
+            ],
+            "translation": [
+              "Проснувшись однажды утром после тревожных снов, Грегор Замза обнаружил, что он у себя в постели превратился в страшное насекомое."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Er lag auf seinem panzerartig harten Rücken",
+                "он лежал на своей твёрдой, словно панцирь, спине"
+              ],
+              " ",
+              [
+                "und sah,",
+                "и видел"
+              ],
+              " ",
+              [
+                "wenn er den Kopf ein wenig hob,",
+                "когда немного приподнимал голову"
+              ],
+              " ",
+              [
+                "seinen gewölbten, braunen,",
+                "свой выпуклый, коричневый"
+              ],
+              " ",
+              [
+                "von bogenförmigen Versteifungen geteilten Bauch,",
+                "разделённый дугообразными рёбрами жёсткости живот"
+              ],
+              " ",
+              [
+                "auf dessen Höhe sich die Bettdecke,",
+                "на выпуклости которого одеяло"
+              ],
+              " ",
+              [
+                "zum gänzlichen Niedergleiten bereit,",
+                "готовое окончательно соскользнуть"
+              ],
+              " ",
+              [
+                "kaum noch erhalten konnte.",
+                "едва ещё могло держаться"
+              ]
+            ],
+            "translation": [
+              "Он лежал на своей твёрдой, словно панцирь, спине и, немного приподняв голову, видел свой выпуклый коричневый живот, разделённый дугообразными рёбрами; на его вершине едва держалось готовое вот-вот соскользнуть одеяло."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Seine vielen,",
+                "его многочисленные"
+              ],
+              " ",
+              [
+                "im Vergleich zu seinem sonstigen Umfang",
+                "по сравнению с остальными размерами его тела"
+              ],
+              " ",
+              [
+                "kläglich dünnen Beine",
+                "жалко тонкие ножки"
+              ],
+              " ",
+              [
+                "flimmerten ihm hilflos vor den Augen.",
+                "беспомощно мельтешили у него перед глазами"
+              ]
+            ],
+            "translation": [
+              "Его многочисленные, жалко тонкие по сравнению с остальным телом ножки беспомощно мельтешили перед глазами."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "\"Was ist mit mir geschehen?\"",
+                "«Что со мной случилось?»"
+              ],
+              " ",
+              [
+                "dachte er.",
+                "подумал он"
+              ],
+              " ",
+              [
+                "Es war kein Traum.",
+                "это был не сон"
+              ]
+            ],
+            "translation": [
+              "«Что со мной случилось?»",
+              "— подумал он.",
+              "Это был не сон."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Sein Zimmer,",
+                "его комната"
+              ],
+              " ",
+              [
+                "ein richtiges, nur etwas zu kleines Menschenzimmer,",
+                "настоящая, только несколько тесная человеческая комната"
+              ],
+              " ",
+              [
+                "lag ruhig",
+                "спокойно располагалась"
+              ],
+              " ",
+              [
+                "zwischen den vier wohlbekannten Wänden.",
+                "между четырьмя хорошо знакомыми стенами"
+              ]
+            ],
+            "translation": [
+              "Его комната — настоящая, только несколько тесная человеческая комната — спокойно располагалась между четырьмя хорошо знакомыми стенами."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Über dem Tisch,",
+                "над столом"
+              ],
+              " ",
+              [
+                "auf dem eine auseinandergepackte Musterkollektion von Tuchwaren",
+                "на котором располагалась распакованная коллекция образцов сукна"
+              ],
+              " ",
+              [
+                "ausgebreitet war",
+                "была разложена"
+              ],
+              " ",
+              [
+                "— Samsa war Reisender —,",
+                "— Замза был коммивояжёром —"
+              ],
+              " ",
+              [
+                "hing das Bild,",
+                "висела картинка"
+              ],
+              " ",
+              [
+                "das er vor kurzem",
+                "которую он незадолго до того"
+              ],
+              " ",
+              [
+                "aus einer illustrierten Zeitschrift ausgeschnitten",
+                "вырезал из иллюстрированного журнала"
+              ],
+              " ",
+              [
+                "und in einem hübschen, vergoldeten Rahmen untergebracht hatte.",
+                "и поместил в красивую позолоченную рамку"
+              ]
+            ],
+            "translation": [
+              "Над столом, на котором была разложена распакованная коллекция образцов сукна — Замза был коммивояжёром, — висела картинка, которую он недавно вырезал из иллюстрированного журнала и вставил в красивую позолоченную рамку."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Es stellte eine Dame dar,",
+                "она изображала даму"
+              ],
+              " ",
+              [
+                "die mit einem Pelzhut und einer Pelzboa versehen,",
+                "которая, в меховой шляпе и меховом боа"
+              ],
+              " ",
+              [
+                "aufrecht dasaß",
+                "сидела прямо"
+              ],
+              " ",
+              [
+                "und einen schweren Pelzmuff,",
+                "и тяжёлую меховую муфту"
+              ],
+              " ",
+              [
+                "in dem ihr ganzer Unterarm verschwunden war,",
+                "в которой исчезло всё её предплечье"
+              ],
+              " ",
+              [
+                "dem Beschauer entgegenhob.",
+                "протягивала зрителю"
+              ]
+            ],
+            "translation": [
+              "На картинке была дама в меховой шляпе и боа: она сидела прямо и протягивала зрителю тяжёлую меховую муфту, в которой целиком скрывалось её предплечье."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "Gregors Blick richtete sich dann zum Fenster,",
+                "затем взгляд Грегора обратился к окну"
+              ],
+              " ",
+              [
+                "und das trübe Wetter",
+                "и пасмурная погода"
+              ],
+              " ",
+              [
+                "— man hörte Regentropfen auf das Fensterblech aufschlagen —",
+                "— было слышно, как капли дождя стучат по жестяному отливу окна —"
+              ],
+              " ",
+              [
+                "machte ihn ganz melancholisch.",
+                "повергла его в глубокую меланхолию"
+              ]
+            ],
+            "translation": [
+              "Затем Грегор посмотрел в окно, и пасмурная погода — слышно было, как капли дождя стучат по жестяному отливу, — навела на него глубокую тоску."
+            ]
+          },
+          {
+            "chunks": [
+              [
+                "\"Wie wäre es,",
+                "«А что, если"
+              ],
+              " ",
+              [
+                "wenn ich noch ein wenig weiterschliefe",
+                "я ещё немного посплю"
+              ],
+              " ",
+              [
+                "und alle Narrheiten vergäße\",",
+                "и забуду все эти глупости»"
+              ],
+              " ",
+              [
+                "dachte er …",
+                "подумал он…"
+              ]
+            ],
+            "translation": [
+              "«А что, если ещё немного поспать и забыть всю эту чепуху», — подумал он…"
+            ]
+          }
+        ]
+      }
+    ],
+    "lemmas": [
+      [
+        "erwachen",
+        "просыпаться",
+        "v"
+      ],
+      [
+        "das Ungeziefer",
+        "паразит, вредное насекомое",
+        "n"
+      ],
+      [
+        "der Traum",
+        "сон, мечта",
+        "n"
+      ],
+      [
+        "verwandeln",
+        "превращать",
+        "v"
+      ],
+      [
+        "der Rücken",
+        "спина",
+        "n"
+      ],
+      [
+        "der Bauch",
+        "живот",
+        "n"
+      ],
+      [
+        "die Bettdecke",
+        "одеяло",
+        "n"
+      ],
+      [
+        "das Bein",
+        "нога",
+        "n"
+      ],
+      [
+        "das Zimmer",
+        "комната",
+        "n"
+      ],
+      [
+        "die Wand",
+        "стена",
+        "n"
+      ],
+      [
+        "der Tisch",
+        "стол",
+        "n"
+      ],
+      [
+        "der Reisende",
+        "коммивояжёр; путешественник",
+        "n"
+      ],
+      [
+        "die Zeitschrift",
+        "журнал",
+        "n"
+      ],
+      [
+        "der Rahmen",
+        "рамка",
+        "n"
+      ],
+      [
+        "der Pelz",
+        "мех",
+        "n"
+      ],
+      [
+        "das Fenster",
+        "окно",
+        "n"
+      ],
+      [
+        "das Wetter",
+        "погода",
+        "n"
+      ],
+      [
+        "der Regentropfen",
+        "капля дождя",
+        "n"
+      ],
+      [
+        "hilflos",
+        "беспомощно",
+        "adv"
+      ],
+      [
+        "geschehen",
+        "происходить",
+        "v"
+      ],
+      [
+        "vergessen",
+        "забывать",
+        "v"
+      ]
+    ],
+    "forms": {
+      "erwachte": "erwachen",
+      "Träumen": "der Traum",
+      "verwandelt": "verwandeln",
+      "Beine": "das Bein",
+      "Wänden": "die Wand",
+      "Reisender": "der Reisende",
+      "geschehen": "geschehen",
+      "vergäße": "vergessen"
+    },
+    "ipa": {
+      "kurzem": "ˈkʊʁtsəm"
+    }
+  }
 ]

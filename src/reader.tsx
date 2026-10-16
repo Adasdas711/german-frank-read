@@ -33,6 +33,7 @@ import {
   exportWords,
 } from "./transfer";
 import demos from "./demos.json";
+import { ensureDemos } from "./demo-library";
 import "./style.css";
 const nav = [
   ["home", "Читаю сейчас", "book"],
@@ -121,18 +122,7 @@ function App() {
     void (async () => {
       await store.put("settings", "probe", true);
       await store.remove("settings", "probe");
-      if (!(await store.get("settings", "initialized"))) {
-        for (const d of demos) {
-          const bytes = Uint8Array.from(atob(d), (c) => c.charCodeAt(0)),
-            b = readBook(bytes);
-          if (!(await store.get("books", b.manifest.id)))
-            await store.put("books", b.manifest.id, {
-              manifest: b.manifest,
-              bytes,
-            });
-        }
-        await store.put("settings", "initialized", true);
-      }
+      await ensureDemos(demos);
       await refresh();
       setReady(true);
       window.__frankaBoot?.finish();

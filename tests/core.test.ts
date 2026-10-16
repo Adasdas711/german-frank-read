@@ -25,7 +25,7 @@ const sample = readBook(bytes);
 const source = JSON.parse(readFileSync("src/demo-source.json", "utf8"))[0];
 describe("fbook v2", () => {
   it("round trips real demo and preserves chunks", () => {
-    expect(sample.content.c[0]).toHaveLength(3);
+    expect(sample.content.c[0]).toHaveLength(30);
     expect(readBook(packBook(sample.manifest, sample.content)).content).toEqual(
       sample.content,
     );
@@ -83,6 +83,39 @@ describe("fbook v2", () => {
   });
   it("computes standard CRC32", () =>
     expect(crc32(strToU8("123456789"))).toBe(0xcbf43926));
+});
+describe("expanded examples", () => {
+  it("ships ten times more original words with aligned hints, translations and IPA", () => {
+    const embedded = JSON.parse(readFileSync("src/demos.json", "utf8"));
+    const sources = JSON.parse(readFileSync("src/demo-source.json", "utf8"));
+    for (const [index, [name, previous]] of [
+      ["die-bremer-stadtmusikanten", 94],
+      ["rotkappchen", 59],
+      ["die-verwandlung", 20],
+    ].entries()) {
+      const bytes = new Uint8Array(
+        readFileSync("books/" + name + "-demo.fbook"),
+      );
+      const b = readBook(bytes);
+      expect(b.manifest.revision).toBe(2);
+      expect(b.manifest.stats.words).toBeGreaterThanOrEqual(
+        Number(previous) * 10,
+      );
+      expect(
+        readBook(new Uint8Array(Buffer.from(embedded[index], "base64"))),
+      ).toEqual(b);
+      const paragraphs = b.content.c.flat().map(plain);
+      expect(new Set(paragraphs).size).toBe(paragraphs.length);
+      checkSource(sources[index]);
+      expect(paragraphs).toEqual(
+        sources[index].chapters.flatMap((c) =>
+          c.fragments.map((f) =>
+            f.chunks.map((c) => (typeof c === "string" ? c : c[0])).join(""),
+          ),
+        ),
+      );
+    }
+  });
 });
 describe("builder", () => {
   it("checks source and rejects missing chapters", () => {

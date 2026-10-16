@@ -204,13 +204,17 @@ try {
   await page.keyboard.press("Escape");
   await page.locator(".reader-header").waitFor();
   // Completing the last fragment returns to the normal library.
+  const total = await page
+    .locator("#book-position")
+    .getAttribute("max")
+    .then((n) => Number(n) + 1);
   await page.evaluate(
-    (book) => (location.hash = `/read/${book}/1.3/clean`),
-    book,
+    ({ book, total }) => (location.hash = `/read/${book}/1.${total}/clean`),
+    { book, total },
   );
   await page
     .locator(".reader-title")
-    .filter({ hasText: "отрывок 3 из 3" })
+    .filter({ hasText: `отрывок ${total} из ${total}` })
     .waitFor();
   await page.getByRole("button", { name: "Режим чтения", exact: true }).click();
   await page.waitForFunction(

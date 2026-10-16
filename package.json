@@ -14,7 +14,9 @@
     "test:layout": "node tests/layout.mjs",
     "test:focus": "node tests/focus.mjs",
     "test:i18n": "node tests/i18n.mjs",
-    "test:book": "node tests/book-flow.mjs"
+    "test:book": "node tests/book-flow.mjs",
+    "test:demos": "node tests/demos.mjs",
+    "build:demos": "node scripts/demo.mjs"
   },
   "dependencies": {
     "espeak-ng": "1.0.2",

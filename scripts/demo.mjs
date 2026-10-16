@@ -1,11 +1,18 @@
 import { readFile, writeFile } from "node:fs/promises";
 import ESpeakNG from "espeak-ng";
-import { zipSync, strToU8 } from "fflate";
+import { zipSync, strToU8, unzipSync, strFromU8 } from "fflate";
 const sources = JSON.parse(await readFile("src/demo-source.json", "utf8"));
 const wasm = await readFile("node_modules/espeak-ng/dist/espeak-ng.wasm");
 const WORD = /[\p{L}\p{M}]+(?:[’'-][\p{L}\p{M}]+)*/gu;
-let compiled = await WebAssembly.compile(wasm);
+const compiled = await WebAssembly.compile(wasm);
 const cache = {};
+// Retain the pronunciation of existing demo words and generate only new forms.
+for (const packed of JSON.parse(await readFile("src/demos.json", "utf8"))) {
+  const entries = unzipSync(Buffer.from(packed, "base64"));
+  const book = JSON.parse(strFromU8(entries["book.json"]));
+  for (const [form, [ipa]] of Object.entries(book.f)) cache[form] = ipa;
+}
+
 for (const source of sources) {
   const b = { v: 2, l: source.lemmas, f: {}, g: [], c: [], t: [] };
   for (const c of source.chapters) {
@@ -38,7 +45,7 @@ for (const source of sources) {
     .join(" ");
   const forms = [...new Set(text.match(WORD))];
   for (const form of forms) {
-    if (!cache[form]) {
+    if (!source.ipa?.[form] && !cache[form]) {
       const mod = await ESpeakNG({
         arguments: ["-v", "de", "--ipa=3", "-q", "--phonout", "/ipa", form],
         wasmBinary: wasm,
@@ -60,13 +67,18 @@ for (const source of sources) {
         l[0] === (source.forms[form] || form) ||
         l[0].replace(/^(der|die|das) /, "") === form,
     );
-    b.f[form] = li >= 0 ? [cache[form], li] : [cache[form]];
+    const ipa = source.ipa?.[form] || cache[form];
+    if (!/^[\p{L}\p{M}\sˈˌːˑ.͜͡‿|()\-]+$/u.test(ipa))
+      throw Error(
+        `Invalid generated IPA for ${form}; provide source.ipa[${JSON.stringify(form)}]`,
+      );
+    b.f[form] = li >= 0 ? [ipa, li] : [ipa];
   }
   const m = {
     format: "fbook",
     formatVersion: 2,
     id: source.id,
-    revision: 1,
+    revision: 2,
     ...source.meta,
     lang: "de",
     hintLang: "ru",
