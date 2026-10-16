@@ -932,7 +932,6 @@ td input {
   .toc {
     position: static;
     max-height: 200px;
-    display: none;
   }
   .word-panel {
     grid-column: 1;
@@ -1200,5 +1199,32 @@ td input {
   }
   .reader-actions .listen {
     grid-column: 1/-1;
+  }
+}
+
+.toc[hidden] {
+  display: none;
+}
+.reader-layout.toc-collapsed {
+  grid-template-columns: minmax(0, 1fr) 280px;
+}
+.reader-tools {
+  justify-content: space-between;
+}
+.toc-toggle {
+  font-size: 13px;
+}
+@media (max-width: 1190px) {
+  .reader-layout.toc-collapsed {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .reader-layout.toc-collapsed .word-panel {
+    grid-column: 1;
+  }
+}
+@media (max-width: 600px) {
+  .toc-toggle {
+    font-size: 12px;
+    padding: 8px 12px;
   }
 }

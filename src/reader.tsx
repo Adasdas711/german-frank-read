@@ -59,6 +59,9 @@ function App() {
       hint: string;
     } | null>(null),
     [busy, setBusy] = useState(false),
+    [tocOpen, setTocOpen] = useState(
+      () => matchMedia("(min-width: 901px)").matches,
+    ),
     [sizeOpen, setSizeOpen] = useState(false),
     [confirm, setConfirm] = useState<{
       title: string;
@@ -127,6 +130,12 @@ function App() {
     };
     window.addEventListener("hashchange", change);
     return () => window.removeEventListener("hashchange", change);
+  }, []);
+  useEffect(() => {
+    const media = matchMedia("(min-width: 901px)");
+    const resize = (event: MediaQueryListEvent) => setTocOpen(event.matches);
+    media.addEventListener("change", resize);
+    return () => media.removeEventListener("change", resize);
   }, []);
   useEffect(() => {
     const root = document.documentElement;
@@ -637,8 +646,13 @@ function App() {
               </button>
             </div>
           </header>
-          <div class="reader-layout">
-            <nav class="toc" aria-label="Отрывки">
+          <div class={"reader-layout" + (tocOpen ? "" : " toc-collapsed")}>
+            <nav
+              class="toc"
+              id="reader-fragments"
+              aria-label="Отрывки"
+              hidden={!tocOpen}
+            >
               <div class="eyebrow">Отрывки</div>
               {active.content.c.map((c, ci) => (
                 <div>
@@ -663,6 +677,15 @@ function App() {
             </nav>
             <main>
               <div class="row reader-tools">
+                <button
+                  class="toc-toggle"
+                  aria-controls="reader-fragments"
+                  aria-expanded={tocOpen}
+                  onClick={() => setTocOpen((open) => !open)}
+                >
+                  <Icon name={tocOpen ? "back" : "next"} />
+                  {tocOpen ? "Скрыть отрывки" : "Показать отрывки"}
+                </button>
                 {mode === "frank" ? (
                   <Toggle
                     checked={settings.showClean}

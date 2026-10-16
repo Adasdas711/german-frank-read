@@ -95,6 +95,36 @@ try {
                 ),
               mode,
             );
+            const toggle = page.locator(".toc-toggle");
+            const initiallyOpen =
+              (await toggle.getAttribute("aria-expanded")) === "true";
+            if (!initiallyOpen) await toggle.click();
+            await page
+              .getByRole("navigation", { name: "Отрывки", exact: true })
+              .waitFor();
+            const expandedWidth = (
+              await page.locator(".reader-layout > main").boundingBox()
+            ).width;
+            await toggle.click();
+            await page
+              .locator("#reader-fragments")
+              .waitFor({ state: "hidden" });
+            assert.equal(await toggle.getAttribute("aria-expanded"), "false");
+            const collapsedWidth = (
+              await page.locator(".reader-layout > main").boundingBox()
+            ).width;
+            assert.ok(
+              width > 900
+                ? collapsedWidth > expandedWidth
+                : collapsedWidth >= expandedWidth,
+              "Reader gains the collapsed panel space",
+            );
+            await toggle.press("Enter");
+            await page
+              .getByRole("navigation", { name: "Отрывки", exact: true })
+              .waitFor();
+            assert.equal(await toggle.getAttribute("aria-expanded"), "true");
+            if (!initiallyOpen) await toggle.click();
             assert.equal(
               await page.locator(".word-panel").count(),
               0,
