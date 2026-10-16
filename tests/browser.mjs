@@ -79,7 +79,7 @@ try {
   await page
     .getByRole("button", { name: "Читать дальше", exact: true })
     .click();
-  await page.getByRole("tab", { name: "Чистый", exact: true }).click();
+  await page.getByRole("tab", { name: "Оригинал", exact: true }).click();
   await page.getByRole("button", { name: "Esel", exact: true }).first().click();
   await page.getByRole("button", { name: "В мои слова", exact: true }).click();
   await page
@@ -112,14 +112,14 @@ try {
   );
   const alert = await page.getByRole("alert").allTextContents();
   assert.equal(alert.length, 0, "voice error " + alert.join());
-  await page.getByRole("tab", { name: "Параллель", exact: true }).click();
+  await page.getByRole("tab", { name: "Паралель", exact: true }).click();
   assert.equal(await page.locator(".parallel-row").count(), 1);
   await page
     .getByRole("button", { name: "Следующий отрывок", exact: true })
     .click();
   await page.waitForURL(/2\/parallel$/);
   await page.reload();
-  await page.getByRole("tab", { name: "Параллель", exact: true }).waitFor();
+  await page.getByRole("tab", { name: "Паралель", exact: true }).waitFor();
   assert.match(page.url(), /1\.2/);
   await page.getByRole("tab", { name: "Франк", exact: true }).click();
   await page

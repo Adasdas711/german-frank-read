@@ -1,3 +1,4 @@
+import { useT } from "./i18n";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import { locate, plain, sentences, type Content, type Chunk } from "./core";
 import { Icon } from "./ui";
@@ -23,6 +24,7 @@ export function FocusReader({
   navigate,
   onExit,
 }: Props) {
+  const t = useT();
   const [controls, setControls] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout>>();
   const main = useRef<HTMLElement>(null);
@@ -102,7 +104,7 @@ export function FocusReader({
         class={"focus-reader" + (mode === "parallel" ? " focus-parallel" : "")}
         ref={main}
         tabIndex={-1}
-        aria-label="Чтение без отвлечений"
+        aria-label={t("Чтение без отвлечений")}
       >
         {mode === "parallel" ? (
           (content.t?.[fragment.c]?.[fragment.f] || []).map(
@@ -127,7 +129,7 @@ export function FocusReader({
       <div
         class={"focus-toolbar" + (controls ? " is-visible" : "")}
         role="toolbar"
-        aria-label="Управление режимом чтения"
+        aria-label={t("Управление режимом чтения")}
         onFocusCapture={reveal}
         onPointerDown={reveal}
         onClick={(event) => {
@@ -136,7 +138,7 @@ export function FocusReader({
       >
         <button
           class="icon"
-          aria-label="Предыдущий отрывок"
+          aria-label={t("Предыдущий отрывок")}
           disabled={index === 0}
           onClick={() => navigate(-1)}
         >
@@ -148,7 +150,7 @@ export function FocusReader({
         <button
           class="icon"
           aria-label={
-            index === total - 1 ? "Завершить чтение" : "Следующий отрывок"
+            index === total - 1 ? t("Завершить чтение") : t("Следующий отрывок")
           }
           onClick={() => navigate(1)}
         >
@@ -156,11 +158,11 @@ export function FocusReader({
         </button>
         <button
           class="focus-exit"
-          aria-label="Выйти из режима чтения"
+          aria-label={t("Выйти из режима чтения")}
           onClick={onExit}
         >
           <Icon name="close" />
-          Выйти
+          {t("Выйти")}
         </button>
       </div>
     </div>

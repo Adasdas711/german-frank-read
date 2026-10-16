@@ -16,6 +16,7 @@ import * as store from "./storage";
 import type { Progress, Settings, SavedWord } from "./storage";
 import { Icon, Modal, Toggle, ProgressBar } from "./ui";
 import { FocusReader } from "./focus-reader";
+import { createTranslator, translateMessage, LocaleContext } from "./i18n";
 import { speak, stop, unlockAudio } from "./voice";
 import {
   exportBackup,
@@ -41,6 +42,7 @@ function App() {
       const cached = document.documentElement.dataset.theme;
       return {
         ...store.defaults,
+        language: document.documentElement.lang === "de" ? "de" : "ru",
         theme: ["light", "dark", "system"].includes(cached) ? cached : "system",
       };
     }),
@@ -81,7 +83,9 @@ function App() {
     backupRef = useRef<HTMLInputElement>(null),
     wordRef = useRef<HTMLElement>(null),
     focusEntryRef = useRef<HTMLButtonElement>(null);
-  const notify = (text: string, error = false) => setMessage({ text, error });
+  const t = createTranslator(settings.language);
+  const notify = (text: string, error = false) =>
+    setMessage({ text: translateMessage(settings.language, text), error });
   const run = async (fn: () => Promise<void>) => {
     try {
       await fn();
@@ -99,7 +103,10 @@ function App() {
     setBooks(b);
     setProgress(p);
     setSaved(w);
-    setSettings(store.checkedSettings(s || store.defaults));
+    const preferences = store.checkedSettings(s || store.defaults);
+    if (!s || s.readingDefaultsVersion !== 1)
+      await store.put("settings", "app", preferences);
+    setSettings(preferences);
   };
   useEffect(() => {
     void (async () => {
@@ -142,6 +149,11 @@ function App() {
   }, []);
   useEffect(() => {
     const root = document.documentElement;
+    root.lang = settings.language;
+    document.title = t("Немецкий по Франку");
+    try {
+      localStorage.setItem("franka-language", settings.language);
+    } catch {}
     root.dataset.theme = settings.theme;
     try {
       localStorage.setItem("franka-theme", settings.theme);
@@ -186,7 +198,7 @@ function App() {
     const b = books.find((b) => b.manifest.id === bookId);
     if (!b) {
       if (ready)
-        notify("Книга не найдена. Загрузите её в разделе «Тексты».", true);
+        notify(t("Книга не найдена. Загрузите её в разделе «Тексты»."), true);
       setActive(null);
       return;
     }
@@ -230,7 +242,7 @@ function App() {
     if (page !== "settings") return;
     void navigator.storage
       ?.estimate?.()
-      .then((e) => setUsage(((e.usage || 0) / 1024 / 1024).toFixed(1) + " МБ"))
+      .then((e) => setUsage(((e.usage || 0) / 1024 / 1024).toFixed(1)))
       .catch(() => {});
   }, [page]);
   function go(book: Book) {
@@ -240,27 +252,31 @@ function App() {
   async function importFiles(files: FileList | File[]) {
     for (const file of Array.from(files)) {
       try {
-        if (file.size > 32 * 1024 * 1024) throw Error("Файл превышает 32 МБ.");
+        if (file.size > 32 * 1024 * 1024)
+          throw Error(t("Файл превышает 32 МБ."));
         const bytes = new Uint8Array(await file.arrayBuffer()),
           b = readBook(bytes),
           old = await store.get<Book>("books", b.manifest.id);
         if (old) {
           if (old.manifest.revision >= b.manifest.revision) {
-            notify("Эта книга уже есть: " + b.manifest.title);
+            notify(t("Эта книга уже есть: ") + b.manifest.title);
             continue;
           }
           await new Promise<void>((resolve) =>
             setConfirm({
-              title: "Обновить книгу?",
+              title: t("Обновить книгу?"),
               cancel: resolve,
-              text: `${b.manifest.title}, версия ${b.manifest.revision}. Прогресс и слова сохранятся.`,
+              text: t("{0}, версия {1}. Прогресс и слова сохранятся.", {
+                0: b.manifest.title,
+                1: b.manifest.revision,
+              }),
               action: async () => {
                 await store.put("books", b.manifest.id, {
                   manifest: b.manifest,
                   bytes,
                 });
                 await refresh();
-                notify("Книга обновлена");
+                notify(t("Книга обновлена"));
                 resolve();
               },
             }),
@@ -271,7 +287,7 @@ function App() {
             bytes,
           });
           await refresh();
-          notify("Книга добавлена: " + b.manifest.title);
+          notify(t("Книга добавлена: ") + b.manifest.title);
         }
       } catch (e) {
         notify(file.name + ": " + (e as Error).message, true);
@@ -330,7 +346,7 @@ function App() {
         };
         await store.put("progress", bookId, p);
         setProgress((prev) => [...prev.filter((p) => p.book !== bookId), p]);
-        notify("Книга прочитана. Можно вернуться к любому отрывку.");
+        notify(t("Книга прочитана. Можно вернуться к любому отрывку."));
         location.hash = "/home";
       });
     }
@@ -450,7 +466,8 @@ function App() {
       book: bookId,
       at,
       lemma: lemma?.[0] || selected.form,
-      ru: lemma?.[1] || selected.hint || "Перевод отсутствует в словаре книги",
+      ru:
+        lemma?.[1] || selected.hint || t("Перевод отсутствует в словаре книги"),
       ipa: selIpa,
       context: selected.context,
       form: selected.form,
@@ -459,7 +476,7 @@ function App() {
     };
     await store.put("words", w.key, w);
     setSaved((prev) => [...prev.filter((x) => x.key !== w.key), w]);
-    notify("Слово сохранено");
+    notify(t("Слово сохранено"));
   }
   const current =
       books.find((b) => b.manifest.id === settings.current) || books[0],
@@ -487,7 +504,7 @@ function App() {
         ),
       );
     }
-    notify("Файл скачан" + (anki ? ". Слова отмечены «в Anki»." : ""));
+    notify(t("Файл скачан") + (anki ? t(". Слова отмечены «в Anki».") : ""));
   };
   function bookCard(b: Book) {
     const m = b.manifest,
@@ -500,7 +517,7 @@ function App() {
             class={"tag " + (m.annotation === "verified" ? "verified" : "")}
           >
             <span class="dot" />
-            {m.annotation === "verified" ? "Проверено" : "Автотекст"}
+            {m.annotation === "verified" ? t("Проверено") : t("Автотекст")}
           </span>
         </div>
         <h3>{m.title}</h3>
@@ -512,33 +529,39 @@ function App() {
           <ProgressBar value={p?.percent || 0} />
           <div class="row between">
             <small class="muted">
-              {p?.percent || 0}% прочитано · {m.stats.fragments} отр.
+              {p?.percent || 0}
+              {t("% прочитано · ")}
+              {m.stats.fragments} {t(" отр.")}
             </small>
-            <small class="muted">{(b.bytes.length / 1024).toFixed(1)} КБ</small>
+            <small class="muted">
+              {(b.bytes.length / 1024).toFixed(1)} {t(" КБ")}
+            </small>
           </div>
         </div>
         <div class="row">
           <button class="primary grow" onClick={() => go(b)}>
-            {p ? "Продолжить" : "Читать"}
+            {p ? t("Продолжить") : t("Читать")}
           </button>
           <button
             class="icon"
-            aria-label={"Скачать " + m.title}
+            aria-label={t("Скачать ") + m.title}
             onClick={() => download(b.bytes, slug(m.title) + ".fbook")}
           >
             <Icon name="download" />
           </button>
           <button
             class="icon"
-            aria-label={"Удалить " + m.title}
+            aria-label={t("Удалить ") + m.title}
             onClick={() =>
               setConfirm({
-                title: "Удалить книгу?",
-                text: "Удалится только файл книги. Сохранённые слова и прогресс останутся.",
+                title: t("Удалить книгу?"),
+                text: t(
+                  "Удалится только файл книги. Сохранённые слова и прогресс останутся.",
+                ),
                 action: async () => {
                   await store.remove("books", m.id);
                   await refresh();
-                  notify("Книга удалена");
+                  notify(t("Книга удалена"));
                 },
               })
             }
@@ -553,21 +576,26 @@ function App() {
     return (
       <>
         <main class="page">
-          <h1>Немецкий по Франку</h1>
+          <h1>{t("Немецкий по Франку")}</h1>
           <p>
             {startupError
-              ? "Не удалось открыть хранилище браузера. Разрешите локальное хранение данных или откройте файл в Chrome / Edge."
-              : "Открываем библиотеку…"}
+              ? t(
+                  "Не удалось открыть хранилище браузера. Разрешите локальное хранение данных или откройте файл в Chrome / Edge.",
+                )
+              : t("Открываем библиотеку…")}
           </p>
           {startupError && (
             <>
-              <div role="alert">{startupError}</div>
+              <div role="alert">
+                {translateMessage(settings.language, startupError)}
+              </div>
               <p>
-                Данные не удалены. Проверьте разрешение браузера на хранение
-                данных.
+                {t(
+                  "Данные не удалены. Проверьте разрешение браузера на хранение данных.",
+                )}
               </p>
               <button onClick={() => location.reload()}>
-                Повторить запуск
+                {t("Повторить запуск")}
               </button>
             </>
           )}
@@ -575,7 +603,7 @@ function App() {
       </>
     );
   return (
-    <>
+    <LocaleContext.Provider value={settings.language}>
       <input
         ref={fileRef}
         type="file"
@@ -597,20 +625,28 @@ function App() {
           if (file)
             void run(async () => {
               if (file.size > 32 * 1024 * 1024)
-                throw Error("Копия превышает 32 МБ.");
+                throw Error(t("Копия превышает 32 МБ."));
               const parsed = parseBackup(
                 new Uint8Array(await file.arrayBuffer()),
               );
               setConfirm({
-                title: "Импорт данных",
-                text: `Добавить слова (${parsed.data.words.length}) и прогресс (${parsed.data.progress.length})? Более свежий прогресс сохранится.`,
+                title: t("Импорт данных"),
+                text: t(
+                  "Добавить слова ({0}) и прогресс ({1})? Более свежий прогресс сохранится.",
+                  {
+                    0: parsed.data.words.length,
+                    1: parsed.data.progress.length,
+                  },
+                ),
                 action: async () => {
                   const replace = window.confirm(
-                    "Заменить также настройки из резервной копии? «Отмена» сохранит текущие настройки.",
+                    t(
+                      "Заменить также настройки из резервной копии? «Отмена» сохранит текущие настройки.",
+                    ),
                   );
                   await importBackup(parsed, replace);
                   await refresh();
-                  notify("Резервная копия импортирована");
+                  notify(t("Резервная копия импортирована"));
                 },
               });
             });
@@ -635,20 +671,21 @@ function App() {
               <div class="header-inner">
                 <a class="back btn" href={href("home")}>
                   <Icon name="back" />
-                  Назад
+                  {t("Назад")}
                 </a>
                 <div class="reader-title">
                   <h1>{active.manifest.title}</h1>
                   <small>
-                    {active.manifest.author} · {active.manifest.level} · отрывок{" "}
-                    {index + 1} из {total}
+                    {active.manifest.author} · {active.manifest.level}{" "}
+                    {t(" · отрывок")} {index + 1} {t(" из ")}
+                    {total}
                   </small>
                 </div>
-                <div class="tabs" role="tablist" aria-label="Режим чтения">
+                <div class="tabs" role="tablist" aria-label={t("Режим чтения")}>
                   {[
-                    ["frank", "Франк"],
-                    ["clean", "Чистый"],
-                    ["parallel", "Параллель"],
+                    ["frank", t("Франк")],
+                    ["parallel", t("Паралель")],
+                    ["clean", t("Оригинал")],
                   ].map(([v, label]) => (
                     <button
                       role="tab"
@@ -656,30 +693,30 @@ function App() {
                       disabled={v === "parallel" && !active.content.t}
                       title={
                         v === "parallel" && !active.content.t
-                          ? "В книге нет перевода"
+                          ? t("В книге нет перевода")
                           : label
                       }
                       onClick={() =>
                         (location.hash = `/read/${bookId}/${at}/${v}`)
                       }
                     >
-                      {label}
+                      {t(label)}
                     </button>
                   ))}
                 </div>
                 <button
                   class="focus-entry"
                   ref={focusEntryRef}
-                  aria-label="Режим чтения"
-                  title="Режим чтения — только текст"
+                  aria-label={t("Режим чтения")}
+                  title={t("Режим чтения — только текст")}
                   onClick={enterFocus}
                 >
                   <Icon name="book" />
-                  <span>Только текст</span>
+                  <span>{t("Только текст")}</span>
                 </button>
                 <button
                   class="icon serif"
-                  aria-label="Размер шрифта"
+                  aria-label={t("Размер шрифта")}
                   onClick={() => setSizeOpen(true)}
                 >
                   Aa
@@ -690,17 +727,18 @@ function App() {
               <nav
                 class="toc"
                 id="reader-fragments"
-                aria-label="Отрывки"
+                aria-label={t("Отрывки")}
                 hidden={!tocOpen}
               >
-                <div class="eyebrow">Отрывки</div>
+                <div class="eyebrow">{t("Отрывки")}</div>
                 {active.content.c.map((c, ci) => (
                   <div>
                     <p
                       class="muted"
                       style={{ padding: "0 12px", fontSize: 12 }}
                     >
-                      {active.manifest.chapters[ci][0] || "Глава " + (ci + 1)}
+                      {active.manifest.chapters[ci][0] ||
+                        t("Глава ") + (ci + 1)}
                     </p>
                     {c.map((f, fi) => (
                       <button
@@ -727,7 +765,7 @@ function App() {
                     onClick={() => setTocOpen((open) => !open)}
                   >
                     <Icon name={tocOpen ? "back" : "next"} />
-                    {tocOpen ? "Скрыть отрывки" : "Показать отрывки"}
+                    {tocOpen ? t("Скрыть отрывки") : t("Показать отрывки")}
                   </button>
                   {mode === "frank" ? (
                     <Toggle
@@ -736,16 +774,16 @@ function App() {
                         void run(() => saveSettings({ showClean: v }))
                       }
                     >
-                      Текст без подсказок
+                      {t("Текст без подсказок")}
                     </Toggle>
                   ) : null}
                 </div>
                 {mode === "parallel" ? (
                   <section
                     class="reading-panel"
-                    aria-label="Параллельный перевод"
+                    aria-label={t("Параллельный перевод")}
                   >
-                    <div class="eyebrow">Немецкий · Русский</div>
+                    <div class="eyebrow">{t("Немецкий · Русский")}</div>
                     {(active.content.t?.[fragment.c]?.[fragment.f] || []).map(
                       (t, i) => {
                         const text =
@@ -764,14 +802,20 @@ function App() {
                 ) : (
                   <div class="reading-columns">
                     {mode === "frank" && (
-                      <section class="reading-panel" aria-label="С подсказками">
-                        <div class="eyebrow">С подсказками</div>
+                      <section
+                        class="reading-panel"
+                        aria-label={t("С подсказками")}
+                      >
+                        <div class="eyebrow">{t("С подсказками")}</div>
                         <p lang="de">{textBlock(fragment.chunks, true)}</p>
                       </section>
                     )}
                     {(mode === "clean" || settings.showClean) && (
-                      <section class="reading-panel" aria-label="Без подсказок">
-                        <div class="eyebrow">Без подсказок</div>
+                      <section
+                        class="reading-panel"
+                        aria-label={t("Без подсказок")}
+                      >
+                        <div class="eyebrow">{t("Без подсказок")}</div>
                         <p lang="de">{textBlock(fragment.chunks)}</p>
                       </section>
                     )}
@@ -784,43 +828,46 @@ function App() {
                     onClick={() => void listenFragment()}
                   >
                     <Icon name="sound" />
-                    {busy ? "Готовим звук…" : "Прослушать отрывок"}
+                    {busy ? t("Готовим звук…") : t("Прослушать отрывок")}
                   </button>
                   <button
                     disabled={index === 0}
                     class="icon"
-                    aria-label="Предыдущий отрывок"
+                    aria-label={t("Предыдущий отрывок")}
                     onClick={() => navigate(-1)}
                   >
                     <Icon name="back" />
                   </button>
                   <button class="primary" onClick={() => navigate(1)}>
                     {index === total - 1
-                      ? "Завершить чтение"
-                      : "Следующий отрывок"}
+                      ? t("Завершить чтение")
+                      : t("Следующий отрывок")}
                     <Icon name="next" />
                   </button>
                 </div>
                 <div class="reader-info">
-                  <span>← → для перехода</span>
+                  <span>{t("← → для перехода")}</span>
                   <span>·</span>
-                  <span>Место сохраняется автоматически</span>
+                  <span>{t("Место сохраняется автоматически")}</span>
                 </div>
               </main>
               {selected ? (
                 <aside
                   class="panel word-panel"
                   ref={wordRef}
-                  aria-label="Подсказка к слову"
+                  aria-label={t("Подсказка к слову")}
                 >
                   <div class="row between">
                     <div class="grow">
                       <h2 lang="de">{lemma?.[0] || selected.form}</h2>
-                      <small class="muted">В тексте: {selected.form}</small>
+                      <small class="muted">
+                        {t("В тексте: ")}
+                        {selected.form}
+                      </small>
                     </div>
                     <button
                       class="icon close-word"
-                      aria-label="Закрыть подсказку"
+                      aria-label={t("Закрыть подсказку")}
                       onClick={() => setSelected(null)}
                     >
                       <Icon name="close" />
@@ -830,14 +877,14 @@ function App() {
                     <span class="ipa">[{selIpa}]</span>
                     <button
                       class="icon"
-                      aria-label="Произнести слово"
+                      aria-label={t("Произнести слово")}
                       disabled={busy}
                       onClick={() => void listen(selected.form, selIpa)}
                     >
                       <Icon name="sound" />
                     </button>
                   </div>
-                  <strong>{lemma?.[1] || "Нет отдельного перевода"}</strong>
+                  <strong>{lemma?.[1] || t("Нет отдельного перевода")}</strong>
                   <div class="context">
                     <i lang="de">{selected.context}</i>
                     {selected.hint && (
@@ -854,10 +901,10 @@ function App() {
                     {isSaved ? (
                       <>
                         <Icon name="check" />
-                        Слово сохранено
+                        {t("Слово сохранено")}
                       </>
                     ) : (
-                      "В мои слова"
+                      t("В мои слова")
                     )}
                   </button>
                 </aside>
@@ -870,23 +917,23 @@ function App() {
           <header class="app-header">
             <div class="header-inner">
               <a class="brand" href={href("home")}>
-                Немецкий по Франку
+                {t("Немецкий по Франку")}
               </a>
-              <nav class="nav" aria-label="Разделы">
+              <nav class="nav" aria-label={t("Разделы")}>
                 {nav.map(([v, label, icon]) => (
                   <a
                     href={href(v)}
                     aria-current={page === v ? "page" : undefined}
                   >
                     <Icon name={icon} />
-                    {label}
+                    {t(label)}
                   </a>
                 ))}
               </nav>
               <a
                 class="settings-link icon"
                 href={href("settings")}
-                aria-label="Настройки"
+                aria-label={t("Настройки")}
               >
                 <Icon name="settings" />
               </a>
@@ -902,12 +949,13 @@ function App() {
                       idx = addresses(data.content).indexOf(cp?.at || "1.1");
                     return (
                       <>
-                        <section class="hero" aria-label="Читаю сейчас">
+                        <section class="hero" aria-label={t("Читаю сейчас")}>
                           <div class="hero-copy">
                             <div class="row">
-                              <span class="eyebrow">Читаю сейчас</span>
+                              <span class="eyebrow">{t("Читаю сейчас")}</span>
                               <span class="badge">
-                                Уровень {current.manifest.level}
+                                {t("Уровень ")}
+                                {current.manifest.level}
                               </span>
                             </div>
                             <h2>{current.manifest.title}</h2>
@@ -918,9 +966,10 @@ function App() {
                             <div>
                               <ProgressBar value={cp?.percent || 0} />
                               <small class="muted">
-                                Отрывок {idx + 1} из{" "}
+                                {t("Отрывок ")}
+                                {idx + 1} {t(" из")}{" "}
                                 {current.manifest.stats.fragments}
-                                {cp?.percent === 100 ? " · Прочитано" : ""}
+                                {cp?.percent === 100 ? t(" · Прочитано") : ""}
                               </small>
                             </div>
                             <blockquote>
@@ -928,7 +977,7 @@ function App() {
                             </blockquote>
                           </div>
                           <button class="btn teal" onClick={() => go(current)}>
-                            Читать дальше
+                            {t("Читать дальше")}
                             <Icon name="next" />
                           </button>
                         </section>
@@ -938,16 +987,18 @@ function App() {
                 ) : (
                   <div class="panel empty">
                     <Icon name="book" size={40} />
-                    <h2>Ваша первая книга</h2>
+                    <h2>{t("Ваша первая книга")}</h2>
                     <p>
-                      Добавьте .fbook и начните читать немецкий с подсказками.
+                      {t(
+                        "Добавьте .fbook и начните читать немецкий с подсказками.",
+                      )}
                     </p>
                     <button
                       class="primary"
                       onClick={() => fileRef.current?.click()}
                     >
                       <Icon name="upload" />
-                      Загрузить книгу
+                      {t("Загрузить книгу")}
                     </button>
                   </div>
                 )}
@@ -956,13 +1007,13 @@ function App() {
             {page === "texts" && (
               <>
                 <div class="page-title">
-                  <h1>Тексты</h1>
+                  <h1>{t("Тексты")}</h1>
                   <button
                     class="primary"
                     onClick={() => fileRef.current?.click()}
                   >
                     <Icon name="upload" />
-                    Загрузить
+                    {t("Загрузить")}
                   </button>
                 </div>
                 <div
@@ -974,19 +1025,21 @@ function App() {
                   onDragLeave={(e) => e.currentTarget.classList.remove("over")}
                   onDrop={(e) => e.currentTarget.classList.remove("over")}
                 >
-                  Перетащите сюда файлы .fbook
+                  {t("Перетащите сюда файлы .fbook")}
                   <br />
-                  <small>Книги хранятся только на этом устройстве</small>
+                  <small>{t("Книги хранятся только на этом устройстве")}</small>
                 </div>
                 <div class="row between" style={{ marginBottom: 24 }}>
                   <input
                     class="text-input search"
-                    placeholder="Найти книгу или автора"
-                    aria-label="Поиск книг"
+                    placeholder={t("Найти книгу или автора")}
+                    aria-label={t("Поиск книг")}
                     value={query}
                     onInput={(e) => setQuery(e.currentTarget.value)}
                   />
-                  <small class="muted">{books.length} книг в библиотеке</small>
+                  <small class="muted">
+                    {books.length} {t(" книг в библиотеке")}
+                  </small>
                 </div>
                 <div class="stack">
                   {["A1", "A2", "B1", "B2", "C1", "C2"].map((level) => {
@@ -1011,8 +1064,8 @@ function App() {
                             marginBottom: 16,
                           }}
                         >
-                          Уровень {level}{" "}
-                          <span class="muted">· {list.length}</span>
+                          {t("Уровень ")}
+                          {level} <span class="muted">· {list.length}</span>
                         </h2>
                         <div class="book-grid">{list.map(bookCard)}</div>
                       </section>
@@ -1020,14 +1073,16 @@ function App() {
                   })}
                   {!books.length && (
                     <div class="empty">
-                      <h2>Библиотека пока пуста</h2>
-                      <p>Загрузите .fbook или создайте книгу в сборщике.</p>
+                      <h2>{t("Библиотека пока пуста")}</h2>
+                      <p>
+                        {t("Загрузите .fbook или создайте книгу в сборщике.")}
+                      </p>
                     </div>
                   )}
                 </div>
                 <p class="hint-note">
-                  «Автотекст» — разметка без полной ручной проверки.{" "}
-                  <a href="fbook-builder.html">Открыть сборщик книг →</a>
+                  {t("«Автотекст» — разметка без полной ручной проверки.")}{" "}
+                  <a href="fbook-builder.html">{t("Открыть сборщик книг →")}</a>
                 </p>
               </>
             )}
@@ -1035,7 +1090,7 @@ function App() {
               <>
                 <div class="page-title">
                   <h1>
-                    Мои слова{" "}
+                    {t("Мои слова")}{" "}
                     <span
                       class="muted"
                       style={{ fontFamily: "inherit", fontSize: 18 }}
@@ -1056,7 +1111,7 @@ function App() {
                       disabled={!filteredWords.length}
                       onClick={() => void run(() => exportList(true))}
                     >
-                      В Anki
+                      {t("В Anki")}
                       <Icon name="next" />
                     </button>
                   </div>
@@ -1065,7 +1120,7 @@ function App() {
                   <div
                     class="tabs"
                     role="tablist"
-                    aria-label="Группировка слов"
+                    aria-label={t("Группировка слов")}
                   >
                     <button
                       role="tab"
@@ -1075,30 +1130,30 @@ function App() {
                         setBookFilter("all");
                       }}
                     >
-                      Все слова
+                      {t("Все слова")}
                     </button>
                     <button
                       role="tab"
                       aria-selected={wordTab === "books"}
                       onClick={() => setWordTab("books")}
                     >
-                      По книгам
+                      {t("По книгам")}
                     </button>
                   </div>
                   <input
                     class="text-input search"
-                    placeholder="Найти слово"
-                    aria-label="Поиск слов"
+                    placeholder={t("Найти слово")}
+                    aria-label={t("Поиск слов")}
                     value={query}
                     onInput={(e) => setQuery(e.currentTarget.value)}
                   />
                 </div>
                 <div class="row between" style={{ marginBottom: 20 }}>
                   <small class="muted">
-                    Перевод, произношение и фраза из книги
+                    {t("Перевод, произношение и фраза из книги")}
                   </small>
                   <Toggle checked={onlyNew} onChange={setOnlyNew}>
-                    В Anki только новые
+                    {t("В Anki только новые")}
                   </Toggle>
                 </div>
                 <div class={wordTab === "books" ? "words-layout" : ""}>
@@ -1108,7 +1163,8 @@ function App() {
                         class={bookFilter === "all" ? "active" : ""}
                         onClick={() => setBookFilter("all")}
                       >
-                        Все книги<span>{saved.length}</span>
+                        {t("Все книги")}
+                        <span>{saved.length}</span>
                       </button>
                       {[...new Set(saved.map((w) => w.book))].map((id) => (
                         <button
@@ -1116,7 +1172,7 @@ function App() {
                           onClick={() => setBookFilter(id)}
                         >
                           {books.find((b) => b.manifest.id === id)?.manifest
-                            .title || "Книга не загружена"}
+                            .title || t("Книга не загружена")}
                           <span>
                             {saved.filter((w) => w.book === id).length}
                           </span>
@@ -1139,16 +1195,19 @@ function App() {
                           <div class="row between" style={{ marginTop: 12 }}>
                             <small class="muted">
                               {books.find((b) => b.manifest.id === w.book)
-                                ?.manifest.title || "Книга не загружена"}{" "}
+                                ?.manifest.title ||
+                                t("Книга не загружена")}{" "}
                               · {w.at}
                             </small>
-                            {w.inAnki && <span class="status">✓ в Anki</span>}
+                            {w.inAnki && (
+                              <span class="status">{t("✓ в Anki")}</span>
+                            )}
                           </div>
                         </div>
                         <div class="stack" style={{ gap: 6 }}>
                           <button
                             class="icon"
-                            aria-label={"Озвучить " + w.lemma}
+                            aria-label={t("Озвучить ") + w.lemma}
                             disabled={busy}
                             onClick={() => void listen(w.form, w.ipa)}
                           >
@@ -1156,10 +1215,10 @@ function App() {
                           </button>
                           <button
                             class="icon"
-                            aria-label={"Удалить слово " + w.lemma}
+                            aria-label={t("Удалить слово ") + w.lemma}
                             onClick={() =>
                               setConfirm({
-                                title: "Удалить слово?",
+                                title: t("Удалить слово?"),
                                 text: w.lemma + " — " + w.ru,
                                 action: async () => {
                                   await store.remove("words", w.key);
@@ -1180,37 +1239,60 @@ function App() {
                         <Icon name="words" size={36} />
                         <h2>
                           {query
-                            ? "Слова не найдены"
-                            : "Здесь будут ваши слова"}
+                            ? t("Слова не найдены")
+                            : t("Здесь будут ваши слова")}
                         </h2>
                         <p>
-                          Нажмите на слово во время чтения и выберите «В мои
-                          слова».
+                          {t(
+                            "Нажмите на слово во время чтения и выберите «В мои слова».",
+                          )}
                         </p>
                         <a class="btn" href={href("home")}>
-                          Перейти к чтению
+                          {t("Перейти к чтению")}
                         </a>
                       </div>
                     )}
                   </div>
                 </div>
                 <p class="hint-note">
-                  Anki: «Файл → Импорт» → выберите скачанный .txt. Каждая книга
-                  попадёт в свою подколоду. Отметка «в Anki» означает, что слово
-                  было экспортировано.
+                  {t(
+                    "Anki: «Файл → Импорт» → выберите скачанный .txt. Каждая книга попадёт в свою подколоду. Отметка «в Anki» означает, что слово было экспортировано.",
+                  )}
                 </p>
               </>
             )}
             {page === "settings" && (
               <>
                 <div class="page-title">
-                  <h1>Настройки</h1>
+                  <h1>{t("Настройки")}</h1>
                 </div>
                 <div class="settings-grid">
                   <section class="panel">
-                    <h2>Чтение</h2>
+                    <h2>{t("Чтение")}</h2>
                     <div class="setting-row">
-                      <label for="font">Шрифт</label>
+                      <label for="interface-language">
+                        {t("Язык интерфейса")}
+                      </label>
+                      <select
+                        id="interface-language"
+                        value={settings.language}
+                        onChange={(event) =>
+                          void run(() =>
+                            saveSettings({
+                              language:
+                                event.currentTarget.value === "de"
+                                  ? "de"
+                                  : "ru",
+                            }),
+                          )
+                        }
+                      >
+                        <option value="ru">{t("Русский")}</option>
+                        <option value="de">Deutsch</option>
+                      </select>
+                    </div>
+                    <div class="setting-row">
+                      <label for="font">{t("Шрифт")}</label>
                       <select
                         id="font"
                         value={settings.font}
@@ -1222,12 +1304,13 @@ function App() {
                       >
                         <option value="serif">Literata</option>
                         <option value="sans">Golos Text</option>
-                        <option value="system">Системный</option>
+                        <option value="system">{t("Системный")}</option>
                       </select>
                     </div>
                     <div class="setting-row">
                       <label for="size">
-                        Размер текста<small>{settings.fontSize} px</small>
+                        {t("Размер текста")}
+                        <small>{settings.fontSize} px</small>
                       </label>
                       <input
                         id="size"
@@ -1243,7 +1326,7 @@ function App() {
                       />
                     </div>
                     <div class="setting-row">
-                      <label for="theme">Тема</label>
+                      <label for="theme">{t("Тема")}</label>
                       <select
                         id="theme"
                         value={settings.theme}
@@ -1253,9 +1336,9 @@ function App() {
                           )
                         }
                       >
-                        <option value="system">Как в системе</option>
-                        <option value="light">Светлая</option>
-                        <option value="dark">Тёмная</option>
+                        <option value="system">{t("Как в системе")}</option>
+                        <option value="light">{t("Светлая")}</option>
+                        <option value="dark">{t("Тёмная")}</option>
                       </select>
                     </div>
                     <div class="setting-row">
@@ -1265,22 +1348,24 @@ function App() {
                           void run(() => saveSettings({ showClean: v }))
                         }
                       >
-                        Текст без подсказок
+                        {t("Текст без подсказок")}
                         <small style={{ display: "block" }}>
-                          Повторять отрывок в режиме «Франк»
+                          {t("Повторять отрывок в режиме «Франк»")}
                         </small>
                       </Toggle>
                     </div>
                     <div class="preview" lang="de">
                       Und machte sich auf den Weg nach Bremen.
                       <br />
-                      <span class="hint">И отправился в путь в Бремен.</span>
+                      <span class="hint" lang="ru">
+                        И отправился в путь в Бремен.
+                      </span>
                     </div>
                   </section>
                   <section class="panel">
-                    <h2>Произношение</h2>
+                    <h2>{t("Произношение")}</h2>
                     <div class="setting-row">
-                      <label for="voice">Голос</label>
+                      <label for="voice">{t("Голос")}</label>
                       <select
                         id="voice"
                         value={settings.voice}
@@ -1290,13 +1375,16 @@ function App() {
                           )
                         }
                       >
-                        <option value="espeak">eSpeak NG · офлайн</option>
-                        <option value="system">Системный голос</option>
+                        <option value="espeak">
+                          {t("eSpeak NG · офлайн")}
+                        </option>
+                        <option value="system">{t("Системный голос")}</option>
                       </select>
                     </div>
                     <div class="setting-row">
                       <label for="rate">
-                        Скорость<small>{settings.rate.toFixed(1)}×</small>
+                        {t("Скорость")}
+                        <small>{settings.rate.toFixed(1)}×</small>
                       </label>
                       <input
                         id="rate"
@@ -1313,9 +1401,9 @@ function App() {
                       />
                     </div>
                     <p class="muted">
-                      eSpeak NG читает произношение из книги. Системный голос
-                      читает немецкий текст и зависит от голосов, установленных
-                      на устройстве.
+                      {t(
+                        "eSpeak NG читает произношение из книги. Системный голос читает немецкий текст и зависит от голосов, установленных на устройстве.",
+                      )}
                     </p>
                     <button
                       disabled={busy}
@@ -1324,37 +1412,38 @@ function App() {
                       }
                     >
                       <Icon name="sound" />
-                      {busy ? "Готовим звук…" : "Послушать пример"}
+                      {busy ? t("Готовим звук…") : t("Послушать пример")}
                     </button>
                   </section>
                   <section class="panel stack">
-                    <h2>Данные</h2>
+                    <h2>{t("Данные")}</h2>
                     <p class="muted" style={{ margin: 0 }}>
-                      Прогресс, слова и настройки хранятся в этом браузере.
-                      Сохраняйте резервную копию перед переносом файла или
-                      очисткой браузера.
+                      {t(
+                        "Прогресс, слова и настройки хранятся в этом браузере. Сохраняйте резервную копию перед переносом файла или очисткой браузера.",
+                      )}
                     </p>
                     <small class="muted">
-                      Занято в браузере: {usage || "нет данных"}
+                      {t("Занято в браузере: ")}
+                      {usage ? usage + t(" МБ") : t("нет данных")}
                     </small>
                     <Toggle checked={withBooks} onChange={setWithBooks}>
-                      Вместе с книгами
+                      {t("Вместе с книгами")}
                     </Toggle>
                     <div class="row">
                       <button
                         onClick={() =>
                           void run(async () => {
                             await exportBackup(withBooks);
-                            notify("Резервная копия скачана");
+                            notify(t("Резервная копия скачана"));
                           })
                         }
                       >
                         <Icon name="download" />
-                        Экспорт
+                        {t("Экспорт")}
                       </button>
                       <button onClick={() => backupRef.current?.click()}>
                         <Icon name="upload" />
-                        Импорт
+                        {t("Импорт")}
                       </button>
                     </div>
                     <div class="line" />
@@ -1362,35 +1451,40 @@ function App() {
                       class="danger"
                       onClick={() =>
                         setConfirm({
-                          title: "Очистить все данные?",
-                          text: "Удалятся книги, слова, прогресс и настройки. Это действие нельзя отменить. Сначала скачайте резервную копию.",
+                          title: t("Очистить все данные?"),
+                          text: t(
+                            "Удалятся книги, слова, прогресс и настройки. Это действие нельзя отменить. Сначала скачайте резервную копию.",
+                          ),
                           action: async () => {
                             stop();
                             await store.clearAll();
                             await refresh();
-                            notify("Данные удалены");
+                            notify(t("Данные удалены"));
                           },
                         })
                       }
                     >
                       <Icon name="trash" />
-                      Очистить данные
+                      {t("Очистить данные")}
                     </button>
                   </section>
                   <section class="panel stack">
-                    <h2>О приложении</h2>
+                    <h2>{t("О приложении")}</h2>
                     <p class="muted" style={{ margin: 0 }}>
-                      Немецкий по методу Ильи Франка: сначала читайте с
-                      подсказками, затем тот же отрывок без перевода.
+                      {t(
+                        "Немецкий по методу Ильи Франка: сначала читайте с подсказками, затем тот же отрывок без перевода.",
+                      )}
                     </p>
                     <a class="btn" href="fbook-builder.html">
-                      Сборщик .fbook
+                      {t("Сборщик .fbook")}
                       <Icon name="next" />
                     </a>
                     <small class="muted">
-                      Версия 1.0 · формат .fbook 2<br />
-                      Без сервера и аккаунтов. При открытии на другом устройстве
-                      данные нужно перенести резервной копией.
+                      {t("Версия 1.0 · формат .fbook 2")}
+                      <br />
+                      {t(
+                        "Без сервера и аккаунтов. При открытии на другом устройстве данные нужно перенести резервной копией.",
+                      )}
                     </small>
                   </section>
                 </div>
@@ -1398,9 +1492,9 @@ function App() {
             )}
             {!["home", "texts", "words", "settings"].includes(page) && (
               <div class="empty">
-                <h1>Страница не найдена</h1>
+                <h1>{t("Страница не найдена")}</h1>
                 <p>
-                  <a href={href("home")}>Вернуться к библиотеке</a>
+                  <a href={href("home")}>{t("Вернуться к библиотеке")}</a>
                 </p>
               </div>
             )}
@@ -1408,9 +1502,12 @@ function App() {
         </>
       )}
       {sizeOpen && (
-        <Modal title="Размер текста" onClose={() => setSizeOpen(false)}>
+        <Modal title={t("Размер текста")} onClose={() => setSizeOpen(false)}>
           <div class="setting-row">
-            <label for="reader-size">Размер: {settings.fontSize} px</label>
+            <label for="reader-size">
+              {t("Размер: ")}
+              {settings.fontSize} px
+            </label>
             <input
               id="reader-size"
               type="range"
@@ -1429,7 +1526,7 @@ function App() {
           </div>
           <div class="row">
             <button class="primary" onClick={() => setSizeOpen(false)}>
-              Готово
+              {t("Готово")}
             </button>
           </div>
         </Modal>
@@ -1450,7 +1547,7 @@ function App() {
                 setConfirm(null);
               }}
             >
-              Отмена
+              {t("Отмена")}
             </button>
             <button
               class="primary"
@@ -1460,7 +1557,7 @@ function App() {
                 void run(action);
               }}
             >
-              Подтвердить
+              {t("Подтвердить")}
             </button>
           </div>
         </Modal>
@@ -1472,14 +1569,14 @@ function App() {
         >
           <span>{message.text}</span>
           <button
-            aria-label="Закрыть сообщение"
+            aria-label={t("Закрыть сообщение")}
             onClick={() => setMessage(null)}
           >
             <Icon name="close" size={16} />
           </button>
         </div>
       )}
-    </>
+    </LocaleContext.Provider>
   );
 }
 const root = document.getElementById("app")!;

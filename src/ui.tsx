@@ -1,3 +1,4 @@
+import { useT } from "./i18n";
 import { useEffect, useRef } from "preact/hooks";
 export function Icon({ name, size = 20 }: { name: string; size?: number }) {
   const paths: Record<string, any> = {
@@ -90,6 +91,7 @@ export function Modal({
   children: any;
   onClose: () => void;
 }) {
+  const t = useT();
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const before = document.activeElement as HTMLElement;
@@ -135,7 +137,7 @@ export function Modal({
       >
         <div class="row between">
           <h2>{title}</h2>
-          <button class="icon" aria-label="Закрыть" onClick={onClose}>
+          <button class="icon" aria-label={t("Закрыть")} onClick={onClose}>
             <Icon name="close" />
           </button>
         </div>
@@ -165,6 +167,7 @@ export function Toggle({
   );
 }
 export function ProgressBar({ value }: { value: number }) {
+  const t = useT();
   return (
     <div
       class="progress"
@@ -172,7 +175,7 @@ export function ProgressBar({ value }: { value: number }) {
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={value}
-      aria-label="Прочитано"
+      aria-label={t("Прочитано")}
     >
       <div style={{ width: value + "%" }} />
     </div>

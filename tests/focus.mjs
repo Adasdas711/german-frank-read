@@ -45,8 +45,8 @@ try {
       await page.setViewportSize(viewport);
       for (const [mode, label] of [
         ["frank", "Франк"],
-        ["clean", "Чистый"],
-        ["parallel", "Параллель"],
+        ["clean", "Оригинал"],
+        ["parallel", "Паралель"],
       ]) {
         await page.evaluate(
           ({ book, mode }) => (location.hash = `/read/${book}/1.1/${mode}`),

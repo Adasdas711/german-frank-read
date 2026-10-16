@@ -478,6 +478,9 @@ textarea {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
   gap: 20px;
 }
+.reading-columns > .reading-panel:only-child {
+  grid-column: 1 / -1;
+}
 .reading-panel {
   padding: 28px;
   border-radius: 20px;

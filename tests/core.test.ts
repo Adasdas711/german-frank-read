@@ -175,3 +175,49 @@ describe("German IPA mapping", () => {
     expect(() => toPhonemes("😀")).toThrow(/символ/);
   });
 });
+
+describe("reader preferences", () => {
+  it("uses Russian and hides the unannotated copy by default", async () => {
+    const { defaults, checkedSettings } = await import("../src/storage");
+    expect(defaults.language).toBe("ru");
+    expect(defaults.showClean).toBe(false);
+    expect(checkedSettings({ language: "en" }).language).toBe("ru");
+    const migrated = checkedSettings({
+      showClean: true,
+      fontSize: 24,
+      theme: "dark",
+      current: "book-1",
+    });
+    expect(migrated.showClean).toBe(false);
+    expect(migrated).toMatchObject({
+      fontSize: 24,
+      theme: "dark",
+      current: "book-1",
+    });
+    expect(
+      checkedSettings({ ...migrated, showClean: true, language: "de" }),
+    ).toMatchObject({ showClean: true, language: "de" });
+  });
+  it("translates messages and parameters without touching book data", async () => {
+    const { translate, translateMessage } = await import("../src/i18n");
+    expect(translate("de", "  Назад ")).toBe("  Zurück ");
+    expect(
+      translate("ru", "{0}, версия {1}. Прогресс и слова сохранятся.", {
+        0: "Buch",
+        1: 2,
+      }),
+    ).toBe("Buch, версия 2. Прогресс и слова сохранятся.");
+    expect(
+      translate("de", "{0}, версия {1}. Прогресс и слова сохранятся.", {
+        0: "Buch",
+        1: 2,
+      }),
+    ).toBe("Buch, Version 2. Lesefortschritt und Wörter bleiben erhalten.");
+    expect(translateMessage("de", "Файл превышает 32 МБ.")).toBe(
+      "Die Datei ist größer als 32 MB.",
+    );
+    expect(translate("de", "Бременские музыканты")).toBe(
+      "Бременские музыканты",
+    );
+  });
+});

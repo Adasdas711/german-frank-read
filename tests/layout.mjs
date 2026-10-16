@@ -84,7 +84,7 @@ try {
           }
         }
         if (route.startsWith("read/")) {
-          for (const mode of ["Франк", "Чистый", "Параллель"]) {
+          for (const mode of ["Франк", "Оригинал", "Паралель"]) {
             await page.getByRole("tab", { name: mode, exact: true }).click();
             await page.waitForFunction(
               (mode) =>

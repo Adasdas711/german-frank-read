@@ -1,4 +1,5 @@
 import type { Book } from "./core";
+import type { Language } from "./i18n";
 export type Progress = {
   book: string;
   at: string;
@@ -23,6 +24,8 @@ export type Settings = {
   fontSize: number;
   theme: string;
   showClean: boolean;
+  language: Language;
+  readingDefaultsVersion: 1;
   voice: string;
   rate: number;
   current?: string;
@@ -31,7 +34,9 @@ export const defaults: Settings = {
   font: "serif",
   fontSize: 19,
   theme: "system",
-  showClean: true,
+  showClean: false,
+  language: "ru",
+  readingDefaultsVersion: 1,
   voice: "espeak",
   rate: 1,
 };
@@ -146,7 +151,12 @@ export function checkedSettings(s: any): Settings {
       ? Math.max(14, Math.min(30, s.fontSize))
       : 19,
     theme: ["light", "dark", "system"].includes(s?.theme) ? s.theme : "system",
-    showClean: typeof s?.showClean === "boolean" ? s.showClean : true,
+    showClean:
+      s?.readingDefaultsVersion === 1 && typeof s?.showClean === "boolean"
+        ? s.showClean
+        : false,
+    language: s?.language === "de" ? "de" : "ru",
+    readingDefaultsVersion: 1,
     voice: ["espeak", "system"].includes(s?.voice) ? s.voice : "espeak",
     rate: Number.isFinite(s?.rate) ? Math.max(0.5, Math.min(1.5, s.rate)) : 1,
     ...(typeof s?.current === "string" ? { current: s.current } : {}),

@@ -16,6 +16,12 @@ import demoSources from "./demo-source.json";
 import * as pdfjs from "pdfjs-dist";
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?raw";
 import "./style.css";
+import {
+  createTranslator,
+  translateMessage,
+  LocaleContext,
+  type Language,
+} from "./i18n";
 const pdfURL = URL.createObjectURL(
   new Blob([pdfWorker], { type: "text/javascript" }),
 );
@@ -28,6 +34,26 @@ const steps = [
   "Скачать .fbook",
 ];
 function Builder() {
+  const [language, setLanguage] = useState<Language>(() =>
+    document.documentElement.lang === "de" ? "de" : "ru",
+  );
+  const t = createTranslator(language);
+  useEffect(() => {
+    document.documentElement.lang = language;
+    document.title = t("Сборщик книг") + " · " + t("Немецкий по Франку");
+    try {
+      localStorage.setItem("franka-language", language);
+    } catch {}
+  }, [language]);
+  async function saveLanguage(value: string) {
+    const next = value === "de" ? "de" : "ru";
+    setLanguage(next);
+    const preferences = store.checkedSettings(
+      await store.get("settings", "app"),
+    );
+    await store.put("settings", "app", { ...preferences, language: next });
+  }
+
   const [startupError, setStartupError] = useState<string | null>(null);
   const [step, setStep] = useState(0),
     [source, setSource] = useState<Source | null>(null),
@@ -59,7 +85,7 @@ function Builder() {
     dictFile = useRef<HTMLInputElement>(null),
     pdfArea = useRef<HTMLTextAreaElement>(null);
   const notify = (s: string, err = false) => {
-    setMessage(s);
+    setMessage(translateMessage(language, s));
     setError(err);
   };
   async function run(fn: () => Promise<void>) {
@@ -74,6 +100,10 @@ function Builder() {
   }
   useEffect(() => {
     void (async () => {
+      const preferences = store.checkedSettings(
+        await store.get("settings", "app"),
+      );
+      setLanguage(preferences.language);
       const d: any = await store.get("drafts", "builder");
       if (d) {
         setSource(d.source);
@@ -87,7 +117,7 @@ function Builder() {
         setChecks(d.checks || [false, false, false, false]);
         setPDF(d.pdf || "");
         setStep(d.step || 0);
-        notify("Черновик восстановлен");
+        notify(t("Черновик восстановлен"));
       }
       setDict((await store.get("drafts", "dictionary")) || {});
       setReady(true);
@@ -118,7 +148,7 @@ function Builder() {
       void store
         .put("drafts", "builder", draft())
         .catch((e) =>
-          notify("Не удалось сохранить черновик: " + e.message, true),
+          notify(t("Не удалось сохранить черновик: ") + e.message, true),
         );
     }, 400);
     return () => clearTimeout(timer);
@@ -184,7 +214,7 @@ function Builder() {
     setAt("1.1");
     setHistory([]);
     setStep(0);
-    notify("Исходник загружен. Черновик сохраняется автоматически.");
+    notify(t("Исходник загружен. Черновик сохраняется автоматически."));
   }
   function parse() {
     try {
@@ -193,7 +223,7 @@ function Builder() {
         checkSource(s);
         editSource(s, "all");
       } else load(s);
-      notify("Структура исходника корректна");
+      notify(t("Структура исходника корректна"));
     } catch (e) {
       notify((e as Error).message, true);
     }
@@ -201,13 +231,14 @@ function Builder() {
   async function files(files: FileList) {
     const parts = [];
     for (const f of files) {
-      if (f.size > 16 * 1024 * 1024) throw Error("Исходник превышает 16 МБ.");
+      if (f.size > 16 * 1024 * 1024)
+        throw Error(t("Исходник превышает 16 МБ."));
       parts.push(JSON.parse(await f.text()));
     }
     load(mergeSources(parts));
   }
   async function generateIPA() {
-    if (!source) throw Error("Сначала загрузите исходник.");
+    if (!source) throw Error(t("Сначала загрузите исходник."));
     checkSource(source);
     const next = { ...ipa },
       base = { ...origIPA },
@@ -215,7 +246,13 @@ function Builder() {
     let rejected = 0;
     for (let i = 0; i < forms.length; i++) {
       const word = forms[i];
-      notify(`Произношение: ${i + 1} / ${forms.length} · ${word}`);
+      notify(
+        t("Произношение: {0} / {1} · {2}", {
+          0: i + 1,
+          1: forms.length,
+          2: word,
+        }),
+      );
       if (!base[word]) base[word] = await voiceRequest("ipa", word);
       const ai = source.ipa?.[word];
       let accepted = ai;
@@ -242,7 +279,12 @@ function Builder() {
     setReviewed([]);
     setChecks([false, false, false, false]);
     notify(
-      `IPA готова: ${forms.length} форм.${rejected ? " Отклонено вариантов ИИ: " + rejected + ". Использована eSpeak." : ""}`,
+      t("IPA готова: {0} форм.{1}", {
+        0: forms.length,
+        1: rejected
+          ? " Отклонено вариантов ИИ: " + rejected + ". Использована eSpeak."
+          : "",
+      }),
     );
   }
   const changeChunk = (i: number, key: 1 | 2, value: string) => {
@@ -273,37 +315,54 @@ function Builder() {
   if (!ready)
     return (
       <main class="page">
-        <h1>Сборщик .fbook</h1>
+        <h1>{t("Сборщик .fbook")}</h1>
         {startupError ? (
           <>
-            <div role="alert">{startupError}</div>
-            <p>Не удалось открыть хранилище. Данные не удалены.</p>
-            <button onClick={() => location.reload()}>Повторить запуск</button>
+            <div role="alert">{translateMessage(language, startupError)}</div>
+            <p>{t("Не удалось открыть хранилище. Данные не удалены.")}</p>
+            <button onClick={() => location.reload()}>
+              {t("Повторить запуск")}
+            </button>
           </>
         ) : (
-          <p>Открываем черновик…</p>
+          <p>{t("Открываем черновик…")}</p>
         )}
       </main>
     );
   return (
-    <>
+    <LocaleContext.Provider value={language}>
       <header class="app-header">
         <div class="header-inner">
           <a class="brand" href="index.html">
-            Немецкий по Франку
+            {t("Немецкий по Франку")}
           </a>
-          <span class="muted grow">Сборщик книг</span>
+          <span class="muted grow">{t("Сборщик книг")}</span>
+          <select
+            id="interface-language"
+            aria-label={t("Язык интерфейса")}
+            value={language}
+            disabled={busy}
+            onChange={(event) =>
+              void run(() => saveLanguage(event.currentTarget.value))
+            }
+          >
+            <option value="ru">{t("Русский")}</option>
+            <option value="de">Deutsch</option>
+          </select>
           <a href="index.html" class="btn">
-            <Icon name="back" />К читалке
+            <Icon name="back" />
+            {t("К читалке")}
           </a>
         </div>
       </header>
       <main class="page builder-page">
         <div class="page-title">
           <div>
-            <h1>Сборщик .fbook</h1>
+            <h1>{t("Сборщик .fbook")}</h1>
             <p class="muted" style={{ marginBottom: 0 }}>
-              Из размеченного текста — в книгу. Всё остаётся на устройстве.
+              {t(
+                "Из размеченного текста — в книгу. Всё остаётся на устройстве.",
+              )}
             </p>
           </div>
         </div>
@@ -329,7 +388,7 @@ function Builder() {
             if (f)
               void run(async () => {
                 if (f.size > 64 * 1024 * 1024)
-                  throw Error("PDF превышает 64 МБ.");
+                  throw Error(t("PDF превышает 64 МБ."));
                 const doc = await pdfjs.getDocument({
                   data: new Uint8Array(await f.arrayBuffer()),
                   useWasm: false,
@@ -340,7 +399,12 @@ function Builder() {
                 }).promise;
                 let text = "";
                 for (let i = 1; i <= doc.numPages; i++) {
-                  notify(`Читаем PDF: страница ${i} / ${doc.numPages}`);
+                  notify(
+                    t("Читаем PDF: страница {0} / {1}", {
+                      0: i,
+                      1: doc.numPages,
+                    }),
+                  );
                   const page = await doc.getPage(i),
                     content = await page.getTextContent();
                   text +=
@@ -354,8 +418,12 @@ function Builder() {
                 setChecks([false, false, false, false]);
                 notify(
                   text.trim()
-                    ? "PDF прочитан. Проверьте колонтитулы и выполните сверку."
-                    : "У PDF нет текстового слоя. Возможна только ручная проверка; метка останется «Автотекст».",
+                    ? t(
+                        "PDF прочитан. Проверьте колонтитулы и выполните сверку.",
+                      )
+                    : t(
+                        "У PDF нет текстового слоя. Возможна только ручная проверка; метка останется «Автотекст».",
+                      ),
                 );
               });
             e.currentTarget.value = "";
@@ -376,7 +444,7 @@ function Builder() {
                   d.version !== 2 ||
                   typeof d.id !== "string"
                 )
-                  throw Error("Неверный формат черновика.");
+                  throw Error(t("Неверный формат черновика."));
                 if (d.source) checkSource(d.source);
                 setSource(d.source);
                 setJSON(d.json || JSON.stringify(d.source, null, 2));
@@ -391,7 +459,9 @@ function Builder() {
                 setStep(0);
                 setDiff(null);
                 notify(
-                  "Черновик импортирован. Перед меткой «Проверено» повторите проверки.",
+                  t(
+                    "Черновик импортирован. Перед меткой «Проверено» повторите проверки.",
+                  ),
                 );
               });
             e.currentTarget.value = "";
@@ -408,16 +478,16 @@ function Builder() {
               void run(async () => {
                 const d = JSON.parse(await f.text());
                 if (!d || Array.isArray(d) || typeof d !== "object")
-                  throw Error("Нужен словарь «форма → IPA».");
+                  throw Error(t("Нужен словарь «форма → IPA»."));
                 for (const [k, v] of Object.entries(d)) {
                   if (typeof v !== "string" || !IPA.test(v))
-                    throw Error("Неверная IPA: " + k);
+                    throw Error(t("Неверная IPA: ") + k);
                   toPhonemes(v);
                 }
                 const next = { ...dict, ...d };
                 setDict(next);
                 await store.put("drafts", "dictionary", next);
-                notify("Словарь импортирован");
+                notify(t("Словарь импортирован"));
               });
             e.currentTarget.value = "";
           }}
@@ -425,10 +495,10 @@ function Builder() {
         <div class="row" style={{ marginBottom: 24 }}>
           <button onClick={() => file.current?.click()} disabled={busy}>
             <Icon name="upload" />
-            Загрузить исходники
+            {t("Загрузить исходники")}
           </button>
           <button onClick={() => draftFile.current?.click()} disabled={busy}>
-            Открыть черновик
+            {t("Открыть черновик")}
           </button>
           <button
             onClick={() =>
@@ -439,24 +509,24 @@ function Builder() {
                   slug(source?.meta.title || "book") + ".fbook-draft.json",
                   "application/json",
                 );
-                notify("Черновик сохранён");
+                notify(t("Черновик сохранён"));
               })
             }
           >
             <Icon name="download" />
-            Сохранить черновик
+            {t("Сохранить черновик")}
           </button>
-          <small class="muted">Автосохранение включено</small>
+          <small class="muted">{t("Автосохранение включено")}</small>
         </div>
         <div class="builder-grid">
-          <nav class="builder-nav" aria-label="Этапы сборки">
+          <nav class="builder-nav" aria-label={t("Этапы сборки")}>
             {steps.map((name, i) => (
               <button
                 class={step === i ? "primary" : ""}
                 disabled={(i > 0 && !source) || busy}
                 onClick={() => setStep(i)}
               >
-                {i + 1}. {name}
+                {i + 1}. {t(name)}
               </button>
             ))}
           </nav>
@@ -464,29 +534,31 @@ function Builder() {
             {step === 0 && (
               <section class="panel stack">
                 <div class="row between">
-                  <h2>Исходник книги</h2>
+                  <h2>{t("Исходник книги")}</h2>
                   <button
                     onClick={() => {
                       if (
                         source &&
                         !window.confirm(
-                          "Заменить текущий черновик демонстрационным исходником?",
+                          t(
+                            "Заменить текущий черновик демонстрационным исходником?",
+                          ),
                         )
                       )
                         return;
                       load(demoSources[0] as any);
                     }}
                   >
-                    Пример
+                    {t("Пример")}
                   </button>
                 </div>
                 <p class="muted" style={{ margin: 0 }}>
-                  Загрузите book.source.json из ответа ИИ. Части одной книги
-                  можно выбрать вместе. Либо вставьте JSON ниже и нажмите
-                  «Проверить».
+                  {t(
+                    "Загрузите book.source.json из ответа ИИ. Части одной книги можно выбрать вместе. Либо вставьте JSON ниже и нажмите «Проверить».",
+                  )}
                 </p>
                 <textarea
-                  aria-label="Исходник JSON"
+                  aria-label={t("Исходник JSON")}
                   spellcheck={false}
                   value={json}
                   placeholder='{"meta": {"title": "…", "author": "…", "level": "A2", "source": "…", "license": "public-domain"}, "chapters": […], "lemmas": […]}'
@@ -494,26 +566,26 @@ function Builder() {
                 />
                 <div class="row">
                   <button class="primary" onClick={parse} disabled={busy}>
-                    Проверить и применить JSON
+                    {t("Проверить и применить JSON")}
                   </button>
                   <small class="muted">
-                    Немецкий текст и подсказки не отправляются в сеть
+                    {t("Немецкий текст и подсказки не отправляются в сеть")}
                   </small>
                 </div>
                 {source && (
                   <>
                     <div class="line" />
-                    <h3>Паспорт книги</h3>
+                    <h3>{t("Паспорт книги")}</h3>
                     <div class="field-grid">
                       {[
-                        ["title", "Название"],
-                        ["titleRu", "По-русски"],
-                        ["author", "Автор"],
-                        ["source", "Источник"],
-                        ["license", "Лицензия"],
+                        ["title", t("Название")],
+                        ["titleRu", t("По-русски")],
+                        ["author", t("Автор")],
+                        ["source", t("Источник")],
+                        ["license", t("Лицензия")],
                       ].map(([k, label]) => (
                         <label class="field">
-                          {label}
+                          {t(label)}
                           <input
                             class="text-input"
                             value={(source.meta as any)[k] || ""}
@@ -526,7 +598,7 @@ function Builder() {
                         </label>
                       ))}
                       <label class="field">
-                        Уровень
+                        {t("Уровень")}
                         <select
                           value={source.meta.level}
                           onChange={(e) => {
@@ -542,13 +614,15 @@ function Builder() {
                       </label>
                     </div>
                     <div class="notice">
-                      {source.chapters.length} глав · {allFragments.length}{" "}
-                      отрывков · {words(sourceText(source)).length} слов. UUID
-                      сохраняется в черновике и не меняется при повторной
-                      сборке.
+                      {source.chapters.length} {t(" глав · ")}
+                      {allFragments.length} {t("отрывков · ")}
+                      {words(sourceText(source)).length}{" "}
+                      {t(
+                        " слов. UUID сохраняется в черновике и не меняется при повторной сборке.",
+                      )}
                     </div>
                     <button class="primary" onClick={() => setStep(1)}>
-                      Далее: сверка с PDF
+                      {t("Далее: сверка с PDF")}
                       <Icon name="next" />
                     </button>
                   </>
@@ -557,13 +631,11 @@ function Builder() {
             )}
             {step === 1 && source && (
               <section class="panel stack">
-                <h2>Сверка с оригиналом</h2>
+                <h2>{t("Сверка с оригиналом")}</h2>
                 <p class="muted" style={{ margin: 0 }}>
-                  Загрузите тот же PDF, по которому подготовлен исходник.
-                  Красным показаны слова PDF, пропущенные в исходнике; зелёным —
-                  лишние слова исходника. Регистр и старая орфография
-                  учитываются. Удалите из поля повторяющиеся колонтитулы перед
-                  сверкой.
+                  {t(
+                    "Загрузите тот же PDF, по которому подготовлен исходник. Красным показаны слова PDF, пропущенные в исходнике; зелёным — лишние слова исходника. Регистр и старая орфография учитываются. Удалите из поля повторяющиеся колонтитулы перед сверкой.",
+                  )}
                 </p>
                 <div class="row">
                   <button
@@ -571,7 +643,7 @@ function Builder() {
                     onClick={() => pdfFile.current?.click()}
                   >
                     <Icon name="upload" />
-                    Открыть PDF
+                    {t("Открыть PDF")}
                   </button>
                   <button
                     disabled={busy || !pdf.trim()}
@@ -581,21 +653,23 @@ function Builder() {
                       setDiff(d);
                       notify(
                         d.every((x) => x.type === "same")
-                          ? "Слова PDF и исходника совпадают."
-                          : "Найдены расхождения: " +
+                          ? t("Слова PDF и исходника совпадают.")
+                          : t("Найдены расхождения: ") +
                               d.filter((x) => x.type !== "same").length +
-                              " слов.",
+                              t(" слов."),
                       );
                     }}
                   >
-                    Сверить текст
+                    {t("Сверить текст")}
                   </button>
                 </div>
                 <textarea
                   ref={pdfArea}
-                  aria-label="Текст PDF"
+                  aria-label={t("Текст PDF")}
                   value={pdf}
-                  placeholder="Здесь появится текст PDF. Для текста без PDF можно вставить оригинал вручную; метка «Проверено» требует ручной сверки с источником."
+                  placeholder={t(
+                    "Здесь появится текст PDF. Для текста без PDF можно вставить оригинал вручную; метка «Проверено» требует ручной сверки с источником.",
+                  )}
                   onInput={(e) => {
                     setPDF(e.currentTarget.value);
                     setDiff(null);
@@ -614,8 +688,8 @@ function Builder() {
                   <>
                     <h3>
                       {diff.every((x) => x.type === "same")
-                        ? "✓ Слова совпадают"
-                        : "Расхождения с оригиналом"}
+                        ? t("✓ Слова совпадают")
+                        : t("Расхождения с оригиналом")}
                     </h3>
                     <div class="diff">
                       {diff.map((d) =>
@@ -629,14 +703,14 @@ function Builder() {
                       )}
                     </div>
                     <div class="notice">
-                      Сверка сравнивает последовательности слов, не пунктуацию.
-                      При проверке каждого отрывка сверьте также знаки
-                      препинания и смысл подсказок.
+                      {t(
+                        "Сверка сравнивает последовательности слов, не пунктуацию. При проверке каждого отрывка сверьте также знаки препинания и смысл подсказок.",
+                      )}
                     </div>
                   </>
                 )}
                 <button onClick={() => setStep(2)}>
-                  Далее: произношение
+                  {t("Далее: произношение")}
                   <Icon name="next" />
                 </button>
               </section>
@@ -644,33 +718,34 @@ function Builder() {
             {step === 2 && source && (
               <section class="panel stack">
                 <div class="row between">
-                  <h2>Произношение</h2>
+                  <h2>{t("Произношение")}</h2>
                   <button
                     class="primary"
                     disabled={busy}
                     onClick={() => void run(generateIPA)}
                   >
-                    Создать IPA · {forms.length} форм
+                    {t("Создать IPA · ")}
+                    {forms.length} {t(" форм")}
                   </button>
                 </div>
                 <p class="muted" style={{ margin: 0 }}>
-                  Приоритет: ваш словарь → допустимая IPA из исходника → eSpeak
-                  NG. Словарную форму можно связать вручную: автоматическое
-                  распознавание склонений здесь не используется.
+                  {t(
+                    "Приоритет: ваш словарь → допустимая IPA из исходника → eSpeak NG. Словарную форму можно связать вручную: автоматическое распознавание склонений здесь не используется.",
+                  )}
                 </p>
                 <div class="row">
                   <select
-                    aria-label="Фильтр IPA"
+                    aria-label={t("Фильтр IPA")}
                     value={ipaFilter}
                     onChange={(e) => setIPAFilter(e.currentTarget.value)}
                   >
-                    <option value="all">Все формы</option>
-                    <option value="diff">ИИ ≠ eSpeak</option>
-                    <option value="rejected">Отклонено</option>
-                    <option value="edited">Исправлено</option>
+                    <option value="all">{t("Все формы")}</option>
+                    <option value="diff">{t("ИИ ≠ eSpeak")}</option>
+                    <option value="rejected">{t("Отклонено")}</option>
+                    <option value="edited">{t("Исправлено")}</option>
                   </select>
                   <button onClick={() => dictFile.current?.click()}>
-                    Импорт словаря
+                    {t("Импорт словаря")}
                   </button>
                   <button
                     onClick={() =>
@@ -681,18 +756,18 @@ function Builder() {
                       )
                     }
                   >
-                    Экспорт словаря
+                    {t("Экспорт словаря")}
                   </button>
                 </div>
                 <div class="scroll-table">
                   <table>
                     <thead>
                       <tr>
-                        <th>Форма</th>
-                        <th>IPA · итог</th>
-                        <th>Лемма</th>
-                        <th>Источник / eSpeak</th>
-                        <th>Голос</th>
+                        <th>{t("Форма")}</th>
+                        <th>{t("IPA · итог")}</th>
+                        <th>{t("Лемма")}</th>
+                        <th>{t("Источник / eSpeak")}</th>
+                        <th>{t("Голос")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -728,7 +803,7 @@ function Builder() {
                                   const v = e.currentTarget.value;
                                   try {
                                     if (!v.trim() || !IPA.test(v))
-                                      throw Error("Неверная IPA");
+                                      throw Error(t("Неверная IPA"));
                                     toPhonemes(v);
                                     const d = { ...dict, [word]: v };
                                     setDict(d);
@@ -744,7 +819,7 @@ function Builder() {
                             </td>
                             <td>
                               <select
-                                aria-label={"Лемма " + word}
+                                aria-label={t("Лемма ") + word}
                                 value={links[word] ?? -1}
                                 onChange={(e) => {
                                   const next = { ...links };
@@ -755,7 +830,7 @@ function Builder() {
                                   setReviewed([]);
                                 }}
                               >
-                                <option value={-1}>Без леммы</option>
+                                <option value={-1}>{t("Без леммы")}</option>
                                 {source.lemmas.map((l, i) => (
                                   <option value={i}>
                                     {l[0]} — {l[1]}
@@ -766,9 +841,9 @@ function Builder() {
                             <td>
                               <small class="muted">
                                 {dict[word]
-                                  ? "Человек"
+                                  ? t("Человек")
                                   : source.ipa?.[word] === ipa[word]
-                                    ? "ИИ"
+                                    ? t("ИИ")
                                     : "eSpeak"}
                                 <br />
                                 {origIPA[word]}
@@ -778,7 +853,7 @@ function Builder() {
                               <button
                                 class="icon"
                                 disabled={busy || !ipa[word]}
-                                aria-label={"Озвучить " + word}
+                                aria-label={t("Озвучить ") + word}
                                 onClick={() => {
                                   unlockAudio();
                                   void run(async () => {
@@ -798,7 +873,7 @@ function Builder() {
                   </table>
                 </div>
                 <button onClick={() => setStep(3)}>
-                  Далее: ручная проверка
+                  {t("Далее: ручная проверка")}
                   <Icon name="next" />
                 </button>
               </section>
@@ -806,14 +881,15 @@ function Builder() {
             {step === 3 && source && fragment && (
               <section class="panel stack">
                 <div class="row between">
-                  <h2>Проверка отрывков</h2>
+                  <h2>{t("Проверка отрывков")}</h2>
                   <small class="muted">
-                    {reviewed.length} из {allFragments.length} проверено
+                    {reviewed.length} {t(" из ")}
+                    {allFragments.length} {t(" проверено")}
                   </small>
                 </div>
                 <div class="row">
                   <select
-                    aria-label="Отрывок для проверки"
+                    aria-label={t("Отрывок для проверки")}
                     value={at}
                     onChange={(e) => {
                       setAt(e.currentTarget.value);
@@ -846,7 +922,7 @@ function Builder() {
                       setDiff(null);
                     }}
                   >
-                    Отменить правку
+                    {t("Отменить правку")}
                   </button>
                 </div>
                 <div class="preview" style={{ marginTop: 0 }}>
@@ -856,7 +932,7 @@ function Builder() {
                   <div class="builder-chunk">
                     {typeof c === "string" ? (
                       <div class="row">
-                        <span lang="de">{c || "Пробел"}</span>
+                        <span lang="de">{c || t("Пробел")}</span>
                         <button
                           onClick={() => {
                             const next = structuredClone(source),
@@ -865,7 +941,7 @@ function Builder() {
                             editSource(next);
                           }}
                         >
-                          Добавить подсказку
+                          {t("Добавить подсказку")}
                         </button>
                       </div>
                     ) : (
@@ -873,18 +949,18 @@ function Builder() {
                         <strong lang="de">{c[0]}</strong>
                         <input
                           class="text-input"
-                          aria-label={"Подсказка " + (i + 1)}
+                          aria-label={t("Подсказка ") + (i + 1)}
                           value={c[1]}
-                          placeholder="Дословная подсказка"
+                          placeholder={t("Дословная подсказка")}
                           onChange={(e) =>
                             changeChunk(i, 1, e.currentTarget.value)
                           }
                         />
                         <input
                           class="text-input"
-                          aria-label={"Смысл " + (i + 1)}
+                          aria-label={t("Смысл ") + (i + 1)}
                           value={c[2] || ""}
-                          placeholder="Перевод по смыслу (необязательно)"
+                          placeholder={t("Перевод по смыслу (необязательно)")}
                           onChange={(e) =>
                             changeChunk(i, 2, e.currentTarget.value)
                           }
@@ -908,7 +984,7 @@ function Builder() {
                               editSource(next);
                             }}
                           >
-                            Не уверен
+                            {t("Не уверен")}
                           </Toggle>
                           <button
                             onClick={() => {
@@ -918,7 +994,7 @@ function Builder() {
                               editSource(next);
                             }}
                           >
-                            Убрать подсказку
+                            {t("Убрать подсказку")}
                           </button>
                           <button
                             disabled={i === fragment.chunks.length - 1}
@@ -936,12 +1012,14 @@ function Builder() {
                               editSource(next);
                             }}
                           >
-                            Объединить со следующим
+                            {t("Объединить со следующим")}
                           </button>
                           <button
                             onClick={() => {
                               const pos = window.prompt(
-                                "После какого слова разделить? Укажите число слов первой части.",
+                                t(
+                                  "После какого слова разделить? Укажите число слов первой части.",
+                                ),
                               );
                               if (!pos) return;
                               const m = [
@@ -956,7 +1034,7 @@ function Builder() {
                                 n >= m.length
                               ) {
                                 notify(
-                                  "Нужно число от 1 до " + (m.length - 1),
+                                  t("Нужно число от 1 до ") + (m.length - 1),
                                   true,
                                 );
                                 return;
@@ -973,7 +1051,7 @@ function Builder() {
                               editSource(next);
                             }}
                           >
-                            Разделить
+                            {t("Разделить")}
                           </button>
                         </div>
                       </>
@@ -981,7 +1059,7 @@ function Builder() {
                   </div>
                 ))}
                 <label class="field">
-                  Перевод · одно предложение на строку
+                  {t("Перевод · одно предложение на строку")}
                   <textarea
                     style={{ minHeight: 100 }}
                     value={fragment.translation.join("\n")}
@@ -997,11 +1075,11 @@ function Builder() {
                   />
                 </label>
                 <details>
-                  <summary>Исправление по PDF и переразметка</summary>
+                  <summary>{t("Исправление по PDF и переразметка")}</summary>
                   <p class="muted">
-                    На шаге «Сверка» выделите в текстовом поле правильный
-                    отрывок PDF. «Взять из PDF» заменит текущий отрывок одной
-                    неподтверждённой подсказкой.
+                    {t(
+                      "На шаге «Сверка» выделите в текстовом поле правильный отрывок PDF. «Взять из PDF» заменит текущий отрывок одной неподтверждённой подсказкой.",
+                    )}
                   </p>
                   <button
                     disabled={!pdfSelection}
@@ -1015,10 +1093,10 @@ function Builder() {
                       editSource(next);
                       setIPA({});
                       setOrigIPA({});
-                      notify("Текст взят из PDF. Обновите подсказки и IPA.");
+                      notify(t("Текст взят из PDF. Обновите подсказки и IPA."));
                     }}
                   >
-                    Взять из PDF
+                    {t("Взять из PDF")}
                   </button>
                   <button
                     onClick={() =>
@@ -1031,19 +1109,21 @@ function Builder() {
                           (pdfSelection || text);
                         try {
                           await navigator.clipboard.writeText(prompt);
-                          notify("Запрос скопирован");
+                          notify(t("Запрос скопирован"));
                         } catch {
                           download(prompt, "fragment-prompt.txt", "text/plain");
                         }
                       })
                     }
                   >
-                    Скопировать запрос
+                    {t("Скопировать запрос")}
                   </button>
                   <textarea
-                    aria-label="Ответ ИИ для отрывка"
+                    aria-label={t("Ответ ИИ для отрывка")}
                     value={fragmentJSON}
-                    placeholder="Вставьте JSON отрывка с chunks и translation"
+                    placeholder={t(
+                      "Вставьте JSON отрывка с chunks и translation",
+                    )}
                     onInput={(e) => setFragmentJSON(e.currentTarget.value)}
                   />
                   <button
@@ -1060,7 +1140,9 @@ function Builder() {
                             .join("");
                         if (before !== after)
                           throw Error(
-                            "Немецкий текст изменён. Сначала используйте «Взять из PDF».",
+                            t(
+                              "Немецкий текст изменён. Сначала используйте «Взять из PDF».",
+                            ),
                           );
                         next.chapters[ci].fragments[fi] = f;
                         checkSource(next);
@@ -1071,7 +1153,7 @@ function Builder() {
                       }
                     }}
                   >
-                    Применить ответ
+                    {t("Применить ответ")}
                   </button>
                 </details>
                 <div class="row">
@@ -1085,13 +1167,13 @@ function Builder() {
                         const i = allFragments.findIndex((x) => x.at === at);
                         if (i < allFragments.length - 1)
                           setAt(allFragments[i + 1].at);
-                        notify("Отрывок отмечен проверенным");
+                        notify(t("Отрывок отмечен проверенным"));
                       } catch (e) {
                         notify((e as Error).message, true);
                       }
                     }}
                   >
-                    Готово, дальше
+                    {t("Готово, дальше")}
                     <Icon name="check" />
                   </button>
                   <button
@@ -1100,37 +1182,46 @@ function Builder() {
                         (x) => uncertain(x.f) && x.at !== at,
                       );
                       if (next) setAt(next.at);
-                      else notify("Других сомнительных отрывков нет");
+                      else notify(t("Других сомнительных отрывков нет"));
                     }}
                   >
-                    К следующему сомнению
+                    {t("К следующему сомнению")}
                   </button>
                 </div>
                 <div class="notice">
-                  Отрывок с «не уверен» или [?] нельзя отметить проверенным.
-                  Ручную проверку смыслов и произношения выполняет человек.
+                  {t(
+                    "Отрывок с «не уверен» или [?] нельзя отметить проверенным. Ручную проверку смыслов и произношения выполняет человек.",
+                  )}
                 </div>
               </section>
             )}
             {step === 4 && source && (
               <section class="panel stack">
-                <h2>Готовая книга</h2>
+                <h2>{t("Готовая книга")}</h2>
                 <div>
                   <h3>{source.meta.title}</h3>
                   <p class="muted">
                     {source.meta.author} · {source.meta.level} ·{" "}
-                    {allFragments.length} отрывков
+                    {allFragments.length} {t(" отрывков")}
                   </p>
                   <span class="badge">
-                    {canVerified ? "Проверено" : "Автотекст"}
+                    {canVerified ? t("Проверено") : t("Автотекст")}
                   </span>
                 </div>
                 <div class="checklist">
                   {[
-                    "Текст и пунктуация сверены с оригиналом; ничего не пропущено и не изменено.",
-                    "Дословные подсказки и идиомы проверены, смысл соответствует контексту.",
-                    "IPA и произношение, включая имена и омографы, прослушаны и проверены.",
-                    "Источник, лицензия, леммы, переводы и уровень книги проверены.",
+                    t(
+                      "Текст и пунктуация сверены с оригиналом; ничего не пропущено и не изменено.",
+                    ),
+                    t(
+                      "Дословные подсказки и идиомы проверены, смысл соответствует контексту.",
+                    ),
+                    t(
+                      "IPA и произношение, включая имена и омографы, прослушаны и проверены.",
+                    ),
+                    t(
+                      "Источник, лицензия, леммы, переводы и уровень книги проверены.",
+                    ),
                   ].map((label, i) => (
                     <label>
                       <input
@@ -1142,15 +1233,14 @@ function Builder() {
                           setChecks(n);
                         }}
                       />
-                      {label}
+                      {t(label)}
                     </label>
                   ))}
                 </div>
                 <div class="notice">
-                  Для метки «Проверено» нужны: все отрывки проверены, нет [?],
-                  все пункты выше отмечены и последняя сверка с оригиналом без
-                  расхождений. Иначе файл собирается с честной меткой
-                  «Автотекст».
+                  {t(
+                    "Для метки «Проверено» нужны: все отрывки проверены, нет [?], все пункты выше отмечены и последняя сверка с оригиналом без расхождений. Иначе файл собирается с честной меткой «Автотекст».",
+                  )}
                 </div>
                 <button
                   class="primary"
@@ -1171,19 +1261,28 @@ function Builder() {
                       );
                       setRevision(revision + 1);
                       setSummary(
-                        `Версия ${revision + 1} · ${(result.bytes.length / 1024).toFixed(1)} КБ · ${Object.keys(result.content.f).length} форм с IPA · ${canVerified ? "Проверено" : "Автотекст"}. Архив проверен обратной распаковкой и CRC-32.`,
+                        t(
+                          "Версия {0} · {1} КБ · {2} форм с IPA · {3}. Архив проверен обратной распаковкой и CRC-32.",
+                          {
+                            0: revision + 1,
+                            1: (result.bytes.length / 1024).toFixed(1),
+                            2: Object.keys(result.content.f).length,
+                            3: canVerified ? "Проверено" : "Автотекст",
+                          },
+                        ),
                       );
-                      notify("Книга собрана и скачана");
+                      notify(t("Книга собрана и скачана"));
                     })
                   }
                 >
                   <Icon name="download" />
-                  Собрать и скачать .fbook
+                  {t("Собрать и скачать .fbook")}
                 </button>
                 {summary && <p role="status">{summary}</p>}
                 <small class="muted">
-                  Повторная сборка сохраняет UUID и увеличивает revision.
-                  Храните черновик для последующих исправлений.
+                  {t(
+                    "Повторная сборка сохраняет UUID и увеличивает revision. Храните черновик для последующих исправлений.",
+                  )}
                 </small>
               </section>
             )}
@@ -1199,12 +1298,15 @@ function Builder() {
             {busy ? "⏳ " : ""}
             {message}
           </span>
-          <button aria-label="Закрыть сообщение" onClick={() => setMessage("")}>
+          <button
+            aria-label={t("Закрыть сообщение")}
+            onClick={() => setMessage("")}
+          >
             <Icon name="close" />
           </button>
         </div>
       )}
-    </>
+    </LocaleContext.Provider>
   );
 }
 const root = document.getElementById("app")!;
