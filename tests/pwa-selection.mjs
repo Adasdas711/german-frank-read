@@ -84,7 +84,23 @@ try {
     location.hash = "/words";
   });
   await p.reload();
-  await p.locator(".word-selection-toggle").click();
+  await p.locator(".word-main").first().click();
+  assert.equal(
+    new URL(p.url()).hash,
+    "#/words",
+    "word click stays in dictionary",
+  );
+  assert.equal(
+    await p.locator(".word-row.selected").count(),
+    1,
+    "word click enters selection mode",
+  );
+  await p.locator(".word-main").first().click();
+  assert.equal(
+    await p.locator(".word-row.selected").count(),
+    0,
+    "second word click deselects",
+  );
   const checks = p.getByRole("checkbox");
   assert.equal(await checks.count(), 4);
   assert.equal(

@@ -995,7 +995,11 @@ function App() {
         )}
         <button
           class="word-main"
-          onClick={() => (selecting ? toggleWord(w.key) : b && go(b, w.at))}
+          aria-pressed={selection.has(w.key) && selecting}
+          onClick={() => {
+            setSelecting(true);
+            toggleWord(w.key);
+          }}
         >
           <span lang="de">
             <strong>{w.lemma}</strong> <small class="ipa">[{w.ipa}]</small>
