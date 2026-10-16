@@ -25,16 +25,14 @@ export async function ensureDemos(
     await new Promise<void>((resolve, reject) => {
       // Upgrade the file and its percentage together; words and the address stay intact.
       const transaction = db.transaction(["books", "progress"], "readwrite");
-      transaction
-        .objectStore("books")
-        .put(
-          {
-            manifest: book.manifest,
-            bytes,
-            addedAt: old?.addedAt || new Date().toISOString(),
-          },
-          book.manifest.id,
-        );
+      transaction.objectStore("books").put(
+        {
+          manifest: book.manifest,
+          bytes,
+          addedAt: old?.addedAt || new Date().toISOString(),
+        },
+        book.manifest.id,
+      );
       if (progress && index >= 0)
         transaction.objectStore("progress").put(
           {

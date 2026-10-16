@@ -399,13 +399,11 @@ try {
     });
     d.close();
   });
-  await phone
-    .locator('input[type=file][accept=".json,.zip"]')
-    .setInputFiles({
-      name: "backup.zip",
-      mimeType: "application/zip",
-      buffer: bytes,
-    });
+  await phone.locator('input[type=file][accept=".json,.zip"]').setInputFiles({
+    name: "backup.zip",
+    mimeType: "application/zip",
+    buffer: bytes,
+  });
   await phone
     .getByRole("dialog", { name: "Restore backup?" })
     .getByRole("button", { name: "Done", exact: true })
