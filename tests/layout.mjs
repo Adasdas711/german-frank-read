@@ -29,7 +29,7 @@ try {
   await page.locator(".reader-layout").waitFor();
   const reader = await page.evaluate(() => location.hash);
   const routes = [
-    ["home", "Продолжим читать?"],
+    ["home", "Читаю сейчас"],
     ["texts", "Тексты"],
     ["words", "Мои слова"],
     ["settings", "Настройки"],
@@ -56,7 +56,8 @@ try {
       await page.setViewportSize({ width, height });
       for (const [route, title] of routes) {
         await page.evaluate((route) => (location.hash = "/" + route), route);
-        if (title)
+        if (route === "home") await page.locator(".hero").waitFor();
+        else if (title)
           await page
             .getByRole("heading", { name: title, exact: route !== "words" })
             .waitFor();
@@ -67,6 +68,21 @@ try {
               requestAnimationFrame(() => requestAnimationFrame(r)),
             ),
         );
+        if (route === "home") {
+          assert.equal(
+            await page
+              .locator(
+                ".dashboard-aside,.home-shelf,.workspace-header,.home-heading,.workspace-topbar,.book-cover",
+              )
+              .count(),
+            0,
+            "No added sections on the original home screen",
+          );
+          if (width > 900) {
+            const nav = await page.locator(".nav").boundingBox();
+            assert.ok(nav.y < 100, "Desktop navigation must be at the top");
+          }
+        }
         const metrics = await page.evaluate(() => ({
           root: getComputedStyle(document.documentElement).backgroundColor,
           body: getComputedStyle(document.body).backgroundColor,
@@ -112,7 +128,7 @@ try {
         if (theme === "dark")
           assert.notEqual(
             metrics.root,
-            "rgb(245, 245, 241)",
+            "rgb(244, 244, 240)",
             "Light canvas in dark mode: " + label,
           );
         const controls = await page
@@ -150,14 +166,14 @@ try {
     await page.evaluate(
       () => getComputedStyle(document.documentElement).backgroundColor,
     ),
-    "rgb(21, 28, 29)",
+    "rgb(22, 26, 28)",
   );
   await page.emulateMedia({ colorScheme: "light" });
   assert.equal(
     await page.evaluate(
       () => getComputedStyle(document.documentElement).backgroundColor,
     ),
-    "rgb(245, 245, 241)",
+    "rgb(244, 244, 240)",
   );
   for (const viewport of [
     { width: 390, height: 844 },
