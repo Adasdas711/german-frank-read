@@ -23,7 +23,8 @@
     "test:reader-dock": "node tests/reader-dock.mjs",
     "test:word-sheet": "node tests/word-sheet.mjs",
     "test:pwa-selection": "node tests/pwa-selection.mjs",
-    "test:folders": "node tests/folders.mjs"
+    "test:folders": "node tests/folders.mjs",
+    "test:sidebar": "node tests/sidebar.mjs"
   },
   "dependencies": {
     "espeak-ng": "1.0.2",

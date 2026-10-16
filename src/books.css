@@ -2898,3 +2898,60 @@ html.reading-pages body {
   user-select: none;
   -webkit-user-select: none;
 }
+
+/* Finder-like insertion cues keep the current folder readable while sorting. */
+.collection-nav-row.drop-before,
+.collection-nav-row.drop-after {
+  position: relative;
+  outline: 0;
+}
+.collection-nav-row.drop-before::before,
+.collection-nav-row.drop-after::after {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--teal);
+  pointer-events: none;
+}
+.collection-nav-row.drop-before::before {
+  top: -1px;
+}
+.collection-nav-row.drop-after::after {
+  bottom: -1px;
+}
+.level-menu .collection-nav-row,
+.collection-menu .collection-nav-row {
+  cursor: grab;
+}
+.level-menu .collection-nav-row:active,
+.collection-menu .collection-nav-row:active {
+  cursor: grabbing;
+}
+.folder-context-menu {
+  position: fixed;
+  z-index: 200;
+  width: 224px;
+  padding: 5px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px #0005;
+}
+.folder-context-menu > button {
+  width: 100%;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+}
+.folder-context-menu > button:hover,
+.folder-context-menu > button:focus-visible {
+  background: var(--soft);
+}
+.collection-menu > .sidebar-item {
+  display: flex;
+  width: 100%;
+}

@@ -4,6 +4,9 @@ const rows: [string, string, string][] = [
   ["Chapter {0}", "Глава {0}", "Kapitel {0}"],
   ["{0} chapters", "{0} глав", "{0} Kapitel"],
 
+  ["Levels", "Уровни", "Niveaus"],
+  ["Folder options", "Действия с папкой", "Ordneroptionen"],
+  ["Delete Folder", "Удалить папку", "Ordner löschen"],
   ["My Collections", "Мои коллекции", "Meine Sammlungen"],
   ["New Collection", "Новая коллекция", "Neue Sammlung"],
   ["Edit Collection", "Изменить коллекцию", "Sammlung bearbeiten"],

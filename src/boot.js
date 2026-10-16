@@ -4,7 +4,6 @@
     "contextmenu",
     function (event) {
       event.preventDefault();
-      event.stopPropagation();
     },
     true,
   );

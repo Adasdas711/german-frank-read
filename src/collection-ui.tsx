@@ -1,4 +1,5 @@
-import { useState } from "preact/hooks";
+import { useState, useEffect, useRef } from "preact/hooks";
+import type { ComponentChildren } from "preact";
 import type { Book } from "./core";
 import type { BookCollection } from "./collections";
 import { useT } from "./i18n";
@@ -14,10 +15,13 @@ type MenuProps = {
   onManage(c: BookCollection): void;
   onReorder(id: string, before: string | null): void;
   onMoveBook(book: string, target: string): void;
+  children?: ComponentChildren;
+  onContextMenu?(c: BookCollection, event: MouseEvent): void;
 };
 export function CollectionMenu(props: MenuProps) {
   const t = useT();
   const [over, setOver] = useState("");
+  const [after, setAfter] = useState(false);
   return (
     <section class="collection-menu">
       <div class="collection-heading">
@@ -30,9 +34,18 @@ export function CollectionMenu(props: MenuProps) {
           <Icon name="plus" size={15} />
         </button>
       </div>
+      {props.children}
       {props.collections.map((c) => (
         <div
-          class={"collection-nav-row" + (over === c.id ? " drop-target" : "")}
+          class={
+            "collection-nav-row" +
+            (over === c.id
+              ? " drop-target" + (after ? " drop-after" : " drop-before")
+              : "")
+          }
+          data-folder-context
+          onContextMenu={(event) => props.onContextMenu?.(c, event)}
+          onDragEnd={() => setOver("")}
           key={c.id}
           data-collection={c.id}
           draggable
@@ -49,6 +62,8 @@ export function CollectionMenu(props: MenuProps) {
             ) {
               e.preventDefault();
               e.stopPropagation();
+              const r = e.currentTarget.getBoundingClientRect();
+              setAfter(e.clientY > r.top + r.height / 2);
               setOver(c.id);
             }
           }}
@@ -63,7 +78,17 @@ export function CollectionMenu(props: MenuProps) {
             e.stopPropagation();
             setOver("");
             if (book) props.onMoveBook(book, c.id);
-            else props.onReorder(collection, c.id);
+            else {
+              const r = e.currentTarget.getBoundingClientRect();
+              const before =
+                e.clientY > r.top + r.height / 2
+                  ? props.collections[
+                      props.collections.findIndex((item) => item.id === c.id) +
+                        1
+                    ]?.id || null
+                  : c.id;
+              props.onReorder(collection, before);
+            }
           }}
         >
           <button
@@ -99,7 +124,12 @@ export function CollectionMenu(props: MenuProps) {
 export function CollectionStrip(
   props: Pick<
     MenuProps,
-    "collections" | "active" | "onSelect" | "onCreate" | "onManage"
+    | "collections"
+    | "active"
+    | "onSelect"
+    | "onCreate"
+    | "onManage"
+    | "onContextMenu"
   >,
 ) {
   const t = useT();
@@ -112,6 +142,7 @@ export function CollectionStrip(
             class={"pill" + (props.active === c.id ? " selected" : " glass")}
             aria-pressed={props.active === c.id}
             onClick={() => props.onSelect(c.id)}
+            onContextMenu={(event) => props.onContextMenu?.(c, event)}
           >
             {c.name}
           </button>
@@ -296,4 +327,140 @@ export function bookDrag(event: DragEvent, id: string) {
   if (!event.dataTransfer) return;
   event.dataTransfer.setData(BOOK, id);
   event.dataTransfer.effectAllowed = "move";
+}
+
+const LEVEL = "application/x-franka-level";
+export function LevelMenu({
+  levels,
+  active,
+  onSelect,
+  onReorder,
+  onContextMenu,
+}: {
+  levels: string[];
+  active: string;
+  onSelect(id: string): void;
+  onReorder(id: string, before: string | null): void;
+  onContextMenu(id: string, event: MouseEvent): void;
+}) {
+  const t = useT();
+  const [over, setOver] = useState("");
+  const [after, setAfter] = useState(false);
+  return (
+    <section class="level-menu">
+      <h3>{t("Levels")}</h3>
+      {levels.map((id) => (
+        <div
+          key={id}
+          data-level={id}
+          data-folder-context
+          draggable
+          class={
+            "collection-nav-row" +
+            (over === id
+              ? " drop-target" + (after ? " drop-after" : " drop-before")
+              : "")
+          }
+          onContextMenu={(event) => onContextMenu(id, event)}
+          onDragStart={(event) => {
+            if (!event.dataTransfer) return;
+            event.dataTransfer.setData(LEVEL, id);
+            event.dataTransfer.effectAllowed = "move";
+          }}
+          onDragOver={(event) => {
+            if (!event.dataTransfer?.types.includes(LEVEL)) return;
+            event.preventDefault();
+            event.stopPropagation();
+            const rect = event.currentTarget.getBoundingClientRect();
+            setOver(id);
+            setAfter(event.clientY > rect.top + rect.height / 2);
+          }}
+          onDragLeave={() => setOver("")}
+          onDragEnd={() => setOver("")}
+          onDrop={(event) => {
+            const moving = event.dataTransfer?.getData(LEVEL);
+            if (!moving) return;
+            event.preventDefault();
+            event.stopPropagation();
+            setOver("");
+            const rect = event.currentTarget.getBoundingClientRect();
+            onReorder(
+              moving,
+              event.clientY > rect.top + rect.height / 2
+                ? levels[levels.indexOf(id) + 1] || null
+                : id,
+            );
+          }}
+        >
+          <button
+            class={"sidebar-item" + (active === id ? " active" : "")}
+            onClick={() => onSelect(id)}
+          >
+            <Icon name="texts" size={17} />
+            <span>{id}</span>
+          </button>
+        </div>
+      ))}
+    </section>
+  );
+}
+export type FolderMenuTarget = {
+  kind: "level" | "collection" | "finished";
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+};
+export function FolderContextMenu({
+  target,
+  onDelete,
+  onClose,
+}: {
+  target: FolderMenuTarget;
+  onDelete(): void;
+  onClose(): void;
+}) {
+  const t = useT(),
+    menu = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    menu.current?.querySelector("button")?.focus();
+    const outside = (event: Event) => {
+      if (!menu.current?.contains(event.target as Node)) onClose();
+    };
+    const key = (event: KeyboardEvent) => {
+      if (event.key === "Escape" || event.key === "Tab") {
+        onClose();
+        if (event.key === "Escape") event.preventDefault();
+      }
+    };
+    document.addEventListener("pointerdown", outside);
+    document.addEventListener("keydown", key);
+    window.addEventListener("resize", onClose);
+    window.addEventListener("scroll", onClose, true);
+    window.addEventListener("blur", onClose);
+    return () => {
+      document.removeEventListener("pointerdown", outside);
+      document.removeEventListener("keydown", key);
+      window.removeEventListener("resize", onClose);
+      window.removeEventListener("scroll", onClose, true);
+      window.removeEventListener("blur", onClose);
+    };
+  }, [target]);
+  return (
+    <div
+      ref={menu}
+      class="folder-context-menu glass"
+      role="menu"
+      aria-label={t("Folder options")}
+      style={{
+        left: Math.max(8, Math.min(target.x, innerWidth - 232)),
+        top: Math.max(8, Math.min(target.y, innerHeight - 64)),
+      }}
+    >
+      <button role="menuitem" class="quiet danger" onClick={onDelete}>
+        <Icon name="trash" size={16} />
+        {t("Delete Folder")}
+      </button>
+    </div>
+  );
 }

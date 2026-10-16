@@ -25,6 +25,9 @@ import { BookText, type WordSelection } from "./book-text";
 import { BookCover } from "./book-cover";
 import {
   CollectionMenu,
+  LevelMenu,
+  FolderContextMenu,
+  type FolderMenuTarget,
   CollectionStrip,
   CollectionEditor,
   MoveBookDialog,
@@ -63,7 +66,6 @@ const navigation = [
   ["words", "Words", "words"],
   ["search", "Search", "search"],
 ];
-const filters = ["all", "A2", "B1", "B2", "reading", "finished"];
 const filterLabel = (v: string) =>
   ({ all: "All Books", reading: "Reading", finished: "Finished" })[v] || v;
 type IndexCache = Record<string, { signature: string; pages: PageEntry[] }>;
@@ -80,6 +82,12 @@ function App() {
   const [ready, setReady] = useState(false),
     [startupError, setStartupError] = useState("");
   const [route, setRoute] = useState(location.hash.slice(2) || "home");
+  const searchReturn = useRef(route === "search" ? "home" : route);
+  const [folderMenu, setFolderMenu] = useState<FolderMenuTarget | null>(null);
+  useEffect(() => {
+    if (route !== "search") searchReturn.current = route;
+    setFolderMenu(null);
+  }, [route]);
   const [overlay, setOverlay] = useState(""),
     [details, setDetails] = useState<Book | null>(null);
   const [message, setMessage] = useState<{
@@ -387,6 +395,10 @@ function App() {
     return () => clearTimeout(id);
   }, [query, page]);
   const navigate = (dest: string) => {
+    if (dest === "search") {
+      if (page === "search") dest = searchReturn.current || "home";
+      else searchReturn.current = route;
+    }
     if (dest === "words") {
       setWordBook("all");
       setWordTab("all");
@@ -900,7 +912,7 @@ function App() {
     );
     notify(t("Book moved"));
   };
-  const visibleFilters = filters.filter(
+  const visibleFilters = ["all", ...settings.levelOrder, "finished"].filter(
     (value) => !settings.hiddenLibraryFolders.includes(value),
   );
   const deleteLibraryFolder = (value: string) => {
@@ -918,11 +930,37 @@ function App() {
       },
     });
   };
-  const deleteCollection = () => {
-    if (!editingCollection) return;
-    const id = editingCollection.id;
+  const openFolderMenu = (
+    kind: FolderMenuTarget["kind"],
+    id: string,
+    name: string,
+    event: MouseEvent,
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    setFolderMenu({
+      kind,
+      id,
+      name,
+      x: event.clientX || rect.left + 20,
+      y: event.clientY || rect.bottom,
+    });
+  };
+  const reorderLevel = (id: string, before: string | null) => {
+    if (id === before || !settingsRef.current.levelOrder.includes(id)) return;
+    const order = settingsRef.current.levelOrder.filter(
+      (value) => value !== id,
+    );
+    const index = before ? order.indexOf(before) : -1;
+    order.splice(index < 0 ? order.length : index, 0, id);
+    void run(() => saveSettings({ levelOrder: order }));
+  };
+  const deleteCollection = (collection = editingCollection) => {
+    if (!collection) return;
+    const id = collection.id;
     setConfirm({
-      title: t("Delete collection {0}?", { 0: editingCollection.name }),
+      title: t("Delete collection {0}?", { 0: collection.name }),
       text: t("The books will stay in your library."),
       action: async () => {
         await saveCollections(
@@ -1049,7 +1087,7 @@ function App() {
       : page === "words"
         ? t(wordTab === "book" ? "Words by Book" : "All words")
         : t(page === "search" ? "Search" : "Home");
-  const runningBooks = [...books]
+  const orderedReadingBooks = [...books]
     .sort((a, b) => {
       const pa = progress.find((p) => p.book === a.manifest.id),
         pb = progress.find((p) => p.book === b.manifest.id);
@@ -1061,8 +1099,13 @@ function App() {
     })
     .filter(
       (b) => progress.find((p) => p.book === b.manifest.id)?.percent !== 100,
-    )
-    .slice(0, 2);
+    );
+  const startedBooks = orderedReadingBooks.filter((b) =>
+    progress.some((p) => p.book === b.manifest.id && p.percent < 100),
+  );
+  const runningBooks = startedBooks.length
+    ? startedBooks
+    : orderedReadingBooks.slice(0, 2);
   const recentBooks = [...books]
     .sort((a, b) =>
       ((b as any).addedAt || "").localeCompare((a as any).addedAt || ""),
@@ -1259,49 +1302,79 @@ function App() {
               <Icon name="home" />
               {t("Home")}
             </button>
-            <h3>{t("Library")}</h3>
-            {visibleFilters.map((value) => (
-              <div class="collection-nav-row" key={value}>
+            <CollectionMenu
+              collections={collections}
+              books={books}
+              active={page === "library" ? collectionFilter : ""}
+              onSelect={selectCollection}
+              onCreate={createCollection}
+              onManage={manageCollection}
+              onReorder={reorderCollection}
+              onMoveBook={(id, target) => void run(() => moveBook(id, target))}
+              onContextMenu={(c, event) =>
+                openFolderMenu("collection", c.id, c.name, event)
+              }
+            >
+              <button
+                class={
+                  "sidebar-item" +
+                  (page === "library" &&
+                  !collectionFilter &&
+                  libraryFilter === "all"
+                    ? " active"
+                    : "")
+                }
+                onClick={() => {
+                  setLibraryFilter("all");
+                  setCollectionFilter("");
+                  navigate("library");
+                }}
+              >
+                <Icon name="book" size={17} />
+                <span>{t("All Books")}</span>
+              </button>
+              {!settings.hiddenLibraryFolders.includes("finished") && (
                 <button
+                  data-folder-context
                   class={
                     "sidebar-item" +
                     (page === "library" &&
                     !collectionFilter &&
-                    libraryFilter === value
+                    libraryFilter === "finished"
                       ? " active"
                       : "")
                   }
+                  onContextMenu={(event) =>
+                    openFolderMenu("finished", "finished", t("Finished"), event)
+                  }
                   onClick={() => {
-                    setLibraryFilter(value);
+                    setLibraryFilter("finished");
                     setCollectionFilter("");
                     navigate("library");
                   }}
                 >
-                  <Icon
-                    name={
-                      value === "all"
-                        ? "book"
-                        : value === "finished"
-                          ? "check"
-                          : "texts"
-                    }
-                    size={17}
-                  />
-                  <span>{t(filterLabel(value))}</span>
+                  <Icon name="check" size={17} />
+                  <span>{t("Finished")}</span>
                 </button>
-                {value !== "all" && (
-                  <button
-                    class="collection-manage round quiet"
-                    aria-label={t("Delete folder {0}", {
-                      0: t(filterLabel(value)),
-                    })}
-                    onClick={() => deleteLibraryFolder(value)}
-                  >
-                    <Icon name="trash" size={14} />
-                  </button>
-                )}
-              </div>
-            ))}
+              )}
+            </CollectionMenu>
+            <LevelMenu
+              levels={settings.levelOrder.filter(
+                (id) => !settings.hiddenLibraryFolders.includes(id),
+              )}
+              active={
+                page === "library" && !collectionFilter ? libraryFilter : ""
+              }
+              onSelect={(id) => {
+                setLibraryFilter(id);
+                setCollectionFilter("");
+                navigate("library");
+              }}
+              onReorder={reorderLevel}
+              onContextMenu={(id, event) =>
+                openFolderMenu("level", id, id, event)
+              }
+            />
             <h3>{t("Words")}</h3>
             <button
               class={
@@ -1335,16 +1408,6 @@ function App() {
               <Icon name="download" size={17} />
               {t("Export to Anki")}
             </button>
-            <CollectionMenu
-              collections={collections}
-              books={books}
-              active={page === "library" ? collectionFilter : ""}
-              onSelect={selectCollection}
-              onCreate={createCollection}
-              onManage={manageCollection}
-              onReorder={reorderCollection}
-              onMoveBook={(id, target) => void run(() => moveBook(id, target))}
-            />
             <div class="sidebar-spacer" />
             <button
               class="sidebar-item"
@@ -1444,7 +1507,7 @@ function App() {
             {page === "home" && (
               <>
                 <section class="home-section">
-                  <h2>{t("Continue Reading")}</h2>
+                  <h2>{t("Reading")}</h2>
                   <div class="continue-shelf">
                     {runningBooks.map((b, i) => (
                       <article
@@ -1537,6 +1600,15 @@ function App() {
                   {visibleFilters.map((value) => (
                     <button
                       role="tab"
+                      onContextMenu={(event) => {
+                        if (value !== "all")
+                          openFolderMenu(
+                            value === "finished" ? "finished" : "level",
+                            value,
+                            t(filterLabel(value)),
+                            event,
+                          );
+                      }}
                       aria-selected={
                         !collectionFilter && value === libraryFilter
                       }
@@ -1555,6 +1627,9 @@ function App() {
                   onSelect={selectCollection}
                   onCreate={createCollection}
                   onManage={manageCollection}
+                  onContextMenu={(c, event) =>
+                    openFolderMenu("collection", c.id, c.name, event)
+                  }
                 />
                 <div class="book-grid">{filteredBooks.map(card)}</div>
                 {!filteredBooks.length && (
@@ -1973,7 +2048,7 @@ function App() {
           onSave={saveCollection}
           onClose={() => setOverlay(collectionBook ? "move-collection" : "")}
           onReorder={shiftCollection}
-          onDelete={deleteCollection}
+          onDelete={() => deleteCollection()}
         />
       )}
       {overlay === "move-collection" && collectionBook && (
@@ -2438,6 +2513,19 @@ function App() {
             </button>
           </div>
         </Modal>
+      )}
+      {folderMenu && (
+        <FolderContextMenu
+          target={folderMenu}
+          onClose={() => setFolderMenu(null)}
+          onDelete={() => {
+            const target = folderMenu;
+            setFolderMenu(null);
+            if (target.kind === "collection")
+              deleteCollection(collections.find((c) => c.id === target.id));
+            else deleteLibraryFolder(target.id);
+          }}
+        />
       )}
       {message && (
         <div

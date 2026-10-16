@@ -121,7 +121,7 @@ try {
       0,
       "deletion persists",
     );
-    for (const name of ["B1", "B2", "Reading", "Finished"]) {
+    for (const name of ["B1", "B2", "Finished"]) {
       await p.getByRole("tab", { name, exact: true }).click();
       await p.locator(".delete-library-folder").click();
       await p
@@ -139,7 +139,7 @@ try {
     );
     assert.deepEqual(await snapshot(p), initial);
     console.log(
-      `${width}px: cancel, delete all five built-in folders, persistence and unchanged books/words/progress passed`,
+      `${width}px: cancel, delete all built-in folders, persistence and unchanged books/words/progress passed`,
     );
     await context.close();
   }
