@@ -4,118 +4,153 @@ import {
   useEffect,
   useLayoutEffect,
   useRef,
+  useMemo,
   useCallback,
 } from "preact/hooks";
 import {
   readBook,
   plain,
-  sentences,
   addresses,
-  locate,
-  words as splitWords,
   download,
   slug,
   type Book,
-  type Content,
   type Chunk,
 } from "./core";
 import * as store from "./storage";
-import type { Progress, Settings, SavedWord } from "./storage";
+import type { Settings, Progress, SavedWord } from "./storage";
+import { LocaleContext, createTranslator, translateMessage } from "./i18n";
 import { Icon, Modal, Toggle, ProgressBar } from "./ui";
-import { BookFlow, type ReadingFlow } from "./book-flow";
-import { PagedReader } from "./paged-reader";
+import { PagedReader, type PageEntry } from "./paged-reader";
+import { BookText, type WordSelection } from "./book-text";
 import { BookCover } from "./book-cover";
-import { FocusReader } from "./focus-reader";
-import { createTranslator, translateMessage, LocaleContext } from "./i18n";
-import { speak, stop, unlockAudio } from "./voice";
+import { ThemesPanel } from "./themes-panel";
 import {
   exportBackup,
   parseBackup,
   importBackup,
   exportWords,
 } from "./transfer";
-import demos from "./demos.json";
+import { speak, stop, unlockAudio } from "./voice";
 import { ensureDemos } from "./demo-library";
+import {
+  pageFor,
+  searchText,
+  highlightParts,
+  positionKey,
+} from "./library-model";
+import demos from "./demos.json";
 import "./style.css";
 import "./books.css";
-const nav = [
-  ["home", "Читаю сейчас", "book"],
-  ["texts", "Тексты", "texts"],
-  ["words", "Слова", "words"],
+
+const navigation = [
+  ["home", "Home", "home"],
+  ["library", "Library", "book"],
+  ["words", "Words", "words"],
+  ["search", "Search", "search"],
 ];
-const href = (page: string) => "#/" + page;
+const filters = ["all", "A2", "B1", "B2", "reading", "finished"];
+const filterLabel = (v: string) =>
+  ({ all: "All Books", reading: "Reading", finished: "Finished" })[v] || v;
+type IndexCache = Record<string, { signature: string; pages: PageEntry[] }>;
 function App() {
-  const [startupError, setStartupError] = useState<string | null>(null);
-  const [ready, setReady] = useState(false),
-    [books, setBooks] = useState<Book[]>([]),
+  const [settings, setSettings] = useState<Settings>(() => ({
+    ...store.defaults,
+    language: ["en", "ru", "de"].includes(document.documentElement.lang)
+      ? (document.documentElement.lang as Settings["language"])
+      : "en",
+  }));
+  const [books, setBooks] = useState<Book[]>([]),
     [progress, setProgress] = useState<Progress[]>([]),
-    [saved, setSaved] = useState<SavedWord[]>([]),
-    [settings, setSettings] = useState<Settings>(() => {
-      const cached = document.documentElement.dataset.theme;
-      return {
-        ...store.defaults,
-        language: document.documentElement.lang === "de" ? "de" : "ru",
-        theme: ["light", "dark", "system"].includes(cached) ? cached : "system",
-      };
-    }),
-    [route, setRoute] = useState(location.hash.slice(2) || "home");
+    [saved, setSaved] = useState<SavedWord[]>([]);
+  const [ready, setReady] = useState(false),
+    [startupError, setStartupError] = useState("");
+  const [route, setRoute] = useState(location.hash.slice(2) || "home");
+  const [overlay, setOverlay] = useState(""),
+    [details, setDetails] = useState<Book | null>(null);
   const [message, setMessage] = useState<{
-      text: string;
-      error?: boolean;
-    } | null>(null),
-    [active, setActive] = useState<{
-      manifest: Book["manifest"];
-      content: Content;
-      bytes: Uint8Array;
-    } | null>(null),
-    [selected, setSelected] = useState<{
-      form: string;
-      context: string;
-      hint: string;
-      at: string;
-    } | null>(null),
-    [busy, setBusy] = useState(false),
-    [focusMode, setFocusMode] = useState(false),
-    [tocOpen, setTocOpen] = useState(false),
-    [sizeOpen, setSizeOpen] = useState(false),
-    [confirm, setConfirm] = useState<{
-      title: string;
-      text: string;
-      action: () => Promise<void>;
-      cancel?: () => void;
-    } | null>(null),
+    text: string;
+    error?: boolean;
+  } | null>(null);
+  const [confirm, setConfirm] = useState<{
+    title: string;
+    text: string;
+    action: () => Promise<void>;
+  } | null>(null);
+  const [pending, setPending] = useState<ReturnType<typeof readBook> | null>(
+      null,
+    ),
+    [fileError, setFileError] = useState(""),
+    [fileBusy, setFileBusy] = useState(false);
+  const [word, setWord] = useState<WordSelection | null>(null),
+    [busy, setBusy] = useState(false);
+  const [libraryFilter, setLibraryFilter] = useState("all");
+  const [wordTab, setWordTab] = useState("all"),
+    [wordBook, setWordBook] = useState("all"),
+    [selecting, setSelecting] = useState(false),
+    [selection, setSelection] = useState<Set<string>>(new Set());
+  const [searchScope, setSearchScope] = useState("books"),
     [query, setQuery] = useState(""),
-    [wordTab, setWordTab] = useState("all"),
-    [bookFilter, setBookFilter] = useState("all"),
-    [onlyNew, setOnlyNew] = useState(true),
-    [withBooks, setWithBooks] = useState(false),
-    [usage, setUsage] = useState("");
+    [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [ankiScope, setAnkiScope] = useState("new"),
+    [ankiBook, setAnkiBook] = useState("all"),
+    [ankiIpa, setAnkiIpa] = useState(true),
+    [ankiContext, setAnkiContext] = useState(true);
+  const [indexCache, setIndexCache] = useState<IndexCache>({}),
+    [viewportSize, setViewportSize] = useState(
+      () => `${innerWidth}x${innerHeight}`,
+    );
   const fileRef = useRef<HTMLInputElement>(null),
     backupRef = useRef<HTMLInputElement>(null),
-    wordRef = useRef<HTMLElement>(null),
-    focusEntryRef = useRef<HTMLButtonElement>(null);
-  const progressRef = useRef(progress);
-  progressRef.current = progress;
-  const commitProgress = async (value: Progress) => {
-    progressRef.current = [
-      ...progressRef.current.filter((p) => p.book !== value.book),
-      value,
-    ];
-    setProgress(progressRef.current);
-    await store.put("progress", value.book, value);
-  };
-  const settingsRef = useRef(settings);
+    searchRef = useRef<HTMLInputElement>(null);
+  const audioRunId = useRef(0);
+  const settingsRef = useRef(settings),
+    progressRef = useRef(progress),
+    booksRef = useRef(books);
   settingsRef.current = settings;
+  progressRef.current = progress;
+  booksRef.current = books;
   const t = createTranslator(settings.language);
+  const parts = route.split("/"),
+    page = parts[0] === "texts" ? "library" : parts[0],
+    bookId = parts[1],
+    at = parts[2] || "1.1",
+    mode = parts[3] || settings.defaultMode;
+  const decoded = useMemo(
+    () => new Map(books.map((b) => [b.manifest.id, readBook(b.bytes)])),
+    [books],
+  );
+  const active = page === "read" ? decoded.get(bookId) : null;
+  useEffect(() => {
+    if (!ready) return;
+    if (page === "settings") {
+      setOverlay("settings");
+      location.hash = "/home";
+    } else if (page === "read" && !decoded.has(bookId)) {
+      notify(t("Book not found"), true);
+      location.hash = "/home";
+    } else if (!["home", "library", "words", "search", "read"].includes(page)) {
+      location.hash = "/home";
+    }
+  }, [ready, page, bookId, decoded]);
+  const currentProgress = progress.find((p) => p.book === bookId);
   const notify = (text: string, error = false) =>
-    setMessage({ text: translateMessage(settings.language, text), error });
-  const run = async (fn: () => Promise<void>) => {
+    setMessage({
+      text: translateMessage(settingsRef.current.language, text),
+      error,
+    });
+  const run = async (fn: () => Promise<unknown>) => {
     try {
       await fn();
     } catch (e) {
       notify((e as Error).message, true);
     }
   };
+  const saveSettings = useCallback(async (p: Partial<Settings>) => {
+    const next = { ...settingsRef.current, ...p };
+    settingsRef.current = next;
+    setSettings(next);
+    await store.put("settings", "app", next);
+  }, []);
   const refresh = async () => {
     const [b, p, w, s] = await Promise.all([
       store.all<Book>("books"),
@@ -125,197 +160,404 @@ function App() {
     ]);
     setBooks(b);
     setProgress(p);
+    const prefs = store.checkedSettings(s);
+    setSettings(prefs);
+    settingsRef.current = prefs;
     setSaved(w);
-    const preferences = store.checkedSettings(s || store.defaults);
-    if (!s || s.readingDefaultsVersion !== 1 || s.bookStyleVersion !== 1)
-      await store.put("settings", "app", preferences);
-    setSettings(preferences);
+    if (!s || s.designVersion !== 2) await store.put("settings", "app", prefs);
   };
+  const commit = useCallback(async (p: Progress) => {
+    const previous = progressRef.current.find((x) => x.book === p.book);
+    const next = { ...previous, ...p };
+    progressRef.current = [
+      ...progressRef.current.filter((x) => x.book !== p.book),
+      next,
+    ];
+    setProgress(progressRef.current);
+    await store.put("progress", p.book, next);
+  }, []);
   useEffect(() => {
     void (async () => {
-      await store.put("settings", "probe", true);
-      await store.remove("settings", "probe");
       await ensureDemos(demos);
       await refresh();
       setReady(true);
       window.__frankaBoot?.finish();
       void navigator.storage?.persist?.().catch(() => {});
     })().catch((e) => {
-      setStartupError(e instanceof Error ? e.message : String(e));
+      setStartupError(String(e.message || e));
       window.__frankaBoot?.finish();
     });
     const change = () => {
       setRoute(location.hash.slice(2) || "home");
-      setSelected(null);
+      setWord(null);
       stop();
-      if (
-        !(
-          location.hash.startsWith("#/read/") &&
-          settingsRef.current.readingFlow === "continuous"
-        )
-      )
-        window.scrollTo(0, 0);
+      audioRunId.current++;
+      setBusy(false);
+      window.scrollTo(0, 0);
     };
     window.addEventListener("hashchange", change);
     return () => window.removeEventListener("hashchange", change);
   }, []);
   useLayoutEffect(() => {
-    const root = document.documentElement;
-    root.lang = settings.language;
-    document.title = t("Немецкий по Франку");
+    document.documentElement.lang = settings.language;
+    document.documentElement.dataset.theme = settings.theme;
+    document.title = t("German with Frank");
     try {
       localStorage.setItem("franka-language", settings.language);
-    } catch {}
-    root.dataset.theme = settings.theme;
-    try {
       localStorage.setItem("franka-theme", settings.theme);
-    } catch {
-      /* IndexedDB remains the source of truth. */
-    }
-    const media = matchMedia("(prefers-color-scheme: dark)");
-    const updateBrowserColor = () => {
-      const meta = document.querySelector<HTMLMetaElement>(
-        'meta[name="theme-color"]',
-      );
-      if (meta) meta.content = getComputedStyle(root).backgroundColor;
-    };
-    updateBrowserColor();
-    media.addEventListener("change", updateBrowserColor);
-    root.style.setProperty("--size", settings.fontSize + "px");
-    root.style.setProperty(
-      "--reading",
-      settings.font === "serif"
-        ? "'Literata', Georgia, serif"
-        : settings.font === "sans"
-          ? "'Golos Text', sans-serif"
-          : "system-ui, sans-serif",
-    );
-    return () => media.removeEventListener("change", updateBrowserColor);
-  }, [settings]);
-  const saveSettings = async (p: Partial<Settings>) => {
-    const next = { ...settingsRef.current, ...p };
-    settingsRef.current = next;
-    setSettings(next);
-    await store.put("settings", "app", next);
-  };
-  const parts = route.split("/"),
-    page = parts[0],
-    bookId = parts[1],
-    at = parts[2] || "1.1",
-    mode = parts[3] || "frank";
-  useEffect(() => {
-    if (page !== "read") {
-      setActive(null);
-      return;
-    }
-    const b = books.find((b) => b.manifest.id === bookId);
-    if (!b) {
-      if (ready)
-        notify(t("Книга не найдена. Загрузите её в разделе «Тексты»."), true);
-      setActive(null);
-      return;
-    }
-    void run(async () => {
-      const data = readBook(b.bytes);
-      setActive(data);
-    });
-  }, [page, bookId, books]);
-  useEffect(() => {
-    if (page !== "read" || !active || active.manifest.id !== bookId) return;
-    const data = active;
-    void run(async () => {
-      if (!addresses(data.content).includes(at)) {
-        location.hash = `/read/${bookId}/1.1/frank`;
-        return;
-      }
-      if (
-        !["frank", "clean", "parallel"].includes(mode) ||
-        (mode === "parallel" && !data.content.t)
-      ) {
-        location.hash = `/read/${bookId}/${at}/frank`;
-        return;
-      }
-      const index = addresses(data.content).indexOf(at),
-        old = progressRef.current.find((p) => p.book === bookId),
-        p = {
-          book: bookId,
-          at,
-          ...(old?.at === at && Number.isFinite(old.offset)
-            ? { offset: old.offset }
-            : {}),
-          percent:
-            old?.at === at
-              ? old.percent
-              : Math.round((index / data.manifest.stats.fragments) * 100),
-          mode,
-          updatedAt: new Date().toISOString(),
-        };
-      await commitProgress(p);
-      if (settingsRef.current.current !== bookId)
-        await saveSettings({ current: bookId });
-    });
-  }, [page, bookId, at, mode, active]);
+    } catch {}
+  }, [settings.language, settings.theme]);
   useEffect(() => {
     if (!message) return;
-    const id = setTimeout(() => setMessage(null), message.error ? 12000 : 5000);
+    const id = setTimeout(() => setMessage(null), message.error ? 10000 : 4000);
     return () => clearTimeout(id);
   }, [message]);
   useEffect(() => {
-    if (page !== "settings") return;
-    void navigator.storage
-      ?.estimate?.()
-      .then((e) => setUsage(((e.usage || 0) / 1024 / 1024).toFixed(1)))
-      .catch(() => {});
-  }, [page]);
-  function go(book: Book) {
-    const p = progress.find((p) => p.book === book.manifest.id);
-    location.hash = `/read/${book.manifest.id}/${p?.at || "1.1"}/${p?.mode || "frank"}`;
-  }
-  async function importFiles(files: FileList | File[]) {
-    for (const file of Array.from(files)) {
-      try {
-        if (file.size > 32 * 1024 * 1024)
-          throw Error(t("Файл превышает 32 МБ."));
-        const bytes = new Uint8Array(await file.arrayBuffer()),
-          b = readBook(bytes),
-          old = await store.get<Book>("books", b.manifest.id);
-        if (old) {
-          if (old.manifest.revision >= b.manifest.revision) {
-            notify(t("Эта книга уже есть: ") + b.manifest.title);
-            continue;
-          }
-          await new Promise<void>((resolve) =>
-            setConfirm({
-              title: t("Обновить книгу?"),
-              cancel: resolve,
-              text: t("{0}, версия {1}. Прогресс и слова сохранятся.", {
-                0: b.manifest.title,
-                1: b.manifest.revision,
-              }),
-              action: async () => {
-                await store.put("books", b.manifest.id, {
-                  manifest: b.manifest,
-                  bytes,
-                });
-                await refresh();
-                notify(t("Книга обновлена"));
-                resolve();
-              },
-            }),
-          );
-        } else {
-          await store.put("books", b.manifest.id, {
-            manifest: b.manifest,
-            bytes,
-          });
-          await refresh();
-          notify(t("Книга добавлена: ") + b.manifest.title);
-        }
-      } catch (e) {
-        notify(file.name + ": " + (e as Error).message, true);
+    const media = matchMedia("(prefers-color-scheme: light)");
+    const change = () => setSettings((s) => ({ ...s }));
+    media.addEventListener("change", change);
+    return () => media.removeEventListener("change", change);
+  }, []);
+  useEffect(() => {
+    let frame = 0;
+    const resize = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() =>
+        setViewportSize(`${innerWidth}x${innerHeight}`),
+      );
+    };
+    window.addEventListener("resize", resize);
+    return () => {
+      window.removeEventListener("resize", resize);
+      cancelAnimationFrame(frame);
+    };
+  }, []);
+  useLayoutEffect(() => {
+    const key = (e: KeyboardEvent) => {
+      if (e.metaKey && e.ctrlKey && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        void saveSettings({
+          sidebarCollapsed: !settingsRef.current.sidebarCollapsed,
+        });
       }
+      if (
+        page === "words" &&
+        selecting &&
+        !overlay &&
+        !confirm &&
+        !["INPUT", "SELECT", "TEXTAREA"].includes(
+          (e.target as HTMLElement).tagName,
+        )
+      ) {
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "a") {
+          e.preventDefault();
+          setSelection(new Set(visibleWords.map((w) => w.key)));
+        }
+        if (e.key === "Delete" || e.key === "Backspace") {
+          e.preventDefault();
+          requestDeleteWords();
+        }
+      }
+    };
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+  }, [page, selecting, selection, wordBook, overlay, confirm, saved]);
+  useEffect(() => {
+    if (page !== "search" || !query.trim()) return;
+    const id = setTimeout(() => {
+      const value = query.trim();
+      void saveSettings({
+        recentSearches: [
+          value,
+          ...settingsRef.current.recentSearches.filter((x) => x !== value),
+        ].slice(0, 8),
+      });
+    }, 800);
+    return () => clearTimeout(id);
+  }, [query, page]);
+  const navigate = (dest: string) => {
+    if (dest === "words") {
+      setWordBook("all");
+      setWordTab("all");
     }
+    location.hash = "/" + dest;
+    setOverlay("");
+  };
+  function go(b: Book, address?: string, offset?: number) {
+    const p = progressRef.current.find((x) => x.book === b.manifest.id);
+    const content = decoded.get(b.manifest.id)!.content;
+    const keys = addresses(content);
+    const requested = address || p?.at || "1.1";
+    const target = keys.includes(requested) ? requested : "1.1";
+    const [ci, fi] = target.split(".").map((n) => +n - 1);
+    const length = plain(content.c[ci][fi]).length;
+    const position = Math.max(0, offset || 0);
+    const percent = Math.min(
+      99,
+      Math.round(
+        ((keys.indexOf(target) +
+          (position % (length + 1)) / Math.max(1, length)) /
+          keys.length) *
+          100,
+      ),
+    );
+    const nextMode = p?.mode || settings.defaultMode;
+    setWord(null);
+    setOverlay("");
+    if (address)
+      void run(() =>
+        commit({
+          book: b.manifest.id,
+          at: target,
+          offset: position,
+          mode: nextMode,
+          percent: p?.percent === 100 ? 100 : percent,
+          updatedAt: new Date().toISOString(),
+        }),
+      );
+    location.hash = `/read/${b.manifest.id}/${target}/${nextMode}`;
   }
+  useEffect(() => {
+    if (!active) return;
+    if (!addresses(active.content).includes(at)) {
+      location.hash = `/read/${bookId}/1.1/${settings.defaultMode}`;
+      return;
+    }
+    if (
+      !["frank", "clean", "parallel"].includes(mode) ||
+      (mode === "parallel" && !active.content.t)
+    ) {
+      location.hash = `/read/${bookId}/${at}/frank`;
+      return;
+    }
+    if (settings.current !== bookId)
+      void run(() => saveSettings({ current: bookId }));
+    if (!currentProgress)
+      void run(() =>
+        commit({
+          book: bookId,
+          at,
+          offset: 0,
+          percent: 0,
+          mode,
+          updatedAt: new Date().toISOString(),
+        }),
+      );
+  }, [bookId, active, at, mode]);
+  const onWord = useCallback((w: WordSelection) => setWord(w), []);
+  const renderFragment = useCallback(
+    (chunks: Chunk[], address: string) =>
+      active ? (
+        <BookText
+          chunks={chunks}
+          address={address}
+          content={active.content}
+          manifest={active.manifest}
+          mode={mode}
+          repeat={settings.showClean}
+          onWord={onWord}
+        />
+      ) : null,
+    [active, mode, settings.showClean, onWord],
+  );
+  const onPosition = (address: string, offset: number) => {
+    if (!active) return;
+    const keys = addresses(active.content),
+      i = keys.indexOf(address),
+      [ci, fi] = address.split(".").map((n) => +n - 1);
+    const fraction =
+      (offset % (plain(active.content.c[ci][fi]).length + 1)) /
+      Math.max(1, plain(active.content.c[ci][fi]).length);
+    const previous = progressRef.current.find((p) => p.book === bookId);
+    void run(() =>
+      commit({
+        book: bookId,
+        at: address,
+        offset,
+        mode,
+        percent:
+          previous?.percent === 100
+            ? 100
+            : Math.min(99, Math.round(((i + fraction) / keys.length) * 100)),
+        updatedAt: new Date().toISOString(),
+      }),
+    );
+    const next = `read/${bookId}/${address}/${mode}`;
+    history.replaceState(null, "", "#/" + next);
+    setRoute(next);
+  };
+  const signature = useCallback(
+    (id: string) => {
+      const b = decoded.get(id),
+        p = progress.find((x) => x.book === id);
+      return JSON.stringify([
+        viewportSize,
+        b?.manifest.revision,
+        page === "read" && id === bookId
+          ? mode
+          : p?.mode || settings.defaultMode,
+        settings.font,
+        settings.fontSize,
+        settings.showClean,
+        settings.pageTurn,
+        settings.bold,
+        settings.hintSize,
+        settings.hintItalic,
+        settings.customLayout,
+        settings.lineSpacing,
+        settings.letterSpacing,
+        settings.wordSpacing,
+        settings.margins,
+        settings.columns,
+        settings.justify,
+      ]);
+    },
+    [decoded, progress, viewportSize, mode, settings, page, bookId],
+  );
+  const recordIndex = useCallback(
+    (id: string, sig: string, pages: PageEntry[]) =>
+      setIndexCache((cache) =>
+        cache[id]?.signature === sig &&
+        JSON.stringify(cache[id].pages) === JSON.stringify(pages)
+          ? cache
+          : { ...cache, [id]: { signature: sig, pages } },
+      ),
+    [],
+  );
+  const pageEntries = (id: string) =>
+    indexCache[id]?.signature === signature(id)
+      ? indexCache[id].pages
+      : undefined;
+  const measureBook =
+    page !== "read"
+      ? books.find((b) => !pageEntries(b.manifest.id))
+      : undefined;
+  const measured = measureBook ? decoded.get(measureBook.manifest.id) : null;
+  const measureMode = measured
+    ? progress.find((p) => p.book === measured.manifest.id)?.mode ||
+      settings.defaultMode
+    : "frank";
+  const renderMeasure = useCallback(
+    (chunks: Chunk[], address: string) =>
+      measured ? (
+        <BookText
+          chunks={chunks}
+          address={address}
+          content={measured.content}
+          manifest={measured.manifest}
+          mode={measureMode}
+          repeat={settings.showClean}
+        />
+      ) : null,
+    [measured, measureMode, settings.showClean],
+  );
+  const status = (b: Book) => {
+    const p = progress.find((x) => x.book === b.manifest.id);
+    return p?.percent === 100 ? t("Finished") : p ? `${p.percent}%` : t("NEW");
+  };
+  const pageStatus = (b: Book) => {
+    const p = progress.find((x) => x.book === b.manifest.id),
+      entries = pageEntries(b.manifest.id);
+    return entries
+      ? t("Page {0} of {1}", {
+          0: pageFor(entries, p?.at || "1.1", p?.offset || 0),
+          1: entries.length,
+        })
+      : "…";
+  };
+  const showBookWords = (id: string) => {
+    setWordBook(id);
+    setWordTab("book");
+    location.hash = "/words";
+    setOverlay("");
+  };
+  function openAnki(id?: string, selected = false) {
+    setAnkiBook(id || "all");
+    setAnkiScope(selected ? "selected" : id ? "book" : "new");
+    setOverlay("anki");
+  }
+  const newWords = saved.filter((w) => !w.inAnki);
+  const visibleWords = saved
+    .filter((w) => wordBook === "all" || w.book === wordBook)
+    .sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+  const toggleWord = (key: string) =>
+    setSelection((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  const selectAll = (list: SavedWord[]) =>
+    setSelection((prev) => {
+      const next = new Set(prev);
+      const all = list.every((w) => next.has(w.key));
+      for (const w of list) all ? next.delete(w.key) : next.add(w.key);
+      return next;
+    });
+  function requestDeleteWords() {
+    if (!selection.size) return;
+    setConfirm({
+      title: t("Delete selected words?"),
+      text: t("This removes {0} saved words.", { 0: selection.size }),
+      action: async () => {
+        const keys = [...selection];
+        await Promise.all(keys.map((k) => store.remove("words", k)));
+        setSaved((prev) => prev.filter((w) => !keys.includes(w.key)));
+        setSelection(new Set());
+        setSelecting(false);
+      },
+    });
+  }
+  const chosenAnki = saved.filter((w) =>
+    ankiScope === "selected"
+      ? selection.has(w.key)
+      : ankiScope === "book"
+        ? w.book === ankiBook && !w.inAnki
+        : ankiScope === "new"
+          ? !w.inAnki
+          : true,
+  );
+  const exportAnki = async () => {
+    if (!chosenAnki.length) return;
+    exportWords(chosenAnki, books, true, false, {
+      ipa: ankiIpa,
+      context: ankiContext,
+      deck: settings.deck,
+    });
+    if (settings.markExported) {
+      await Promise.all(
+        chosenAnki.map((w) =>
+          store.put("words", w.key, { ...w, inAnki: true }),
+        ),
+      );
+      setSaved((prev) =>
+        prev.map((w) =>
+          chosenAnki.some((x) => x.key === w.key) ? { ...w, inAnki: true } : w,
+        ),
+      );
+    }
+    setOverlay("");
+    notify(t("Anki export complete"));
+  };
+  const inspectFile = async (file: File) => {
+    setOverlay("add");
+    setFileBusy(true);
+    setFileError("");
+    setPending(null);
+    try {
+      if (!file.name.toLowerCase().endsWith(".fbook"))
+        throw Error(t("Choose an .fbook file."));
+      if (file.size > 32 * 1024 * 1024)
+        throw Error(t("The file exceeds 32 MB."));
+      const data = readBook(new Uint8Array(await file.arrayBuffer()));
+      setPending(data);
+    } catch (e) {
+      setFileError(
+        translateMessage(settingsRef.current.language, (e as Error).message),
+      );
+    } finally {
+      setFileBusy(false);
+    }
+  };
   useEffect(() => {
     const drag = (e: DragEvent) => {
       if (e.dataTransfer?.types.includes("Files")) e.preventDefault();
@@ -323,1559 +565,1528 @@ function App() {
     const drop = (e: DragEvent) => {
       if (e.dataTransfer?.files.length) {
         e.preventDefault();
-        void importFiles(e.dataTransfer.files);
+        void inspectFile(e.dataTransfer.files[0]);
       }
     };
-    document.addEventListener("dragover", drag);
-    document.addEventListener("drop", drop);
+    window.addEventListener("dragover", drag);
+    window.addEventListener("drop", drop);
     return () => {
-      document.removeEventListener("dragover", drag);
-      document.removeEventListener("drop", drop);
+      window.removeEventListener("dragover", drag);
+      window.removeEventListener("drop", drop);
     };
-  }, [books]);
-  const index = active ? addresses(active.content).indexOf(at) : 0,
-    total = active?.manifest.stats.fragments || 0;
-  const fragment = active ? locate(active.content, at) : null;
-  useEffect(() => {
-    if (page !== "read") setFocusMode(false);
-  }, [page]);
-  const enterFocus = () => {
-    stop();
-    setSelected(null);
-    setMessage(null);
-    setFocusMode(true);
-    window.scrollTo(0, 0);
+  }, [settings.language]);
+  const addPending = async () => {
+    if (
+      !pending ||
+      booksRef.current.some((b) => b.manifest.id === pending.manifest.id)
+    )
+      return;
+    await store.put("books", pending.manifest.id, {
+      manifest: pending.manifest,
+      bytes: pending.bytes,
+      addedAt: new Date().toISOString(),
+    });
+    await refresh();
+    setOverlay("");
+    setPending(null);
+    notify(t("Book added"));
   };
-  const exitFocus = () => {
-    setFocusMode(false);
-    setTimeout(() => focusEntryRef.current?.focus({ preventScroll: true }), 0);
-  };
-  const bookmarkScroll = (address: string) => {
-    const next = `read/${bookId}/${address}/${mode}`;
-    history.replaceState(null, "", "#/" + next);
-    setRoute(next);
-  };
-  const changeFlow = (flow: ReadingFlow) => {
-    setSelected(null);
-    setFocusMode(false);
-    void run(() => saveSettings({ readingFlow: flow }));
-  };
-  const navigate = (delta: number) => {
-    if (!active) return;
-    const list = addresses(active.content),
-      next = list[index + delta];
-    if (next) {
-      setSelected(null);
-      location.hash = `/read/${bookId}/${next}/${mode}`;
-    } else if (delta > 0 && index + delta >= list.length) {
-      void run(async () => {
-        const p = {
-          book: bookId,
-          at: list[list.length - 1],
-          percent: 100,
-          mode,
-          updatedAt: new Date().toISOString(),
-        };
-        await store.put("progress", bookId, p);
-        setProgress((prev) => [...prev.filter((p) => p.book !== bookId), p]);
-        notify(t("Книга прочитана. Можно вернуться к любому отрывку."));
-        location.hash = "/home";
-      });
+  const removeBook = (b: Book) =>
+    setConfirm({
+      title: t("Remove book?"),
+      text:
+        b.manifest.title + ". " + t("Saved words will stay on this device."),
+      action: async () => {
+        await store.remove("books", b.manifest.id);
+        await store.remove("progress", b.manifest.id);
+        await refresh();
+        setOverlay("");
+        setDetails(null);
+      },
+    });
+  const wordForm = word && active?.content.f[word.form],
+    lemma = wordForm?.[1] != null ? active?.content.l[wordForm[1]] : undefined,
+    ipa = word
+      ? active?.content.x?.[word.at]?.[word.form] || wordForm?.[0] || ""
+      : "";
+  const wordKey = word
+    ? [bookId, lemma?.[0] || word.form, word.at].join("|")
+    : "";
+  const listen = async (text: string, phonetic?: string, toggle = false) => {
+    const id = ++audioRunId.current;
+    if (busy && toggle) {
+      stop();
+      setBusy(false);
+      return;
     }
-  };
-  useLayoutEffect(() => {
-    const listener = (e: KeyboardEvent) => {
-      if (
-        page !== "read" ||
-        focusMode ||
-        settings.readingFlow === "pages" ||
-        confirm ||
-        sizeOpen ||
-        e.altKey ||
-        e.ctrlKey ||
-        e.metaKey ||
-        ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(
-          (e.target as HTMLElement).tagName,
-        )
-      )
-        return;
-      if (e.key === "ArrowRight") {
-        e.preventDefault();
-        navigate(1);
-      }
-      if (e.key === "ArrowLeft") {
-        e.preventDefault();
-        navigate(-1);
-      }
-      if (e.key === "Escape") setSelected(null);
-    };
-    window.addEventListener("keydown", listener);
-    return () => window.removeEventListener("keydown", listener);
-  }, [active, at, mode, confirm, sizeOpen, focusMode, settings.readingFlow]);
-  async function listen(text: string, ipa?: string) {
     unlockAudio();
     setBusy(true);
     try {
-      await speak(text, ipa, settings);
+      const duration = await speak(text, phonetic, settings, () => {
+        if (id === audioRunId.current) setBusy(false);
+      });
+      if (duration === 0 && id === audioRunId.current) setBusy(false);
     } catch (e) {
-      notify((e as Error).message, true);
-    } finally {
-      setBusy(false);
+      if (id === audioRunId.current) {
+        setBusy(false);
+        notify((e as Error).message, true);
+      }
     }
-  }
-  async function listenFragment() {
-    if (!active || !fragment) return;
-    const overrides = active.content.x?.[at] || {},
-      text = plain(fragment.chunks);
-    let ipa = "";
-    for (const part of text.split(/([\p{L}\p{M}]+(?:[’'-][\p{L}\p{M}]+)*)/gu)) {
-      if (splitWords(part).length) {
-        ipa += (overrides[part] || active.content.f[part]?.[0] || "") + " ";
-      } else
-        ipa += part
-          .replace(/[,;:]/g, " | ")
-          .replace(/[.!?]/g, " || ")
-          .replace(/[^|\s]/g, " ");
-    }
-    await listen(text, ipa);
-  }
-  function cleanText(
-    text: string,
-    context: string,
-    hint: string,
-    address = at,
-    baseOffset = 0,
-  ) {
-    let position = baseOffset;
-    return text
-      .split(/([\p{L}\p{M}]+(?:[’'-][\p{L}\p{M}]+)*)/gu)
-      .map((part, i) => {
-        const offset = position;
-        position += part.length;
-        return splitWords(part).length ? (
-          <button
-            key={i}
-            lang="de"
-            class={"word" + (selected?.form === part ? " chosen" : "")}
-            data-book-char={offset}
-            onClick={() =>
-              setSelected({ form: part, context, hint, at: address })
-            }
-          >
-            {part}
-          </button>
-        ) : (
-          part
-        );
-      });
-  }
-
-  function textBlock(
-    chunks: Chunk[],
-    hints = false,
-    address = at,
-    startOffset = 0,
-  ) {
-    let position = startOffset;
-    return chunks.map((c) => {
-      const offset = position;
-      position += typeof c === "string" ? c.length : c[0].length;
-      if (typeof c === "string")
-        return cleanText(c, plain(chunks), "", address, offset);
-      const hint =
-        active!.content.g[c[1]] +
-        (c[2] != null ? " = " + active!.content.g[c[2]] : "");
-      return (
-        <span class={c[3] === 1 ? "uncertain" : ""}>
-          {cleanText(c[0], c[0], hint, address, offset)}
-          {hints && (
-            <>
-              {" "}
-              <span class="hint" lang="ru">
-                ({hint})
-              </span>
-            </>
-          )}
-        </span>
-      );
-    });
-  }
-  const renderBookFragment = useCallback(
-    (chunks, address) => {
-      const [ci, fi] = address.split(".").map((n) => +n - 1);
-      const sourceText = plain(chunks),
-        lines = sentences(sourceText);
-      let cursor = 0;
-      const starts = lines.map((line) => {
-        const start = sourceText.indexOf(line, cursor);
-        cursor = start + line.length;
-        return start;
-      });
-      return mode === "parallel" ? (
-        <section class="reading-panel" aria-label={t("Параллельный перевод")}>
-          {(active.content.t?.[ci]?.[fi] || []).map((translation, i) => (
-            <div class="parallel-row">
-              <p lang="de">
-                {cleanText(
-                  sentences(plain(chunks))[i] || "",
-                  sentences(plain(chunks))[i] || "",
-                  translation,
-                  address,
-                  starts[i] || 0,
-                )}
-              </p>
-              <p class="translation" lang="ru">
-                {translation}
-              </p>
-            </div>
-          ))}
-        </section>
-      ) : (
-        <div class="reading-columns">
-          {mode === "frank" && (
-            <section class="reading-panel" aria-label={t("С подсказками")}>
-              {settings.showClean && (
-                <div class="eyebrow">{t("С подсказками")}</div>
-              )}
-              <p lang="de">{textBlock(chunks, true, address)}</p>
-            </section>
-          )}
-          {(mode === "clean" || settings.showClean) && (
-            <section class="reading-panel" aria-label={t("Без подсказок")}>
-              {mode === "frank" && (
-                <div class="eyebrow">{t("Без подсказок")}</div>
-              )}
-              <p lang="de">
-                {textBlock(
-                  chunks,
-                  false,
-                  address,
-                  mode === "frank" ? plain(chunks).length + 1 : 0,
-                )}
-              </p>
-            </section>
-          )}
-        </div>
-      );
-    },
-    [active, mode, settings.showClean, selected, settings.language],
-  );
-  const selForm = selected && active?.content.f[selected.form],
-    lemma = selForm?.[1] != null ? active?.content.l[selForm[1]] : null,
-    selIpa = selected
-      ? active?.content.x?.[selected.at]?.[selected.form] || selForm?.[0] || ""
-      : "";
-  const selKey = selected
-    ? [bookId, lemma?.[0] || selected.form, selected.at].join("|")
-    : "";
-  const isSaved = saved.some((w) => w.key === selKey);
-  async function saveWord() {
-    if (!selected) return;
+  };
+  const saveWord = async () => {
+    if (!word) return;
     const w: SavedWord = {
-      key: selKey,
+      key: wordKey,
       book: bookId,
-      at: selected.at,
-      lemma: lemma?.[0] || selected.form,
-      ru:
-        lemma?.[1] || selected.hint || t("Перевод отсутствует в словаре книги"),
-      ipa: selIpa,
-      context: selected.context,
-      form: selected.form,
+      at: word.at,
+      lemma: lemma?.[0] || word.form,
+      ru: lemma?.[1] || word.hint || "",
+      ipa,
+      context: word.context,
+      contextTranslation: word.translation,
+      partOfSpeech: lemma?.[2] || "",
+      form: word.form,
       savedAt: new Date().toISOString(),
       inAnki: false,
     };
     await store.put("words", w.key, w);
     setSaved((prev) => [...prev.filter((x) => x.key !== w.key), w]);
-    notify(t("Слово сохранено"));
-  }
-  const current =
-      books.find((b) => b.manifest.id === settings.current) || books[0],
-    cp = current
-      ? progress.find((p) => p.book === current.manifest.id)
-      : undefined;
-  const filteredWords = saved
-    .filter(
-      (w) =>
-        (bookFilter === "all" || w.book === bookFilter) &&
-        [w.lemma, w.ru, w.context]
-          .join(" ")
-          .toLocaleLowerCase()
-          .includes(query.toLocaleLowerCase()),
-    )
-    .sort((a, b) => b.savedAt.localeCompare(a.savedAt));
-  const exportList = async (anki: boolean) => {
-    const list = exportWords(filteredWords, books, anki, onlyNew);
-    if (anki) {
-      for (const w of list)
-        await store.put("words", w.key, { ...w, inAnki: true });
-      setSaved((prev) =>
-        prev.map((w) =>
-          list.some((x) => x.key === w.key) ? { ...w, inAnki: true } : w,
-        ),
-      );
-    }
-    notify(t("Файл скачан") + (anki ? t(". Слова отмечены «в Anki».") : ""));
   };
-  function bookCard(b: Book) {
-    const m = b.manifest,
-      p = progress.find((p) => p.book === m.id);
-    return (
-      <article class="panel book-card" key={m.id}>
+  const wordPanel =
+    word && active ? (
+      <aside class="word-panel" aria-label={t("Word details")}>
+        <div class="row between">
+          <h2 lang="de">{lemma?.[0] || word.form}</h2>
+          <button
+            class="round"
+            aria-label={t("Close")}
+            onClick={() => setWord(null)}
+          >
+            <Icon name="close" />
+          </button>
+        </div>
+        <div class="row between">
+          <small class="muted">
+            {lemma?.[2] || ""} · {t("In text: {0}", { 0: word.form })} · [{ipa}]
+          </small>
+          <button
+            class="round"
+            aria-label={t("Pronounce word")}
+            onClick={() => void listen(word.form, ipa)}
+          >
+            <Icon name="sound" />
+          </button>
+        </div>
+        <p>{lemma?.[1] || word.hint || t("No dictionary translation")}</p>
+        <div class="word-context">
+          <p lang="de">{word.context}</p>
+          {word.translation && (
+            <p lang={active.manifest.hintLang}>{word.translation}</p>
+          )}
+        </div>
         <button
-          class="cover-open"
-          aria-label={t("Читать ") + m.title}
+          class="primary wide"
+          disabled={saved.some((w) => w.key === wordKey)}
+          onClick={() => void run(saveWord)}
+        >
+          <Icon
+            name={saved.some((w) => w.key === wordKey) ? "check" : "bookmark"}
+          />
+          {t(
+            saved.some((w) => w.key === wordKey) ? "Saved" : "Save to My Words",
+          )}
+        </button>
+      </aside>
+    ) : null;
+  const bookmarkKey = positionKey(at, currentProgress?.offset || 0);
+  const toggleBookmark = () => {
+    const p = progressRef.current.find((x) => x.book === bookId);
+    if (!p) return;
+    const exists = p.bookmarks?.some(
+      (b) => positionKey(b.at, b.offset) === bookmarkKey,
+    );
+    void run(() =>
+      commit({
+        ...p,
+        bookmarks: exists
+          ? p.bookmarks!.filter(
+              (b) => positionKey(b.at, b.offset) !== bookmarkKey,
+            )
+          : [
+              ...(p.bookmarks || []),
+              {
+                at,
+                offset: p.offset || 0,
+                createdAt: new Date().toISOString(),
+              },
+            ],
+      }),
+    );
+  };
+  const marked = (text: string) => (
+    <>
+      {highlightParts(text, query).map((p, i) =>
+        p.match ? <mark key={i}>{p.text}</mark> : p.text,
+      )}
+    </>
+  );
+  const card = (b: Book) => (
+    <article class="shelf-book" key={b.manifest.id}>
+      <button
+        class="cover-open"
+        aria-label={b.manifest.title}
+        onClick={() => {
+          setDetails(b);
+          setOverlay("details");
+        }}
+      >
+        <BookCover manifest={b.manifest} />
+      </button>
+      <div class="book-status">
+        <span
+          class={
+            !progress.some((p) => p.book === b.manifest.id) ? "new-badge" : ""
+          }
+        >
+          {status(b)}
+        </span>
+        {b.manifest.annotation === "auto" && (
+          <span class="auto-badge">{t("Auto text")}</span>
+        )}
+        <button
+          class="book-more"
+          aria-label={t("Read") + " " + b.manifest.title}
           onClick={() => go(b)}
         >
-          <BookCover manifest={m} />
-        </button>
-        <div class="row between">
-          <span class="badge">{m.level}</span>
-          <span
-            class={"tag " + (m.annotation === "verified" ? "verified" : "")}
-          >
-            <span class="dot" />
-            {m.annotation === "verified" ? t("Проверено") : t("Автотекст")}
-          </span>
-        </div>
-        <h3>{m.title}</h3>
-        <p>
-          {m.author}
-          {m.titleRu ? " · " + m.titleRu : ""}
-        </p>
-        <div>
-          <ProgressBar value={p?.percent || 0} />
-          <div class="row between">
-            <small class="muted">
-              {p?.percent || 0}
-              {t("% прочитано · ")}
-              {m.stats.fragments} {t(" отр.")}
-            </small>
-          </div>
-        </div>
-        <div class="row">
-          <button
-            class="primary grow"
-            aria-label={(p ? t("Продолжить ") : t("Читать ")) + m.title}
-            onClick={() => go(b)}
-          >
-            {p ? t("Продолжить") : t("Читать")}
-          </button>
-          <button
-            class="icon"
-            aria-label={t("Скачать ") + m.title}
-            onClick={() => download(b.bytes, slug(m.title) + ".fbook")}
-          >
-            <Icon name="download" />
-          </button>
-          <button
-            class="icon"
-            aria-label={t("Удалить ") + m.title}
-            onClick={() =>
-              setConfirm({
-                title: t("Удалить книгу?"),
-                text: t(
-                  "Удалится только файл книги. Сохранённые слова и прогресс останутся.",
-                ),
-                action: async () => {
-                  await store.remove("books", m.id);
-                  await refresh();
-                  notify(t("Книга удалена"));
-                },
-              })
-            }
-          >
-            <Icon name="trash" />
-          </button>
-        </div>
-      </article>
-    );
-  }
-  const wordPanel = selected ? (
-    <aside
-      class="panel word-panel"
-      ref={wordRef}
-      aria-label={t("Подсказка к слову")}
-    >
-      <div class="row between">
-        <div class="grow">
-          <h2 lang="de">{lemma?.[0] || selected.form}</h2>
-          <small class="muted">
-            {t("В тексте: ")}
-            {selected.form}
-          </small>
-        </div>
-        <button
-          class="icon close-word"
-          aria-label={t("Закрыть подсказку")}
-          onClick={() => setSelected(null)}
-        >
-          <Icon name="close" />
+          ···
         </button>
       </div>
-      <div class="row">
-        <span class="ipa">[{selIpa}]</span>
-        <button
-          class="icon"
-          aria-label={t("Произнести слово")}
-          disabled={busy}
-          onClick={() => void listen(selected.form, selIpa)}
-        >
-          <Icon name="sound" />
-        </button>
-      </div>
-      <strong>{lemma?.[1] || t("Нет отдельного перевода")}</strong>
-      <div class="context">
-        <i lang="de">{selected.context}</i>
-        {selected.hint && (
-          <div style={{ color: "var(--teal)" }}>{selected.hint}</div>
-        )}
-      </div>
-      <button
-        class="primary"
-        disabled={isSaved}
-        onClick={() => void run(saveWord)}
+    </article>
+  );
+  const bookMini = (id: string) => {
+    const b = books.find((b) => b.manifest.id === id);
+    return b ? <BookCover manifest={b.manifest} small /> : <Icon name="book" />;
+  };
+  const wordRow = (w: SavedWord) => {
+    const b = books.find((b) => b.manifest.id === w.book);
+    return (
+      <div
+        class={
+          "word-row" + (selection.has(w.key) && selecting ? " selected" : "")
+        }
+        role="row"
+        key={w.key}
       >
-        {isSaved ? (
-          <>
-            <Icon name="check" />
-            {t("Слово сохранено")}
-          </>
-        ) : (
-          t("В мои слова")
+        {selecting && (
+          <input
+            type="checkbox"
+            aria-label={t("Select word {0}", { 0: w.lemma })}
+            checked={selection.has(w.key)}
+            onChange={() => toggleWord(w.key)}
+          />
         )}
-      </button>
-    </aside>
-  ) : null;
+        <button
+          class="word-main"
+          onClick={() => (selecting ? toggleWord(w.key) : b && go(b, w.at))}
+        >
+          <span lang="de">
+            <strong>{w.lemma}</strong> <small class="ipa">[{w.ipa}]</small>
+          </span>
+          <span class="word-translation">{w.ru}</span>
+          <span class="word-sentence" lang="de">
+            {w.context}
+          </span>
+        </button>
+        <button
+          class="word-book"
+          aria-label={b?.manifest.title || t("Unknown book")}
+          onClick={() => showBookWords(w.book)}
+        >
+          {bookMini(w.book)}
+          <span>{b?.manifest.title || t("Unknown book")}</span>
+        </button>
+        {!w.inAnki && <span class="new-word-dot" title={t("New word")} />}
+      </div>
+    );
+  };
+  const ankiCount = chosenAnki.length;
+  const title =
+    page === "library"
+      ? t(libraryFilter === "all" ? "All Books" : filterLabel(libraryFilter))
+      : page === "words"
+        ? t(wordTab === "book" ? "Words by Book" : "All words")
+        : t(page === "search" ? "Search" : "Home");
+  const runningBooks = [...books]
+    .sort((a, b) => {
+      const pa = progress.find((p) => p.book === a.manifest.id),
+        pb = progress.find((p) => p.book === b.manifest.id);
+      return (
+        Number(b.manifest.id === settings.current) -
+          Number(a.manifest.id === settings.current) ||
+        (pb?.updatedAt || "").localeCompare(pa?.updatedAt || "")
+      );
+    })
+    .filter(
+      (b) => progress.find((p) => p.book === b.manifest.id)?.percent !== 100,
+    )
+    .slice(0, 2);
+  const recentBooks = [...books]
+    .sort((a, b) =>
+      ((b as any).addedAt || "").localeCompare((a as any).addedAt || ""),
+    )
+    .slice(0, 4);
+  const filteredBooks = books.filter(
+    (b) =>
+      libraryFilter === "all" ||
+      libraryFilter === b.manifest.level ||
+      (libraryFilter === "reading" &&
+        progress.some((p) => p.book === b.manifest.id && p.percent < 100)) ||
+      (libraryFilter === "finished" &&
+        progress.some((p) => p.book === b.manifest.id && p.percent === 100)),
+  );
+  const foundBooks = books.filter((b) =>
+    [b.manifest.title, b.manifest.author, b.manifest.level]
+      .join(" ")
+      .toLocaleLowerCase()
+      .includes(query.trim().toLocaleLowerCase()),
+  );
+  const foundWords = saved.filter((w) =>
+    [w.lemma, w.form, w.ru, w.context]
+      .join(" ")
+      .toLocaleLowerCase()
+      .includes(query.trim().toLocaleLowerCase()),
+  );
+  const foundText = useMemo(
+    () =>
+      query.trim()
+        ? books
+            .map((b) => ({
+              book: b,
+              hits: searchText(
+                decoded.get(b.manifest.id)!.content,
+                query,
+                indexCache[b.manifest.id]?.pages,
+              ),
+            }))
+            .filter((x) => x.hits.length)
+        : [],
+    [books, query, indexCache, decoded],
+  );
   if (!ready)
     return (
-      <>
-        <main class="page">
-          <h1>{t("Немецкий по Франку")}</h1>
-          <p>
-            {startupError
-              ? t(
-                  "Не удалось открыть хранилище браузера. Разрешите локальное хранение данных или откройте файл в Chrome / Edge.",
-                )
-              : t("Открываем библиотеку…")}
-          </p>
-          {startupError && (
-            <>
-              <div role="alert">
-                {translateMessage(settings.language, startupError)}
-              </div>
-              <p>
-                {t(
-                  "Данные не удалены. Проверьте разрешение браузера на хранение данных.",
-                )}
-              </p>
-              <button onClick={() => location.reload()}>
-                {t("Повторить запуск")}
-              </button>
-            </>
+      <main class="startup">
+        <h1>{t("German with Frank")}</h1>
+        <p>
+          {t(
+            startupError ? "Could not open local storage" : "Opening library…",
           )}
-        </main>
-      </>
+        </p>
+        {startupError && (
+          <>
+            <p role="alert">
+              {translateMessage(settings.language, startupError)}
+            </p>
+            <button onClick={() => location.reload()}>{t("Try again")}</button>
+          </>
+        )}
+      </main>
     );
   return (
     <LocaleContext.Provider value={settings.language}>
       <input
-        ref={fileRef}
-        type="file"
         hidden
+        type="file"
         accept=".fbook"
-        multiple
+        ref={fileRef}
         onChange={(e) => {
-          if (e.currentTarget.files) void importFiles(e.currentTarget.files);
+          const file = e.currentTarget.files?.[0];
+          if (file) void inspectFile(file);
           e.currentTarget.value = "";
         }}
       />
       <input
-        ref={backupRef}
-        type="file"
         hidden
+        type="file"
         accept=".json,.zip"
+        ref={backupRef}
         onChange={(e) => {
           const file = e.currentTarget.files?.[0];
+          e.currentTarget.value = "";
           if (file)
             void run(async () => {
               if (file.size > 32 * 1024 * 1024)
-                throw Error(t("Копия превышает 32 МБ."));
+                throw Error(t("The file exceeds 32 MB."));
               const parsed = parseBackup(
                 new Uint8Array(await file.arrayBuffer()),
               );
               setConfirm({
-                title: t("Импорт данных"),
-                text: t(
-                  "Добавить слова ({0}) и прогресс ({1})? Более свежий прогресс сохранится.",
-                  {
-                    0: parsed.data.words.length,
-                    1: parsed.data.progress.length,
-                  },
-                ),
+                title: t("Restore backup?"),
+                text: t("Newer reading progress will be kept."),
                 action: async () => {
-                  const replace = window.confirm(
-                    t(
-                      "Заменить также настройки из резервной копии? «Отмена» сохранит текущие настройки.",
-                    ),
-                  );
-                  await importBackup(parsed, replace);
+                  await importBackup(parsed, true);
                   await refresh();
-                  notify(t("Резервная копия импортирована"));
+                  setIndexCache({});
+                  setOverlay("");
+                  notify(t("Restore complete"));
                 },
               });
             });
-          e.currentTarget.value = "";
         }}
       />
-      {page === "read" && active && fragment ? (
-        settings.readingFlow === "pages" ? (
-          <PagedReader
-            manifest={active.manifest}
-            content={active.content}
-            settings={settings}
-            mode={mode}
-            at={at}
-            offset={
-              progress.find((p) => p.book === bookId && p.at === at)?.offset ||
-              0
-            }
-            onPosition={(address, offset) => {
-              const list = addresses(active.content),
-                index = list.indexOf(address);
-              void run(() =>
-                commitProgress({
-                  book: bookId,
-                  at: address,
-                  offset,
-                  mode,
-                  percent: Math.round(
-                    ((index +
-                      Math.min(
-                        1,
-                        offset /
-                          Math.max(
-                            1,
-                            plain(locate(active.content, address).chunks)
-                              .length,
-                          ),
-                      )) /
-                      list.length) *
-                      100,
-                  ),
-                  updatedAt: new Date().toISOString(),
-                }),
-              );
-              bookmarkScroll(address);
-            }}
-            onSettings={(changes) => {
-              if (changes.readingFlow) changeFlow(changes.readingFlow);
-              else void run(() => saveSettings(changes));
-            }}
-            onMode={(next) => {
-              setSelected(null);
-              location.hash = `/read/${bookId}/${at}/${next}`;
-            }}
-            onJump={(address) => {
-              setSelected(null);
-              void run(() =>
-                commitProgress({
-                  book: bookId,
-                  at: address,
-                  offset: 0,
-                  percent: Math.round(
-                    (addresses(active.content).indexOf(address) / total) * 100,
-                  ),
-                  mode,
-                  updatedAt: new Date().toISOString(),
-                }),
-              );
-              location.hash = `/read/${bookId}/${address}/${mode}`;
-            }}
-            onComplete={() => navigate(total - index)}
-            onListen={() => void listenFragment()}
-            busy={busy}
-            renderFragment={renderBookFragment}
-            wordPanel={wordPanel}
-            onDismissWord={() => setSelected(null)}
-          />
-        ) : focusMode ? (
-          <FocusReader
-            content={active.content}
-            chapters={active.manifest.chapters.map((c) => c[0])}
-            flow={settings.readingFlow}
-            onPosition={bookmarkScroll}
-            layoutKey={[
-              mode,
-              settings.showClean,
-              settings.font,
-              settings.fontSize,
-            ].join("-")}
-            at={at}
-            mode={mode}
-            showClean={settings.showClean}
-            index={index}
-            total={total}
-            navigate={navigate}
-            onExit={exitFocus}
-          />
-        ) : (
-          <>
-            <header class="app-header reader-header">
-              <div class="header-inner">
-                <a class="back btn" href={href("home")}>
-                  <Icon name="back" />
-                  {t("Назад")}
-                </a>
-                <div class="reader-title">
-                  <h1>{active.manifest.title}</h1>
-                  <small>
-                    {active.manifest.author} · {active.manifest.level}{" "}
-                    {t(" · отрывок")} {index + 1} {t(" из ")}
-                    {total}
-                  </small>
-                </div>
-                <div class="tabs" role="tablist" aria-label={t("Режим чтения")}>
-                  {[
-                    ["frank", t("Франк")],
-                    ["parallel", t("Паралель")],
-                    ["clean", t("Оригинал")],
-                  ].map(([v, label]) => (
+      {active ? (
+        <PagedReader
+          key={bookId}
+          manifest={active.manifest}
+          content={active.content}
+          settings={settings}
+          mode={mode}
+          at={at}
+          offset={currentProgress?.at === at ? currentProgress.offset || 0 : 0}
+          onPosition={onPosition}
+          onSettings={(p) => void run(() => saveSettings(p))}
+          onMode={(value) => {
+            setWord(null);
+            location.hash = `/read/${bookId}/${at}/${value}`;
+            const p = progressRef.current.find((x) => x.book === bookId);
+            if (p) void run(() => commit({ ...p, mode: value }));
+          }}
+          onJump={(address) =>
+            go(books.find((b) => b.manifest.id === bookId)!, address, 0)
+          }
+          onComplete={() =>
+            void run(async () => {
+              const p = progressRef.current.find((x) => x.book === bookId)!;
+              await commit({
+                ...p,
+                percent: 100,
+                updatedAt: new Date().toISOString(),
+              });
+              location.hash = "/home";
+              notify(t("Book completed"));
+            })
+          }
+          onListen={(text, ipa) =>
+            void listen(text || plain(active.content.c[0][0]), ipa, true)
+          }
+          busy={busy}
+          progressPercent={currentProgress?.percent || 0}
+          renderFragment={renderFragment}
+          wordPanel={wordPanel}
+          onDismissWord={() => setWord(null)}
+          onIndex={(entries) => recordIndex(bookId, signature(bookId), entries)}
+          onBookmark={toggleBookmark}
+          bookmarked={currentProgress?.bookmarks?.some(
+            (b) => positionKey(b.at, b.offset) === bookmarkKey,
+          )}
+          bookmarks={currentProgress?.bookmarks}
+          onWords={() => showBookWords(bookId)}
+        />
+      ) : (
+        <div
+          class={
+            "books-shell" +
+            (settings.sidebarCollapsed ? " sidebar-collapsed" : "")
+          }
+        >
+          <aside class="library-sidebar glass">
+            <div class="sidebar-brand">
+              <span>{t("German with Frank")}</span>
+              <button
+                class="round"
+                aria-label={t("Hide sidebar")}
+                title="⌃⌘S"
+                onClick={() =>
+                  void run(() => saveSettings({ sidebarCollapsed: true }))
+                }
+              >
+                <Icon name="sidebar" size={18} />
+              </button>
+            </div>
+            <button
+              class={"sidebar-item" + (page === "search" ? " active" : "")}
+              onClick={() => navigate("search")}
+            >
+              <Icon name="search" />
+              {t("Search")}
+            </button>
+            <button
+              class={"sidebar-item" + (page === "home" ? " active" : "")}
+              onClick={() => navigate("home")}
+            >
+              <Icon name="home" />
+              {t("Home")}
+            </button>
+            <h3>{t("Library")}</h3>
+            {filters.map((value) => (
+              <button
+                class={
+                  "sidebar-item" +
+                  (page === "library" && libraryFilter === value
+                    ? " active"
+                    : "")
+                }
+                onClick={() => {
+                  setLibraryFilter(value);
+                  navigate("library");
+                }}
+              >
+                <Icon
+                  name={
+                    value === "all"
+                      ? "book"
+                      : value === "finished"
+                        ? "check"
+                        : "texts"
+                  }
+                  size={17}
+                />
+                {t(filterLabel(value))}
+              </button>
+            ))}
+            <h3>{t("Words")}</h3>
+            <button
+              class={
+                "sidebar-item" +
+                (page === "words" && wordTab === "all" ? " active" : "")
+              }
+              onClick={() => {
+                setWordTab("all");
+                setWordBook("all");
+                location.hash = "/words";
+              }}
+            >
+              <Icon name="words" size={17} />
+              {t("All words")}
+            </button>
+            <button
+              class={
+                "sidebar-item" +
+                (page === "words" && wordTab === "book" ? " active" : "")
+              }
+              onClick={() => {
+                setWordTab("book");
+                setWordBook("all");
+                location.hash = "/words";
+              }}
+            >
+              <Icon name="book" size={17} />
+              {t("By Book")}
+            </button>
+            <button class="sidebar-item" onClick={() => openAnki()}>
+              <Icon name="download" size={17} />
+              {t("Export to Anki")}
+            </button>
+            <div class="sidebar-spacer" />
+            <button
+              class="sidebar-item"
+              onClick={() => {
+                setPending(null);
+                setFileError("");
+                setOverlay("add");
+              }}
+            >
+              <Icon name="plus" size={17} />
+              {t("Add .fbook")}
+            </button>
+            <button class="sidebar-item" onClick={() => setOverlay("settings")}>
+              <Icon name="settings" size={17} />
+              {t("Settings")}
+            </button>
+          </aside>
+          <main class="library-main">
+            <div class="collapsed-tools">
+              <button
+                class="round glass"
+                aria-label={t("Show sidebar")}
+                onClick={() =>
+                  void run(() => saveSettings({ sidebarCollapsed: false }))
+                }
+              >
+                <Icon name="sidebar" />
+              </button>
+              <button
+                class="round glass"
+                aria-label={t("Search")}
+                onClick={() => navigate("search")}
+              >
+                <Icon name="search" />
+              </button>
+            </div>
+            <header class="library-heading">
+              <h1>{title}</h1>
+              <div class="row">
+                {page === "library" && (
+                  <button
+                    class="pill glass"
+                    onClick={() => {
+                      setPending(null);
+                      setFileError("");
+                      setOverlay("add");
+                    }}
+                  >
+                    <Icon name="plus" />
+                    <span>{t("Add .fbook")}</span>
+                  </button>
+                )}
+                {page === "words" && (
+                  <>
                     <button
-                      role="tab"
-                      aria-selected={mode === v}
-                      disabled={v === "parallel" && !active.content.t}
-                      title={
-                        v === "parallel" && !active.content.t
-                          ? t("В книге нет перевода")
-                          : label
-                      }
+                      class="pill glass"
                       onClick={() =>
-                        (location.hash = `/read/${bookId}/${at}/${v}`)
+                        openAnki(wordBook === "all" ? undefined : wordBook)
                       }
                     >
-                      {t(label)}
+                      <Icon name="download" />
+                      <span>{t("To Anki")}</span>
+                    </button>
+                    <button
+                      class="pill glass"
+                      onClick={() => {
+                        setSelecting(!selecting);
+                        setSelection(new Set());
+                      }}
+                    >
+                      {t(selecting ? "Done" : "Select")}
+                    </button>
+                  </>
+                )}
+                <button
+                  class="round glass mobile-settings"
+                  aria-label={t("Settings")}
+                  onClick={() => setOverlay("settings")}
+                >
+                  <Icon name="settings" />
+                </button>
+              </div>
+            </header>
+            {page === "home" && (
+              <>
+                <section class="home-section">
+                  <h2>{t("Continue Reading")}</h2>
+                  <div class="continue-shelf">
+                    {runningBooks.map((b, i) => (
+                      <article
+                        class="continue-card"
+                        key={b.manifest.id}
+                        onClick={(e) => {
+                          if (!(e.target as HTMLElement).closest("button"))
+                            go(b);
+                        }}
+                      >
+                        <BookCover manifest={b.manifest} small />
+                        <div class="continue-copy">
+                          <small>
+                            {i === 0 ? t("Reading now") + " · " : ""}
+                            {b.manifest.level}
+                          </small>
+                          <h3>{b.manifest.title}</h3>
+                          <p>{b.manifest.author}</p>
+                          <small>
+                            {pageStatus(b)} ·{" "}
+                            {progress.find((p) => p.book === b.manifest.id)
+                              ?.percent || 0}
+                            %
+                            {b.manifest.annotation === "auto"
+                              ? " · " + t("Auto text")
+                              : ""}
+                          </small>
+                          <button class="primary" onClick={() => go(b)}>
+                            {t("Continue")}
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                  {!books.length && (
+                    <button onClick={() => setOverlay("add")}>
+                      {t("Add your first book")}
+                    </button>
+                  )}
+                </section>
+                <section class="home-section">
+                  <h2>{t("New Words")}</h2>
+                  <div class="new-words-card glass-group">
+                    <div class="new-words-icon">
+                      <Icon name="words" />
+                    </div>
+                    <div>
+                      <strong>
+                        {t("{0} words not in Anki yet", { 0: newWords.length })}
+                      </strong>
+                      <p>
+                        {newWords.length
+                          ? newWords
+                              .slice(0, 5)
+                              .map((w) => w.lemma)
+                              .join(", ")
+                          : t("Tap a word while reading to save it here.")}
+                      </p>
+                    </div>
+                    <button
+                      class="pill glass"
+                      disabled={!newWords.length}
+                      onClick={() => openAnki()}
+                    >
+                      <Icon name="download" size={15} />
+                      {t("To Anki")}
+                    </button>
+                  </div>
+                </section>
+                <section class="home-section">
+                  <div class="row between">
+                    <h2>{t("Recently Added")}</h2>
+                    <button class="quiet" onClick={() => navigate("library")}>
+                      <Icon name="next" />
+                    </button>
+                  </div>
+                  <div class="book-grid recently-added">
+                    {recentBooks.map(card)}
+                  </div>
+                </section>
+              </>
+            )}
+            {page === "library" && (
+              <>
+                <div
+                  class="filter-tabs"
+                  role="tablist"
+                  aria-label={t("Library")}
+                >
+                  {filters.map((value) => (
+                    <button
+                      role="tab"
+                      aria-selected={value === libraryFilter}
+                      onClick={() => setLibraryFilter(value)}
+                    >
+                      {t(value === "all" ? "All" : filterLabel(value))}
                     </button>
                   ))}
                 </div>
-                <button
-                  class="focus-entry"
-                  ref={focusEntryRef}
-                  aria-label={t("Режим чтения")}
-                  title={t("Режим чтения — только текст")}
-                  onClick={enterFocus}
-                >
-                  <Icon name="book" />
-                  <span>{t("Только текст")}</span>
-                </button>
-                <button
-                  class="icon serif"
-                  aria-label={t("Размер шрифта")}
-                  onClick={() => setSizeOpen(true)}
-                >
-                  Aa
-                </button>
-              </div>
-              <div class="row reader-tools">
-                <button
-                  class="icon toc-toggle"
-                  aria-controls="reader-fragments"
-                  aria-expanded={tocOpen}
-                  aria-label={
-                    tocOpen ? t("Скрыть отрывки") : t("Показать отрывки")
-                  }
-                  title={tocOpen ? t("Скрыть отрывки") : t("Показать отрывки")}
-                  onClick={() => setTocOpen((open) => !open)}
-                >
-                  <Icon name={tocOpen ? "back" : "next"} />
-                </button>
-                <div
-                  class="flow-switch"
-                  role="group"
-                  aria-label={t("Вид чтения")}
-                >
-                  <button
-                    aria-pressed={false}
-                    onClick={() => changeFlow("pages")}
-                  >
-                    {t("Страницы")}
-                  </button>
-                  <button
-                    aria-pressed={settings.readingFlow === "blocks"}
-                    onClick={() => changeFlow("blocks")}
-                  >
-                    {t("По отрывкам")}
-                  </button>
-                  <button
-                    aria-pressed={settings.readingFlow === "continuous"}
-                    onClick={() => changeFlow("continuous")}
-                  >
-                    {t("Сплошной текст")}
-                  </button>
-                </div>
-                {mode === "frank" ? (
-                  <Toggle
-                    checked={settings.showClean}
-                    onChange={(v) =>
-                      void run(() => saveSettings({ showClean: v }))
-                    }
-                  >
-                    {t("Текст без подсказок")}
-                  </Toggle>
-                ) : null}
-              </div>
-            </header>
-            <div class={"reader-layout" + (tocOpen ? "" : " toc-collapsed")}>
-              <nav
-                class="toc"
-                id="reader-fragments"
-                aria-label={t("Отрывки")}
-                hidden={!tocOpen}
-              >
-                <div class="eyebrow">{t("Отрывки")}</div>
-                {tocOpen &&
-                  active.content.c.map((c, ci) => (
-                    <div>
-                      <p
-                        class="muted"
-                        style={{ padding: "0 12px", fontSize: 12 }}
-                      >
-                        {active.manifest.chapters[ci][0] ||
-                          t("Глава ") + (ci + 1)}
-                      </p>
-                      {c.map((f, fi) => (
-                        <button
-                          class={at === `${ci + 1}.${fi + 1}` ? "active" : ""}
-                          aria-current={
-                            at === `${ci + 1}.${fi + 1}`
-                              ? "location"
-                              : undefined
-                          }
-                          onClick={() =>
-                            (location.hash = `/read/${bookId}/${ci + 1}.${fi + 1}/${mode}`)
-                          }
-                        >
-                          {fi + 1}. {plain(f).slice(0, 34)}…
-                        </button>
-                      ))}
-                    </div>
-                  ))}
-              </nav>
-              <main>
-                <article class="book-page">
-                  <div class="book-heading">
-                    <div class="eyebrow">{active.manifest.author}</div>
-                    <h2>{active.manifest.title}</h2>
-                    {settings.readingFlow === "blocks" && (
-                      <p class="muted">
-                        {active.manifest.chapters[fragment.c][0] ||
-                          t("Глава ") + (fragment.c + 1)}
-                      </p>
-                    )}
+                <div class="book-grid">{filteredBooks.map(card)}</div>
+                {!filteredBooks.length && (
+                  <div class="empty-state">
+                    <Icon name="book" size={36} />
+                    <p>{t("No books match this filter")}</p>
                   </div>
-                  <BookFlow
-                    content={active.content}
-                    chapters={active.manifest.chapters.map((c) => c[0])}
-                    at={at}
-                    flow={settings.readingFlow}
-                    layoutKey={[
-                      mode,
-                      settings.showClean,
-                      settings.font,
-                      settings.fontSize,
-                      tocOpen,
-                    ].join("-")}
-                    onPosition={bookmarkScroll}
-                  >
-                    {renderBookFragment}
-                  </BookFlow>
-                </article>
-                <div class="book-position">
-                  <label for="book-position">
-                    {t("Отрывок {0} из {1}", { 0: index + 1, 1: total })}
-                  </label>
-                  <input
-                    id="book-position"
-                    type="range"
-                    min="0"
-                    max={total - 1}
-                    value={index}
-                    aria-label={t("Место в книге")}
-                    onInput={(event) => {
-                      const address = addresses(active.content)[
-                        +event.currentTarget.value
-                      ];
-                      if (address !== at)
-                        location.hash = `/read/${bookId}/${address}/${mode}`;
-                    }}
-                  />
-                  <span>{Math.round(((index + 1) / total) * 100)}%</span>
-                </div>
-                <div class="reader-actions">
-                  <button
-                    class="listen"
-                    disabled={busy}
-                    onClick={() => void listenFragment()}
-                  >
-                    <Icon name="sound" />
-                    {busy ? t("Готовим звук…") : t("Прослушать отрывок")}
-                  </button>
-                  <button
-                    class="primary"
-                    onClick={() =>
-                      navigate(
-                        settings.readingFlow === "continuous"
-                          ? total - index
-                          : 1,
-                      )
-                    }
-                  >
-                    {settings.readingFlow === "continuous" ||
-                    index === total - 1
-                      ? t("Завершить чтение")
-                      : t("Следующий отрывок")}
-                    <Icon name="next" />
-                  </button>
-                </div>
-                <div class="reader-info">
-                  <span>{t("← → для перехода")}</span>
-                  <span>·</span>
-                  <span>{t("Место сохраняется автоматически")}</span>
-                </div>
-              </main>
-              {wordPanel}
-            </div>
-          </>
-        )
-      ) : (
-        <div class={"books-shell route-" + page}>
-          <aside class="library-sidebar" aria-label={t("Библиотека")}>
-            <a class="library-brand" href={href("home")}>
-              <span class="library-logo">
-                <Icon name="book" size={25} />
-              </span>
-              <span>
-                {t("Немецкий")}
-                <small>{t("по Франку")}</small>
-              </span>
-            </a>
-            <label class="library-search">
-              <Icon name="search" size={18} />
-              <input
-                aria-label={t("Поиск в библиотеке")}
-                placeholder={t("Поиск")}
-                value={page === "words" ? "" : query}
-                onInput={(event) => {
-                  setQuery(event.currentTarget.value);
-                  if (page !== "texts") location.hash = "/texts";
-                }}
-              />
-            </label>
-            <div class="sidebar-label">{t("Библиотека")}</div>
-            <nav class="nav" aria-label={t("Разделы")}>
-              {nav.map(([value, label, icon]) => (
-                <a
-                  href={href(value)}
-                  aria-current={page === value ? "page" : undefined}
-                >
-                  <Icon name={icon} />
-                  <span>{t(label)}</span>
-                </a>
-              ))}
-            </nav>
-            <div class="sidebar-spacer" />
-            <button
-              class="sidebar-add"
-              onClick={() => fileRef.current?.click()}
-            >
-              <Icon name="upload" />
-              {t("Добавить книгу")}
-            </button>
-            <a
-              class="settings-link"
-              href={href("settings")}
-              aria-label={t("Настройки")}
-            >
-              <Icon name="settings" />
-              <span>{t("Настройки")}</span>
-            </a>
-          </aside>
-          <main class="page">
-            {page === "home" && (
+                )}
+              </>
+            )}
+            {page === "words" && (
               <>
-                {current ? (
-                  <section
-                    class="hero library-home"
-                    aria-label={t("Читаю сейчас")}
-                  >
-                    <div class="library-title-row">
-                      <h1>{t("Читаю сейчас")}</h1>
-                      <button
-                        class="icon"
-                        aria-label={t("Добавить книгу")}
-                        onClick={() => fileRef.current?.click()}
-                      >
-                        <Icon name="upload" />
-                      </button>
-                    </div>
-                    <h2>{t("Продолжить чтение")}</h2>
-                    <div class="continue-shelf">
-                      {[
-                        current,
-                        ...books
-                          .filter((b) => b.manifest.id !== current.manifest.id)
-                          .sort((a, b) =>
-                            (
-                              progress.find((p) => p.book === b.manifest.id)
-                                ?.updatedAt || ""
-                            ).localeCompare(
-                              progress.find((p) => p.book === a.manifest.id)
-                                ?.updatedAt || "",
-                            ),
-                          ),
-                      ]
-                        .slice(0, 2)
-                        .map((book, i) => {
-                          const p = progress.find(
-                            (p) => p.book === book.manifest.id,
-                          );
-                          return (
-                            <button
-                              class="continue-card"
-                              aria-label={
-                                i === 0
-                                  ? t("Читать дальше")
-                                  : t("Читать ") + book.manifest.title
-                              }
-                              onClick={() => go(book)}
-                            >
-                              <BookCover manifest={book.manifest} small />
-                              <span class="continue-copy">
-                                <strong>{book.manifest.title}</strong>
-                                <span>{book.manifest.author}</span>
-                                <small>
-                                  {book.manifest.level} · {p?.percent || 0}%
-                                </small>
-                                <span class="continue-action">
-                                  {t("Читать дальше")}{" "}
-                                  <Icon name="next" size={14} />
-                                </span>
-                              </span>
-                            </button>
-                          );
-                        })}
-                    </div>
-                    <div class="library-section-title">
-                      <h2>{t("Ваши книги")}</h2>
-                      <a href={href("texts")}>
-                        {t("Все книги")} <Icon name="next" size={16} />
-                      </a>
-                    </div>
-                    <div class="book-grid">{books.map(bookCard)}</div>
-                  </section>
-                ) : (
-                  <div class="panel empty">
-                    <Icon name="book" size={40} />
-                    <h2>{t("Ваша первая книга")}</h2>
-                    <p>
-                      {t(
-                        "Добавьте .fbook и начните читать немецкий с подсказками.",
-                      )}
-                    </p>
+                <div class="word-toolbar">
+                  <div class="tabs">
                     <button
-                      class="primary"
-                      onClick={() => fileRef.current?.click()}
+                      aria-pressed={wordTab === "all"}
+                      onClick={() => setWordTab("all")}
                     >
-                      <Icon name="upload" />
-                      {t("Загрузить книгу")}
+                      {t("All")}
+                    </button>
+                    <button
+                      aria-pressed={wordTab === "book"}
+                      onClick={() => setWordTab("book")}
+                    >
+                      {t("By Book")}
+                    </button>
+                  </div>
+                  {wordBook !== "all" && (
+                    <button
+                      class="pill glass"
+                      onClick={() => setWordBook("all")}
+                    >
+                      {books.find((b) => b.manifest.id === wordBook)?.manifest
+                        .title || t("Unknown book")}{" "}
+                      <Icon name="close" size={14} />
+                    </button>
+                  )}
+                  <small>
+                    {selecting
+                      ? t("{0} selected", { 0: selection.size })
+                      : t("{0} words · {1} not in Anki yet", {
+                          0: visibleWords.length,
+                          1: visibleWords.filter((w) => !w.inAnki).length,
+                        })}
+                  </small>
+                </div>
+                {!visibleWords.length ? (
+                  <div class="empty-state">
+                    <Icon name="words" size={36} />
+                    <h2>{t("No saved words yet")}</h2>
+                    <p>{t("Tap a word while reading to save it here.")}</p>
+                  </div>
+                ) : wordTab === "all" ? (
+                  <div
+                    class={"word-table" + (selecting ? " is-selecting" : "")}
+                    role="table"
+                  >
+                    <div class="word-table-head" role="row">
+                      <span>{t("Word")}</span>
+                      <span>{t("Translation")}</span>
+                      <span>{t("Sentence from book")}</span>
+                      <span>{t("Book")}</span>
+                    </div>
+                    {visibleWords.map(wordRow)}
+                  </div>
+                ) : (
+                  <div class="word-groups">
+                    {[...new Set(visibleWords.map((w) => w.book))].map((id) => {
+                      const list = visibleWords.filter((w) => w.book === id),
+                        b = books.find((b) => b.manifest.id === id);
+                      return (
+                        <section class="word-group glass-group">
+                          <header>
+                            <div class="mini-cover">{bookMini(id)}</div>
+                            <div>
+                              <h3>{b?.manifest.title || t("Unknown book")}</h3>
+                              <small>
+                                {selecting
+                                  ? t("{0} of {1} selected", {
+                                      0: list.filter((w) =>
+                                        selection.has(w.key),
+                                      ).length,
+                                      1: list.length,
+                                    })
+                                  : t("{0} words · {1} new", {
+                                      0: list.length,
+                                      1: list.filter((w) => !w.inAnki).length,
+                                    })}
+                              </small>
+                            </div>
+                            {selecting ? (
+                              <button
+                                class="quiet accent"
+                                aria-label={t("Select all from {0}", {
+                                  0: b?.manifest.title || id,
+                                })}
+                                onClick={() => selectAll(list)}
+                              >
+                                {t("Select All")}
+                              </button>
+                            ) : (
+                              <button
+                                class="pill glass"
+                                onClick={() => openAnki(id)}
+                              >
+                                {t("To Anki")}
+                              </button>
+                            )}
+                          </header>
+                          <div class={selecting ? "is-selecting" : ""}>
+                            {list.map(wordRow)}
+                          </div>
+                        </section>
+                      );
+                    })}
+                  </div>
+                )}
+                {selecting && (
+                  <div class="selection-bar glass">
+                    <button
+                      class="quiet"
+                      onClick={() => selectAll(visibleWords)}
+                    >
+                      {t(
+                        visibleWords.every((w) => selection.has(w.key))
+                          ? "Deselect All"
+                          : "Select All",
+                      )}
+                    </button>
+                    <button
+                      class="pill glass"
+                      disabled={!selection.size}
+                      onClick={() => openAnki(undefined, true)}
+                    >
+                      <Icon name="download" />
+                      {t("To Anki")}
+                    </button>
+                    <button
+                      class="pill danger"
+                      disabled={!selection.size}
+                      onClick={requestDeleteWords}
+                    >
+                      <Icon name="trash" />
+                      {t("Delete")} {selection.size || ""}
                     </button>
                   </div>
                 )}
               </>
             )}
-            {page === "texts" && (
+            {page === "search" && (
               <>
-                <div class="page-title">
-                  <h1>{t("Тексты")}</h1>
-                  <button
-                    class="primary"
-                    onClick={() => fileRef.current?.click()}
-                  >
-                    <Icon name="upload" />
-                    {t("Загрузить")}
-                  </button>
-                </div>
-                <div
-                  class="drop-zone"
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    e.currentTarget.classList.add("over");
-                  }}
-                  onDragLeave={(e) => e.currentTarget.classList.remove("over")}
-                  onDrop={(e) => e.currentTarget.classList.remove("over")}
-                >
-                  {t("Перетащите сюда файлы .fbook")}
-                  <br />
-                  <small>{t("Книги хранятся только на этом устройстве")}</small>
-                </div>
-                <div class="row between" style={{ marginBottom: 24 }}>
-                  <input
-                    class="text-input search"
-                    placeholder={t("Найти книгу или автора")}
-                    aria-label={t("Поиск книг")}
-                    value={query}
-                    onInput={(e) => setQuery(e.currentTarget.value)}
-                  />
-                  <small class="muted">
-                    {books.length} {t(" книг в библиотеке")}
-                  </small>
-                </div>
-                <div class="stack">
-                  {["A1", "A2", "B1", "B2", "C1", "C2"].map((level) => {
-                    const list = books.filter(
-                      (b) =>
-                        b.manifest.level === level &&
-                        [
-                          b.manifest.title,
-                          b.manifest.titleRu,
-                          b.manifest.author,
-                        ]
-                          .join(" ")
-                          .toLowerCase()
-                          .includes(query.toLowerCase()),
-                    );
-                    return list.length ? (
-                      <section>
-                        <h2
-                          style={{
-                            fontFamily: "inherit",
-                            fontSize: 17,
-                            marginBottom: 16,
-                          }}
-                        >
-                          {t("Уровень ")}
-                          {level} <span class="muted">· {list.length}</span>
-                        </h2>
-                        <div class="book-grid">{list.map(bookCard)}</div>
-                      </section>
-                    ) : null;
-                  })}
-                  {!books.length && (
-                    <div class="empty">
-                      <h2>{t("Библиотека пока пуста")}</h2>
-                      <p>
-                        {t("Загрузите .fbook или создайте книгу в сборщике.")}
-                      </p>
-                    </div>
-                  )}
-                </div>
-                <p class="hint-note">
-                  {t("«Автотекст» — разметка без полной ручной проверки.")}{" "}
-                  <a href="fbook-builder.html">{t("Открыть сборщик книг →")}</a>
-                </p>
-              </>
-            )}
-            {page === "words" && (
-              <>
-                <div class="page-title">
-                  <h1>
-                    {t("Мои слова")}{" "}
-                    <span
-                      class="muted"
-                      style={{ fontFamily: "inherit", fontSize: 18 }}
-                    >
-                      {saved.length}
-                    </span>
-                  </h1>
-                  <div class="row">
-                    <button
-                      disabled={!filteredWords.length}
-                      onClick={() => void run(() => exportList(false))}
-                    >
-                      <Icon name="download" />
-                      CSV
-                    </button>
-                    <button
-                      class="primary"
-                      disabled={!filteredWords.length}
-                      onClick={() => void run(() => exportList(true))}
-                    >
-                      {t("В Anki")}
-                      <Icon name="next" />
-                    </button>
-                  </div>
-                </div>
-                <div class="row between" style={{ marginBottom: 24 }}>
-                  <div
-                    class="tabs"
-                    role="tablist"
-                    aria-label={t("Группировка слов")}
-                  >
-                    <button
-                      role="tab"
-                      aria-selected={wordTab === "all"}
-                      onClick={() => {
-                        setWordTab("all");
-                        setBookFilter("all");
+                <div class="search-controls">
+                  <label class="search-field glass-group">
+                    <Icon name="search" />
+                    <input
+                      ref={searchRef}
+                      aria-label={t("Search your library")}
+                      placeholder={t("Search your library")}
+                      value={query}
+                      onInput={(e) => {
+                        setQuery(e.currentTarget.value);
+                        setExpanded(new Set());
                       }}
-                    >
-                      {t("Все слова")}
-                    </button>
-                    <button
-                      role="tab"
-                      aria-selected={wordTab === "books"}
-                      onClick={() => setWordTab("books")}
-                    >
-                      {t("По книгам")}
-                    </button>
-                  </div>
-                  <input
-                    class="text-input search"
-                    placeholder={t("Найти слово")}
-                    aria-label={t("Поиск слов")}
-                    value={query}
-                    onInput={(e) => setQuery(e.currentTarget.value)}
-                  />
-                </div>
-                <div class="row between" style={{ marginBottom: 20 }}>
-                  <small class="muted">
-                    {t("Перевод, произношение и фраза из книги")}
-                  </small>
-                  <Toggle checked={onlyNew} onChange={setOnlyNew}>
-                    {t("В Anki только новые")}
-                  </Toggle>
-                </div>
-                <div class={wordTab === "books" ? "words-layout" : ""}>
-                  {wordTab === "books" && (
-                    <aside class="book-filter">
+                    />
+                    {query && (
                       <button
-                        class={bookFilter === "all" ? "active" : ""}
-                        onClick={() => setBookFilter("all")}
+                        class="round"
+                        aria-label={t("Close")}
+                        onClick={() => setQuery("")}
                       >
-                        {t("Все книги")}
-                        <span>{saved.length}</span>
+                        <Icon name="close" size={15} />
                       </button>
-                      {[...new Set(saved.map((w) => w.book))].map((id) => (
-                        <button
-                          class={bookFilter === id ? "active" : ""}
-                          onClick={() => setBookFilter(id)}
-                        >
-                          {books.find((b) => b.manifest.id === id)?.manifest
-                            .title || t("Книга не загружена")}
-                          <span>
-                            {saved.filter((w) => w.book === id).length}
-                          </span>
-                        </button>
-                      ))}
-                    </aside>
-                  )}
-                  <div class="word-list">
-                    {filteredWords.map((w) => (
-                      <article class="panel word-entry">
-                        <div>
-                          <div class="row">
-                            <h3 lang="de">{w.lemma}</h3>
-                            <span class="ipa">[{w.ipa}]</span>
-                          </div>
-                          <div>{w.ru}</div>
-                          <div class="context">
-                            <i lang="de">{w.context}</i>
-                          </div>
-                          <div class="row between" style={{ marginTop: 12 }}>
-                            <small class="muted">
-                              {books.find((b) => b.manifest.id === w.book)
-                                ?.manifest.title ||
-                                t("Книга не загружена")}{" "}
-                              · {w.at}
-                            </small>
-                            {w.inAnki && (
-                              <span class="status">{t("✓ в Anki")}</span>
-                            )}
-                          </div>
-                        </div>
-                        <div class="stack" style={{ gap: 6 }}>
-                          <button
-                            class="icon"
-                            aria-label={t("Озвучить ") + w.lemma}
-                            disabled={busy}
-                            onClick={() => void listen(w.form, w.ipa)}
-                          >
-                            <Icon name="sound" />
-                          </button>
-                          <button
-                            class="icon"
-                            aria-label={t("Удалить слово ") + w.lemma}
-                            onClick={() =>
-                              setConfirm({
-                                title: t("Удалить слово?"),
-                                text: w.lemma + " — " + w.ru,
-                                action: async () => {
-                                  await store.remove("words", w.key);
-                                  setSaved((prev) =>
-                                    prev.filter((x) => x.key !== w.key),
-                                  );
-                                },
-                              })
-                            }
-                          >
-                            <Icon name="trash" />
-                          </button>
-                        </div>
-                      </article>
-                    ))}
-                    {!filteredWords.length && (
-                      <div class="panel empty">
-                        <Icon name="words" size={36} />
-                        <h2>
-                          {query
-                            ? t("Слова не найдены")
-                            : t("Здесь будут ваши слова")}
-                        </h2>
-                        <p>
-                          {t(
-                            "Нажмите на слово во время чтения и выберите «В мои слова».",
-                          )}
-                        </p>
-                        <a class="btn" href={href("home")}>
-                          {t("Перейти к чтению")}
-                        </a>
-                      </div>
                     )}
+                  </label>
+                  <div class="tabs" role="tablist" aria-label={t("Search")}>
+                    {[
+                      ["books", "Books"],
+                      ["words", "Saved Words"],
+                      ["text", "In Text"],
+                    ].map(([value, label]) => (
+                      <button
+                        role="tab"
+                        aria-selected={searchScope === value}
+                        onClick={() => setSearchScope(value)}
+                      >
+                        {t(label)}
+                      </button>
+                    ))}
                   </div>
                 </div>
-                <p class="hint-note">
-                  {t(
-                    "Anki: «Файл → Импорт» → выберите скачанный .txt. Каждая книга попадёт в свою подколоду. Отметка «в Anki» означает, что слово было экспортировано.",
-                  )}
-                </p>
-              </>
-            )}
-            {page === "settings" && (
-              <>
-                <div class="page-title">
-                  <h1>{t("Настройки")}</h1>
-                </div>
-                <div class="settings-grid">
-                  <section class="panel">
-                    <h2>{t("Чтение")}</h2>
-                    <div class="setting-row">
-                      <label for="interface-language">
-                        {t("Язык интерфейса")}
-                      </label>
-                      <select
-                        id="interface-language"
-                        value={settings.language}
-                        onChange={(event) =>
-                          void run(() =>
-                            saveSettings({
-                              language:
-                                event.currentTarget.value === "de"
-                                  ? "de"
-                                  : "ru",
-                            }),
-                          )
-                        }
-                      >
-                        <option value="ru">{t("Русский")}</option>
-                        <option value="de">Deutsch</option>
-                      </select>
+                {!query.trim() ? (
+                  <section class="recent-searches">
+                    <div class="row between">
+                      <h2>{t("Recent searches")}</h2>
+                      {settings.recentSearches.length > 0 && (
+                        <button
+                          class="quiet"
+                          aria-label={t("Clear recent searches")}
+                          onClick={() =>
+                            void run(() => saveSettings({ recentSearches: [] }))
+                          }
+                        >
+                          <Icon name="trash" />
+                        </button>
+                      )}
                     </div>
-                    <div class="setting-row">
-                      <label for="reading-flow">{t("Вид чтения")}</label>
-                      <select
-                        id="reading-flow"
-                        value={settings.readingFlow}
-                        onChange={(event) =>
-                          changeFlow(event.currentTarget.value as ReadingFlow)
-                        }
-                      >
-                        <option value="pages">{t("Страницы")}</option>
-                        <option value="blocks">{t("По отрывкам")}</option>
-                        <option value="continuous">
-                          {t("Сплошной текст")}
-                        </option>
-                      </select>
-                    </div>
-                    <div class="setting-row">
-                      <label for="font">{t("Шрифт")}</label>
-                      <select
-                        id="font"
-                        value={settings.font}
-                        onChange={(e) =>
-                          void run(() =>
-                            saveSettings({ font: e.currentTarget.value }),
-                          )
-                        }
-                      >
-                        <option value="serif">Literata</option>
-                        <option value="sans">Golos Text</option>
-                        <option value="system">{t("Системный")}</option>
-                      </select>
-                    </div>
-                    <div class="setting-row">
-                      <label for="size">
-                        {t("Размер текста")}
-                        <small>{settings.fontSize} px</small>
-                      </label>
-                      <input
-                        id="size"
-                        type="range"
-                        min="14"
-                        max="30"
-                        value={settings.fontSize}
-                        onInput={(e) =>
-                          void run(() =>
-                            saveSettings({ fontSize: +e.currentTarget.value }),
-                          )
-                        }
-                      />
-                    </div>
-                    <div class="setting-row">
-                      <label for="theme">{t("Тема")}</label>
-                      <select
-                        id="theme"
-                        value={settings.theme}
-                        onChange={(e) =>
-                          void run(() =>
-                            saveSettings({ theme: e.currentTarget.value }),
-                          )
-                        }
-                      >
-                        <option value="system">{t("Как в системе")}</option>
-                        <option value="light">{t("Светлая")}</option>
-                        <option value="dark">{t("Тёмная")}</option>
-                      </select>
-                    </div>
-                    <div class="setting-row">
-                      <Toggle
-                        checked={settings.showClean}
-                        onChange={(v) =>
-                          void run(() => saveSettings({ showClean: v }))
-                        }
-                      >
-                        {t("Текст без подсказок")}
-                        <small style={{ display: "block" }}>
-                          {t("Повторять отрывок в режиме «Франк»")}
-                        </small>
-                      </Toggle>
-                    </div>
-                    <div class="preview" lang="de">
-                      Und machte sich auf den Weg nach Bremen.
-                      <br />
-                      <span class="hint" lang="ru">
-                        И отправился в путь в Бремен.
-                      </span>
-                    </div>
-                  </section>
-                  <section class="panel">
-                    <h2>{t("Произношение")}</h2>
-                    <div class="setting-row">
-                      <label for="voice">{t("Голос")}</label>
-                      <select
-                        id="voice"
-                        value={settings.voice}
-                        onChange={(e) =>
-                          void run(() =>
-                            saveSettings({ voice: e.currentTarget.value }),
-                          )
-                        }
-                      >
-                        <option value="espeak">
-                          {t("eSpeak NG · офлайн")}
-                        </option>
-                        <option value="system">{t("Системный голос")}</option>
-                      </select>
-                    </div>
-                    <div class="setting-row">
-                      <label for="rate">
-                        {t("Скорость")}
-                        <small>{settings.rate.toFixed(1)}×</small>
-                      </label>
-                      <input
-                        id="rate"
-                        type="range"
-                        min="0.5"
-                        max="1.5"
-                        step="0.1"
-                        value={settings.rate}
-                        onInput={(e) =>
-                          void run(() =>
-                            saveSettings({ rate: +e.currentTarget.value }),
-                          )
-                        }
-                      />
-                    </div>
+                    {settings.recentSearches.map((q) => (
+                      <button onClick={() => setQuery(q)}>
+                        <Icon name="search" size={18} />
+                        {q}
+                      </button>
+                    ))}
                     <p class="muted">
                       {t(
-                        "eSpeak NG читает произношение из книги. Системный голос читает немецкий текст и зависит от голосов, установленных на устройстве.",
+                        "Search the German text of every book in your library.",
                       )}
                     </p>
-                    <button
-                      disabled={busy}
-                      onClick={() =>
-                        void listen("Guten Tag! Willkommen in Bremen.")
-                      }
-                    >
-                      <Icon name="sound" />
-                      {busy ? t("Готовим звук…") : t("Послушать пример")}
-                    </button>
                   </section>
-                  <section class="panel stack">
-                    <h2>{t("Данные")}</h2>
-                    <p class="muted" style={{ margin: 0 }}>
-                      {t(
-                        "Прогресс, слова и настройки хранятся в этом браузере. Сохраняйте резервную копию перед переносом файла или очисткой браузера.",
-                      )}
+                ) : searchScope === "books" ? (
+                  <>
+                    <p class="result-count">
+                      {t("{0} books", { 0: foundBooks.length })}
                     </p>
-                    <small class="muted">
-                      {t("Занято в браузере: ")}
-                      {usage ? usage + t(" МБ") : t("нет данных")}
-                    </small>
-                    <Toggle checked={withBooks} onChange={setWithBooks}>
-                      {t("Вместе с книгами")}
-                    </Toggle>
-                    <div class="row">
-                      <button
-                        onClick={() =>
-                          void run(async () => {
-                            await exportBackup(withBooks);
-                            notify(t("Резервная копия скачана"));
-                          })
-                        }
-                      >
-                        <Icon name="download" />
-                        {t("Экспорт")}
-                      </button>
-                      <button onClick={() => backupRef.current?.click()}>
-                        <Icon name="upload" />
-                        {t("Импорт")}
-                      </button>
+                    <div class="search-result-list glass-group">
+                      {foundBooks.map((b) => (
+                        <button
+                          class="book-result"
+                          onClick={() => {
+                            setDetails(b);
+                            setOverlay("details");
+                          }}
+                        >
+                          <BookCover manifest={b.manifest} small />
+                          <span>
+                            <strong>{marked(b.manifest.title)}</strong>
+                            <small>
+                              {marked(b.manifest.author)} · {b.manifest.level}
+                            </small>
+                          </span>
+                          <small>{status(b)}</small>
+                        </button>
+                      ))}
                     </div>
-                    <div class="line" />
-                    <button
-                      class="danger"
-                      onClick={() =>
-                        setConfirm({
-                          title: t("Очистить все данные?"),
-                          text: t(
-                            "Удалятся книги, слова, прогресс и настройки. Это действие нельзя отменить. Сначала скачайте резервную копию.",
-                          ),
-                          action: async () => {
-                            stop();
-                            await store.clearAll();
-                            await refresh();
-                            notify(t("Данные удалены"));
-                          },
-                        })
-                      }
-                    >
-                      <Icon name="trash" />
-                      {t("Очистить данные")}
-                    </button>
-                  </section>
-                  <section class="panel stack">
-                    <h2>{t("О приложении")}</h2>
-                    <p class="muted" style={{ margin: 0 }}>
-                      {t(
-                        "Немецкий по методу Ильи Франка: сначала читайте с подсказками, затем тот же отрывок без перевода.",
-                      )}
+                    {!foundBooks.length && (
+                      <p class="muted">{t("No results")}</p>
+                    )}
+                  </>
+                ) : searchScope === "words" ? (
+                  <>
+                    <p class="result-count">
+                      {t("{0} saved words", { 0: foundWords.length })}
                     </p>
-                    <a class="btn" href="fbook-builder.html">
-                      {t("Сборщик .fbook")}
-                      <Icon name="next" />
-                    </a>
-                    <small class="muted">
-                      {t("Версия 1.0 · формат .fbook 2")}
-                      <br />
-                      {t(
-                        "Без сервера и аккаунтов. При открытии на другом устройстве данные нужно перенести резервной копией.",
-                      )}
-                    </small>
-                  </section>
-                </div>
+                    <div class="search-result-list glass-group">
+                      {foundWords.map((w) => {
+                        const b = books.find((b) => b.manifest.id === w.book);
+                        return (
+                          <button
+                            class="saved-result"
+                            onClick={() => b && go(b, w.at)}
+                          >
+                            <div class="mini-cover">{bookMini(w.book)}</div>
+                            <span>
+                              <strong>{marked(w.lemma)}</strong>{" "}
+                              <small>[{w.ipa}]</small>
+                              <p>{marked(w.ru)}</p>
+                              <small>{marked(w.context)}</small>
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {!foundWords.length && (
+                      <p class="muted">{t("No results")}</p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <p class="result-count">
+                      {t("{0} results in {1} books", {
+                        0: foundText.reduce((n, x) => n + x.hits.length, 0),
+                        1: foundText.length,
+                      })}
+                    </p>
+                    {foundText.map(({ book: b, hits }) => (
+                      <section class="text-results">
+                        <div class="result-book-heading">
+                          <BookCover manifest={b.manifest} small />
+                          <div>
+                            <h3>{b.manifest.title}</h3>
+                            <small>
+                              {t("{0} results", { 0: hits.length })}
+                            </small>
+                          </div>
+                        </div>
+                        <div class="glass-group">
+                          {(expanded.has(b.manifest.id)
+                            ? hits
+                            : hits.slice(0, 3)
+                          ).map((hit) => (
+                            <button
+                              class="text-hit"
+                              onClick={() => go(b, hit.at, hit.offset)}
+                            >
+                              <span lang="de">{marked(hit.context)}</span>
+                              <small>
+                                {pageEntries(b.manifest.id)
+                                  ? t("Page {0}", { 0: hit.page })
+                                  : "…"}
+                              </small>
+                            </button>
+                          ))}
+                        </div>
+                        {hits.length > 3 && !expanded.has(b.manifest.id) && (
+                          <button
+                            class="quiet accent"
+                            onClick={() =>
+                              setExpanded(
+                                (prev) => new Set([...prev, b.manifest.id]),
+                              )
+                            }
+                          >
+                            {t("Show all {0} in this book", { 0: hits.length })}
+                          </button>
+                        )}
+                      </section>
+                    ))}
+                    {!foundText.length && (
+                      <p class="muted">{t("No results")}</p>
+                    )}
+                  </>
+                )}
               </>
             )}
-            {!["home", "texts", "words", "settings"].includes(page) && (
-              <div class="empty">
-                <h1>{t("Страница не найдена")}</h1>
-                <p>
-                  <a href={href("home")}>{t("Вернуться к библиотеке")}</a>
-                </p>
-              </div>
-            )}
           </main>
+          <nav class="bottom-nav glass" aria-label={t("Library")}>
+            {navigation.map(([dest, label, icon]) => (
+              <button
+                class={page === dest ? "active" : ""}
+                aria-current={page === dest ? "page" : undefined}
+                onClick={() => navigate(dest)}
+              >
+                <Icon name={icon} />
+                <span>{t(label)}</span>
+              </button>
+            ))}
+          </nav>
         </div>
       )}
-      {sizeOpen && (
-        <Modal title={t("Размер текста")} onClose={() => setSizeOpen(false)}>
-          <div class="setting-row">
-            <label for="reader-size">
-              {t("Размер: ")}
-              {settings.fontSize} px
-            </label>
-            <input
-              id="reader-size"
-              type="range"
-              min="14"
-              max="30"
-              value={settings.fontSize}
-              onInput={(e) =>
-                void run(() =>
-                  saveSettings({ fontSize: +e.currentTarget.value }),
-                )
+      {measured && (
+        <PagedReader
+          key={
+            "measure-" +
+            measured.manifest.id +
+            "-" +
+            signature(measured.manifest.id)
+          }
+          measureOnly
+          manifest={measured.manifest}
+          content={measured.content}
+          settings={settings}
+          mode={measureMode}
+          at="1.1"
+          offset={0}
+          onPosition={() => {}}
+          onSettings={() => {}}
+          onMode={() => {}}
+          onJump={() => {}}
+          onComplete={() => {}}
+          onListen={() => {}}
+          busy={false}
+          renderFragment={renderMeasure}
+          wordPanel={null}
+          onDismissWord={() => {}}
+          onIndex={(entries) =>
+            recordIndex(
+              measured.manifest.id,
+              signature(measured.manifest.id),
+              entries,
+            )
+          }
+        />
+      )}
+      {overlay === "details" && details && (
+        <Modal title={details.manifest.title} onClose={() => setOverlay("")}>
+          <div class="book-details">
+            <BookCover manifest={details.manifest} />
+            <div>
+              <small class="eyebrow">
+                {details.manifest.level} ·{" "}
+                {t(
+                  details.manifest.annotation === "verified"
+                    ? "Checked"
+                    : "Auto text",
+                )}{" "}
+                ·{" "}
+                {pageEntries(details.manifest.id)
+                  ? t("{0} pages", {
+                      0: pageEntries(details.manifest.id)!.length,
+                    })
+                  : "…"}
+              </small>
+              <h2>{details.manifest.title}</h2>
+              <p>
+                {details.manifest.author}
+                {details.manifest.titleRu
+                  ? " · " + details.manifest.titleRu
+                  : ""}
+              </p>
+              <ProgressBar
+                value={
+                  progress.find((p) => p.book === details.manifest.id)
+                    ?.percent || 0
+                }
+              />
+              <small class="muted">
+                {pageStatus(details)} ·{" "}
+                {progress.find((p) => p.book === details.manifest.id)
+                  ?.percent || 0}
+                %
+              </small>
+              <div class="detail-actions">
+                <button onClick={() => showBookWords(details.manifest.id)}>
+                  {t("Words · {0}", {
+                    0: saved.filter((w) => w.book === details.manifest.id)
+                      .length,
+                  })}
+                </button>
+                <button class="primary" onClick={() => go(details)}>
+                  {t("Read")}
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="group detail-more">
+            <button
+              onClick={() =>
+                download(details.bytes, slug(details.manifest.title) + ".fbook")
               }
-            />
-          </div>
-          <div class="preview" lang="de">
-            Da dachte der Herr daran…
-          </div>
-          <div class="row">
-            <button class="primary" onClick={() => setSizeOpen(false)}>
-              {t("Готово")}
+            >
+              <Icon name="upload" />
+              {t("Export .fbook file")}
+            </button>
+            <button onClick={() => openAnki(details.manifest.id)}>
+              <Icon name="download" />
+              {t("Book words to Anki")}
+            </button>
+            <button class="danger quiet" onClick={() => removeBook(details)}>
+              {t("Remove from Library")}
             </button>
           </div>
+        </Modal>
+      )}
+      {overlay === "add" && (
+        <Modal title={t("Add Book")} onClose={() => setOverlay("")}>
+          <div
+            class="file-drop"
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const file = e.dataTransfer?.files[0];
+              if (file) void inspectFile(file);
+            }}
+          >
+            <div class="file-drop-icon">
+              <Icon name="texts" size={26} />
+            </div>
+            <strong>{t("Drop an .fbook file here")}</strong>
+            <small class="muted">{t("or choose it on disk")}</small>
+            <button
+              class="pill glass"
+              disabled={fileBusy}
+              onClick={() => fileRef.current?.click()}
+            >
+              <Icon name="plus" />
+              {t("Choose File")}
+            </button>
+          </div>
+          {fileError && (
+            <p role="alert" class="error-text">
+              {fileError}
+            </p>
+          )}
+          {pending && (
+            <>
+              <h3 class="group-label">{t("File check")}</h3>
+              <div class="import-preview group">
+                <BookCover manifest={pending.manifest} small />
+                <div>
+                  <strong>{pending.manifest.title}</strong>
+                  <small>
+                    {pending.manifest.author} · {pending.manifest.level} ·{" "}
+                    {t(
+                      pending.manifest.annotation === "auto"
+                        ? "Auto text"
+                        : "Checked",
+                    )}
+                  </small>
+                  {[
+                    "This is an .fbook file",
+                    "Archive intact, checksums match",
+                    "Format version 2 — supported",
+                  ].map((label) => (
+                    <p>
+                      <Icon name="check" size={15} />
+                      {t(label)}
+                    </p>
+                  ))}
+                  <p
+                    class={
+                      books.some((b) => b.manifest.id === pending.manifest.id)
+                        ? "error-text"
+                        : ""
+                    }
+                  >
+                    <Icon
+                      name={
+                        books.some((b) => b.manifest.id === pending.manifest.id)
+                          ? "close"
+                          : "check"
+                      }
+                      size={15}
+                    />
+                    {t(
+                      books.some((b) => b.manifest.id === pending.manifest.id)
+                        ? "Already in your library"
+                        : "Not in your library yet",
+                    )}
+                  </p>
+                </div>
+              </div>
+              <button
+                class="primary wide"
+                disabled={
+                  books.some((b) => b.manifest.id === pending.manifest.id) ||
+                  fileBusy
+                }
+                onClick={() => void run(addPending)}
+              >
+                {t("Add to Library")}
+              </button>
+            </>
+          )}
+          <p class="footnote">
+            {t(
+              "Books are stored only on this device. Keep copies of your .fbook files too.",
+            )}
+          </p>
+        </Modal>
+      )}
+      {overlay === "anki" && (
+        <Modal title={t("Export to Anki")} onClose={() => setOverlay("")}>
+          <h3 class="group-label">{t("Which words")}</h3>
+          <div class="group anki-options">
+            {[
+              ["new", "New only", newWords.length],
+              ["all", "All words", saved.length],
+              ["book", "From one book", null],
+              ...(selection.size
+                ? [["selected", "Selected words", selection.size]]
+                : []),
+            ].map(([value, label, count]) => (
+              <button
+                aria-pressed={ankiScope === value}
+                onClick={() => setAnkiScope(String(value))}
+              >
+                <span>{t(String(label))}</span>
+                <small>{count}</small>
+                {ankiScope === value && <Icon name="check" size={17} />}
+              </button>
+            ))}
+            {ankiScope === "book" && (
+              <label class="setting-row">
+                {t("Book")}
+                <select
+                  value={ankiBook}
+                  aria-label={t("Book")}
+                  onChange={(e) => setAnkiBook(e.currentTarget.value)}
+                >
+                  <option value="all">—</option>
+                  {[...new Set(saved.map((w) => w.book))].map((id) => (
+                    <option value={id}>
+                      {books.find((b) => b.manifest.id === id)?.manifest
+                        .title || t("Unknown book")}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </div>
+          <h3 class="group-label">{t("Card")}</h3>
+          <div class="group">
+            <Toggle checked={ankiIpa} onChange={setAnkiIpa}>
+              {t("IPA on the front")}
+            </Toggle>
+            <Toggle checked={ankiContext} onChange={setAnkiContext}>
+              {t("Book sentence on the back")}
+            </Toggle>
+            <label class="setting-row">
+              {t("Deck")}
+              <input
+                aria-label={t("Deck")}
+                value={settings.deck}
+                onInput={(e) =>
+                  void run(() => saveSettings({ deck: e.currentTarget.value }))
+                }
+              />
+            </label>
+          </div>
+          <p class="footnote">
+            {t(
+              "Import this text file in Anki with File → Import. Exported words are marked to avoid duplicates.",
+            )}
+          </p>
+          <button
+            class="primary wide"
+            disabled={!ankiCount}
+            onClick={() => void run(exportAnki)}
+          >
+            <Icon name="download" />
+            {t("Download Anki file")} · {ankiCount}
+          </button>
+          {!ankiCount && <p class="footnote">{t("No words to export")}</p>}
+        </Modal>
+      )}
+      {overlay === "settings" && (
+        <Modal title={t("Settings")} onClose={() => setOverlay("")}>
+          <h3 class="group-label">{t("General")}</h3>
+          <div class="group">
+            <button class="setting-row" onClick={() => setOverlay("language")}>
+              <span>{t("Language")}</span>
+              <span>
+                {settings.language === "en"
+                  ? "English"
+                  : settings.language === "ru"
+                    ? "Русский"
+                    : "Deutsch"}{" "}
+                <Icon name="next" size={15} />
+              </span>
+            </button>
+          </div>
+          <h3 class="group-label">{t("Reading")}</h3>
+          <div class="group">
+            <button
+              class="setting-row"
+              onClick={() => setOverlay("appearance")}
+            >
+              <span>{t("Themes & Voice")}</span>
+              <span>
+                Aa <Icon name="next" size={15} />
+              </span>
+            </button>
+            <Toggle
+              checked={settings.showClean}
+              onChange={(showClean) =>
+                void run(() => saveSettings({ showClean }))
+              }
+            >
+              {t("Repeat without hints")}
+            </Toggle>
+            <label class="setting-row">
+              {t("Default mode")}
+              <select
+                aria-label={t("Default mode")}
+                value={settings.defaultMode}
+                onChange={(e) =>
+                  void run(() =>
+                    saveSettings({
+                      defaultMode: e.currentTarget
+                        .value as Settings["defaultMode"],
+                    }),
+                  )
+                }
+              >
+                {[
+                  ["frank", "Frank"],
+                  ["clean", "Clean"],
+                  ["parallel", "Parallel"],
+                ].map(([v, label]) => (
+                  <option value={v}>{t(label)}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <h3 class="group-label">Anki</h3>
+          <div class="group">
+            <label class="setting-row">
+              {t("Deck")}
+              <input
+                aria-label={t("Deck")}
+                value={settings.deck}
+                onInput={(e) =>
+                  void run(() => saveSettings({ deck: e.currentTarget.value }))
+                }
+              />
+            </label>
+            <Toggle
+              checked={settings.markExported}
+              onChange={(markExported) =>
+                void run(() => saveSettings({ markExported }))
+              }
+            >
+              {t("Mark exported words")}
+            </Toggle>
+          </div>
+          <h3 class="group-label">{t("Data")}</h3>
+          <div class="group data-actions">
+            <button onClick={() => void run(() => exportBackup(true))}>
+              <Icon name="upload" />
+              <span>
+                {t("Back Up")}
+                <small>
+                  {t("Books, progress, words and settings in one file")}
+                </small>
+              </span>
+            </button>
+            <button onClick={() => backupRef.current?.click()}>
+              <Icon name="download" />
+              {t("Restore from Backup")}
+            </button>
+            <div class="setting-row">
+              {t("Books on device")}
+              <span class="muted">{books.length}</span>
+            </div>
+          </div>
+          <button
+            class="wide danger group"
+            onClick={() =>
+              setConfirm({
+                title: t("Erase all local data?"),
+                text: t(
+                  "This removes your books, progress, saved words and settings. Download a backup first.",
+                ),
+                action: async () => {
+                  await store.clearAll();
+                  setBooks([]);
+                  setProgress([]);
+                  setSaved([]);
+                  setIndexCache({});
+                  settingsRef.current = { ...store.defaults };
+                  setSettings({ ...store.defaults });
+                  setSelecting(false);
+                  setSelection(new Set());
+                  setOverlay("");
+                  location.hash = "/home";
+                },
+              })
+            }
+          >
+            {t("Erase All Data")}
+          </button>
+          <p class="footnote">
+            {t("Books, progress and words stay on this device only.")}
+          </p>
+        </Modal>
+      )}
+      {overlay === "language" && (
+        <Modal title={t("Language")} onClose={() => setOverlay("settings")}>
+          <h3 class="group-label">{t("App language")}</h3>
+          <div class="group language-options">
+            {[
+              ["en", "English", ""],
+              ["ru", "Русский", "Russian"],
+              ["de", "Deutsch", "German"],
+            ].map(([value, label, desc]) => (
+              <button
+                aria-pressed={settings.language === value}
+                onClick={() =>
+                  void run(() =>
+                    saveSettings({ language: value as Settings["language"] }),
+                  )
+                }
+              >
+                <span>
+                  {label}
+                  <small>{desc}</small>
+                </span>
+                {settings.language === value && <Icon name="check" />}
+              </button>
+            ))}
+          </div>
+          <p class="footnote">
+            {t(
+              "Menus switch at once. Hints and translations stay in the book’s language.",
+            )}
+          </p>
+        </Modal>
+      )}
+      {overlay === "appearance" && (
+        <Modal
+          title={t("Themes & Voice")}
+          onClose={() => setOverlay("settings")}
+        >
+          <ThemesPanel
+            settings={settings}
+            onChange={(p) => void run(() => saveSettings(p))}
+            onClose={() => setOverlay("settings")}
+          />
         </Modal>
       )}
       {confirm && (
-        <Modal
-          title={confirm.title}
-          onClose={() => {
-            confirm.cancel?.();
-            setConfirm(null);
-          }}
-        >
+        <Modal title={confirm.title} onClose={() => setConfirm(null)}>
           <p>{confirm.text}</p>
-          <div class="row">
-            <button
-              onClick={() => {
-                confirm.cancel?.();
-                setConfirm(null);
-              }}
-            >
-              {t("Отмена")}
-            </button>
+          <div class="row between">
+            <button onClick={() => setConfirm(null)}>{t("Cancel")}</button>
             <button
               class="primary"
-              onClick={() => {
-                const action = confirm.action;
-                setConfirm(null);
-                void run(action);
-              }}
+              onClick={() =>
+                void run(async () => {
+                  await confirm.action();
+                  setConfirm(null);
+                })
+              }
             >
-              {t("Подтвердить")}
+              {t("Done")}
             </button>
           </div>
         </Modal>
       )}
-      {message && (!focusMode || message.error) && (
+      {message && (
         <div
           class={"toast" + (message.error ? " error" : "")}
           role={message.error ? "alert" : "status"}
         >
           <span>{message.text}</span>
-          <button
-            aria-label={t("Закрыть сообщение")}
-            onClick={() => setMessage(null)}
-          >
+          <button aria-label={t("Close")} onClick={() => setMessage(null)}>
             <Icon name="close" size={16} />
           </button>
         </div>

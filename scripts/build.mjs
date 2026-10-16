@@ -28,6 +28,17 @@ for (const [entry, name] of [
     "COPYING",
     "licenses/Golos-Text-OFL.txt",
     "licenses/Literata-OFL.txt",
+    ...(entry === "reader"
+      ? [
+          "lora",
+          "merriweather",
+          "pt-serif",
+          "source-serif-4",
+          "noto-serif",
+          "inter",
+          "pt-sans",
+        ].map((name) => `licenses/${name}-OFL.txt`)
+      : []),
     "licenses/Preact-MIT.txt",
     "licenses/fflate-MIT.txt",
     ...(entry === "builder" ? ["licenses/PDFjs-Apache-2.0.txt"] : []),

@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 const html = await readFile("index.html", "utf8");
 const marker = html.indexOf('<script id="espeak-wasm"');
 assert.ok(
-  marker > 0 && marker < 1200000,
+  marker > 0 && marker < 4000000,
   "startup code must precede the large speech payload",
 );
 assert.ok(html.startsWith("<!doctype html>"), "doctype must be first");
@@ -36,7 +36,8 @@ try {
     waitUntil: "commit",
   });
   await page
-    .getByRole("button", { name: "Читать дальше", exact: true })
+    .getByRole("button", { name: "Continue", exact: true })
+    .first()
     .waitFor({ timeout: 15000 });
   assert.equal(await page.evaluate(() => document.readyState), "loading");
   assert.equal(await page.locator("#espeak-wasm").count(), 0);
@@ -69,7 +70,7 @@ try {
   );
   assert.ok(
     await denied
-      .getByRole("button", { name: "Повторить запуск", exact: true })
+      .getByRole("button", { name: "Try again", exact: true })
       .isVisible(),
   );
   console.log(
@@ -89,7 +90,7 @@ try {
   await stalled.clock.fastForward(11000);
   await stalled
     .getByRole("alert")
-    .filter({ hasText: "не ответило за 10 секунд" })
+    .filter({ hasText: "did not respond within 10 seconds" })
     .waitFor();
   console.log("PASS: stalled IndexedDB opening times out visibly");
 } finally {

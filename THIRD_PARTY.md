@@ -7,4 +7,6 @@
 - **Golos Text** — SIL Open Font License 1.1, `licenses/Golos-Text-OFL.txt`. Шрифт извлечён из предоставленного пользователем макета. Официальный источник: https://github.com/google/fonts/tree/main/ofl/golostext.
 - **Literata** — SIL Open Font License 1.1, `licenses/Literata-OFL.txt`. Шрифт извлечён из предоставленного пользователем макета. Официальный источник: https://github.com/google/fonts/tree/main/ofl/literata.
 
+- **Lora, Merriweather, PT Serif, Source Serif 4, Noto Serif, Inter, PT Sans** — SIL Open Font License 1.1; локальные подмножества Latin/Cyrillic из Fontsource 5.3.0 (Source Serif 4 — 5.3.1). Оригинальные лицензии — `licenses/*-OFL.txt`. Файлы встроены в HTML; обращения к сервисам шрифтов во время чтения нет.
+
 Лицензионные уведомления зависимостей сохранены в скомпилированных файлах и каталоге `licenses/`. Точные версии для воспроизводимой сборки зафиксированы в package-lock.json.

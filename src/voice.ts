@@ -107,6 +107,7 @@ export async function speak(
   text: string,
   ipa: string | undefined,
   settings: { voice: string; rate: number },
+  onEnd?: () => void,
 ) {
   stop();
   const current = generation;
@@ -123,6 +124,8 @@ export async function speak(
     u.voice = v;
     u.lang = "de-DE";
     u.rate = settings.rate;
+    u.onend = () => onEnd?.();
+    u.onerror = () => onEnd?.();
     speechSynthesis.speak(u);
     return;
   }
@@ -135,6 +138,9 @@ export async function speak(
   if (current !== generation) return 0;
   source = audio!.createBufferSource();
   source.buffer = buffer;
+  source.onended = () => {
+    if (current === generation) onEnd?.();
+  };
   source.connect(audio!.destination);
   source.start();
   return buffer.duration;

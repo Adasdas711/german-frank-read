@@ -53,6 +53,16 @@ export function parseBackup(bytes: Uint8Array) {
       !/^\d+\.\d+$/.test(p.at) ||
       (p.offset !== undefined &&
         (!Number.isSafeInteger(p.offset) || p.offset < 0)) ||
+      (p.bookmarks !== undefined &&
+        (!Array.isArray(p.bookmarks) ||
+          p.bookmarks.length > 10000 ||
+          p.bookmarks.some(
+            (b) =>
+              !b ||
+              !/^\d+\.\d+$/.test(b.at) ||
+              !Number.isSafeInteger(b.offset) ||
+              b.offset < 0,
+          ))) ||
       !Number.isFinite(p.percent) ||
       p.percent < 0 ||
       p.percent > 100 ||
@@ -130,13 +140,14 @@ export function exportWords(
   books: Book[],
   anki: boolean,
   onlyNew = true,
+  options: { ipa?: boolean; context?: boolean; deck?: string } = {},
 ) {
   const chosen = list.filter((w) => !anki || !onlyNew || !w.inAnki);
   if (!chosen.length) throw Error("Нет новых слов для экспорта.");
   if (!anki) {
     download(
       csv([
-        ["Слово", "IPA", "Перевод", "Контекст", "Книга", "Отрывок"],
+        ["Word", "IPA", "Translation", "Context", "Book", "Source"],
         ...chosen.map((w) => [
           w.lemma,
           w.ipa,
@@ -160,14 +171,25 @@ export function exportWords(
       "<b>$&</b>",
     );
     return [
-      cell(`<b>${escape(w.lemma)}</b> [${escape(w.ipa)}]`),
-      cell(`${escape(w.ru)}<br><i>${context}</i>`),
+      cell(
+        `<b>${escape(w.lemma)}</b>${options.ipa === false ? "" : " [" + escape(w.ipa) + "]"}`,
+      ),
+      cell(
+        `${escape(w.ru)}${options.context === false ? "" : "<br><i>" + context + "</i>" + (w.contextTranslation ? "<br>" + escape(w.contextTranslation) : "")}`,
+      ),
       "franka " + slug(title),
-      cell("Немецкий по Франку::" + title.replaceAll("::", " ")),
+      cell(options.deck || "German with Frank::" + title.replaceAll("::", " ")),
+      "franka-" +
+        Array.from(w.key)
+          .reduce(
+            (n, c) => Math.imul(n ^ c.charCodeAt(0), 16777619),
+            2166136261,
+          )
+          .toString(36),
     ].join("\t");
   });
   download(
-    "#separator:tab\n#html:true\n#notetype:Basic\n#tags column:3\n#deck column:4\n" +
+    "#separator:tab\n#html:true\n#notetype:Basic\n#tags column:3\n#deck column:4\n#guid column:5\n" +
       lines.join("\n"),
     "franka-anki.txt",
     "text/plain;charset=utf-8",

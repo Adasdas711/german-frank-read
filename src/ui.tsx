@@ -2,6 +2,55 @@ import { useT } from "./i18n";
 import { useEffect, useRef } from "preact/hooks";
 export function Icon({ name, size = 20 }: { name: string; size?: number }) {
   const paths: Record<string, any> = {
+    hints: (
+      <>
+        <path d="M5 5h14M7 9h10M9 13h6M5 17h14M4 3l16 18" />
+      </>
+    ),
+    home: (
+      <>
+        <path d="m3 11 9-8 9 8M5 10v11h5v-7h4v7h5V10" />
+      </>
+    ),
+    sidebar: (
+      <>
+        <rect x="3" y="4" width="18" height="16" rx="3" />
+        <path d="M9 4v16M5 8h2M5 11h2" />
+      </>
+    ),
+    bookmark: <path d="M6 3h12v18l-6-4-6 4z" />,
+    plus: <path d="M12 4v16M4 12h16" />,
+    pages: (
+      <>
+        <rect x="5" y="4" width="15" height="17" rx="2" />
+        <path d="M3 17V3h14M16 4v6h4" />
+      </>
+    ),
+    scroll: (
+      <>
+        <path d="M8 7h8M8 12h8M8 17h8M20 5v14m-2-2 2 2 2-2" />
+        <rect x="3" y="2" width="14" height="20" rx="2" />
+      </>
+    ),
+    slide: (
+      <>
+        <rect x="2" y="5" width="13" height="14" rx="2" />
+        <path d="M18 5h4v14h-4M6 12h5m-2-2 2 2-2 2" />
+      </>
+    ),
+    fade: (
+      <>
+        <rect x="3" y="4" width="18" height="16" rx="2" />
+        <path d="M7 8h10M7 12h7M7 16h4" />
+      </>
+    ),
+    sliders: (
+      <>
+        <path d="M4 7h16M4 17h16" />
+        <circle cx="8" cy="7" r="2" />
+        <circle cx="16" cy="17" r="2" />
+      </>
+    ),
     book: (
       <>
         <path d="M4 4h6l2 2 2-2h6v15h-6l-2 2-2-2H4z" />
@@ -137,7 +186,7 @@ export function Modal({
       >
         <div class="row between">
           <h2>{title}</h2>
-          <button class="icon" aria-label={t("Закрыть")} onClick={onClose}>
+          <button class="icon" aria-label={t("Close")} onClick={onClose}>
             <Icon name="close" />
           </button>
         </div>
@@ -175,7 +224,7 @@ export function ProgressBar({ value }: { value: number }) {
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={value}
-      aria-label={t("Прочитано")}
+      aria-label={t("Reading")}
     >
       <div style={{ width: value + "%" }} />
     </div>

@@ -1,4 +1,3 @@
-import { selectReadingFlow } from "./select-reading-flow.mjs";
 import { chromium } from "playwright-core";
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
@@ -63,47 +62,22 @@ try {
     errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("http://127.0.0.1:4179/german-frank-read/");
-  await selectReadingFlow(page);
-  await page
-    .getByRole("button", { name: "Читать дальше", exact: true })
-    .waitFor();
-  // Fresh profiles receive every expanded book with all three reading formats.
+  await page.getByRole("heading", { name: "Home", exact: true }).waitFor();
   for (const b of demos) {
-    await page.evaluate(
-      (id) => (location.hash = `/read/${id}/1.1/frank`),
-      b.manifest.id,
-    );
-    await page
-      .getByRole("heading", { name: b.manifest.title, exact: true, level: 1 })
-      .waitFor();
-    await page
-      .getByRole("button", { name: "Сплошной текст", exact: true })
-      .click();
-    await page.locator(".book-flow.continuous").waitFor();
-    assert.equal(
-      await page.locator(".book-fragment").count(),
-      b.manifest.stats.fragments,
-    );
-    for (const mode of ["Франк", "Паралель", "Оригинал"]) {
-      await page.getByRole("tab", { name: mode, exact: true }).click();
-      await page.waitForFunction(
-        (mode) =>
-          document.querySelector("[role=tab][aria-selected=true]")
-            ?.textContent === mode,
-        mode,
+    for (const mode of ["frank", "clean", "parallel"]) {
+      await page.evaluate(
+        ({ id, mode }) => (location.hash = `/read/${id}/1.1/${mode}`),
+        { id: b.manifest.id, mode },
       );
+      await page.locator(".books-reader[data-ready=true]").waitFor();
       assert.equal(
-        await page.locator(".book-fragment").count(),
+        await page.locator(".folio-fragment").count(),
         b.manifest.stats.fragments,
       );
     }
-    await page
-      .getByRole("button", { name: "По отрывкам", exact: true })
-      .click();
-    assert.equal(await page.locator(".book-fragment").count(), 1);
   }
   await page.evaluate(() => (location.hash = "/home"));
-  await page.locator(".hero").waitFor();
+  await page.getByRole("heading", { name: "Home", exact: true }).waitFor();
   // Simulate an existing installation, including a deleted demo and a newer edition.
   await page.evaluate(
     async ({ records, deleted, word }) => {
@@ -167,6 +141,7 @@ try {
   await page.reload();
   await page
     .getByRole("button", { name: "Weiterlesen", exact: true })
+    .first()
     .waitFor();
   const snapshot = await page.evaluate(async () => {
     const db = await new Promise((resolve) => {
@@ -223,32 +198,34 @@ try {
     snapshot.progress.find((p) => p.book === old.manifest.id).percent,
     7,
   );
-  await page.getByRole("button", { name: "Weiterlesen", exact: true }).click();
-  await page.locator(".book-flow.continuous").waitFor();
+  const prefs = await page.evaluate(async () => {
+    const d = await new Promise((r) => {
+      const q = indexedDB.open("franka-v2");
+      q.onsuccess = () => r(q.result);
+    });
+    return new Promise((r) => {
+      const q = d.transaction("settings").objectStore("settings").get("app");
+      q.onsuccess = () => r(q.result);
+    });
+  });
+  assert.equal(prefs.language, "de");
+  assert.equal(prefs.font, "Golos Text");
+  assert.equal(prefs.pageTurn, "scroll");
+  assert.equal(prefs.showClean, true);
+  await page
+    .getByRole("button", { name: "Weiterlesen", exact: true })
+    .first()
+    .click();
+  await page.locator(".books-reader[data-ready=true]").waitFor();
   assert.match(page.url(), /1\.3\/frank$/);
-  assert.equal(await page.locator(".book-fragment").count(), 30);
-  assert.equal(
-    await page
-      .getByRole("checkbox", { name: "Text ohne Hilfen", exact: true })
-      .isChecked(),
-    true,
-  );
-  assert.equal(
-    await page.evaluate(() =>
-      getComputedStyle(document.documentElement)
-        .getPropertyValue("--size")
-        .trim(),
-    ),
-    "24px",
-  );
-  assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
-  // Reloading an already upgraded profile does not reset its bookmark.
+  assert.equal(await page.locator(".folio-fragment").count(), 30);
+  assert.ok(await page.locator(".scroll-reader").count());
   await page.reload();
-  await page.locator(".continuous").waitFor();
+  await page.locator(".books-reader[data-ready=true]").waitFor();
   assert.match(page.url(), /1\.3\/frank$/);
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: expanded demos in both views and all formats; revision upgrade preserves bookmarks, words, preferences, deleted books and newer editions",
+    "PASS: expanded demos in all formats; revision upgrade preserves bookmarks, words, preferences, deleted books and newer editions",
   );
 } finally {
   await browser.close();

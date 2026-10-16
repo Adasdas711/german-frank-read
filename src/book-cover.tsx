@@ -6,38 +6,40 @@ export function BookCover({
   manifest: Manifest;
   small?: boolean;
 }) {
-  const title = manifest.title;
-  const variant =
-    title === "Rotkäppchen"
-      ? "red"
-      : title === "Die Verwandlung"
-        ? "ink"
-        : title === "Die Bremer Stadtmusikanten"
-          ? "sage"
-          : ["ochre", "red", "sage", "ink"][
-              [...manifest.id].reduce((sum, c) => sum + c.charCodeAt(0), 0) % 4
+  const colors = [
+    "#228a80",
+    "#a53937",
+    "#675084",
+    "#32618b",
+    "#598235",
+    "#a37b40",
+  ];
+  const color =
+    manifest.title === "Die Bremer Stadtmusikanten"
+      ? colors[0]
+      : manifest.title === "Rotkäppchen"
+        ? colors[1]
+        : manifest.title === "Die Verwandlung"
+          ? colors[2]
+          : colors[
+              [...manifest.id].reduce((s, c) => s + c.charCodeAt(0), 0) %
+                colors.length
             ];
-  const longest = Math.max(...title.split(/\s+/).map((word) => word.length));
+  const letter = manifest.title
+    .replace(/^(Die|Der|Das|Ein|Eine)\s+/, "")
+    .charAt(0);
   return (
     <div
-      class={"book-cover cover-" + variant + (small ? " small" : "")}
+      class={"book-cover" + (small ? " small" : "")}
+      style={{ "--cover": color }}
       aria-hidden="true"
     >
-      <div class="cover-author">{manifest.author}</div>
-      <div
-        class="cover-name"
-        style={{ fontSize: Math.min(22, 160 / longest) + "cqw" }}
-      >
-        {title}
+      <div class="cover-copy">
+        <strong>{manifest.title}</strong>
+        <small>{manifest.author}</small>
       </div>
-      <div class="cover-illustration">
-        <span />
-        <span />
-        <span />
-      </div>
-      <div class="cover-footer">
-        {manifest.lang.toUpperCase()} · {manifest.level}
-      </div>
+      <span class="cover-letter">{letter}</span>
+      <span class="cover-level">{manifest.level}</span>
     </div>
   );
 }

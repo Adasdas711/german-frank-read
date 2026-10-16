@@ -3,17 +3,25 @@
   try {
     var theme = localStorage.getItem("franka-theme");
     document.documentElement.dataset.theme =
-      ["light", "dark", "system"].indexOf(theme) >= 0 ? theme : "system";
+      ["light", "dark", "system"].indexOf(theme) >= 0 ? theme : "dark";
   } catch (_) {
-    document.documentElement.dataset.theme = "system";
+    document.documentElement.dataset.theme = "dark";
   }
-  var de = false;
+  var de = false,
+    en = true;
   try {
-    de = localStorage.getItem("franka-language") === "de";
+    var lang = localStorage.getItem("franka-language");
+    de = lang === "de";
+    en = lang !== "ru" && !de;
   } catch (_) {}
-  document.documentElement.lang = de ? "de" : "ru";
-  function localized(ru, german) {
-    return de ? german : ru;
+  document.documentElement.lang = de ? "de" : en ? "en" : "ru";
+  function localized(ru, german, english) {
+    return de
+      ? german
+      : en
+        ? english ||
+          "The app could not start. Reload this page. Your data has not been removed."
+        : ru;
   }
   var complete = false;
   var timer = setTimeout(function () {
@@ -51,7 +59,11 @@
         "Lade die Seite neu. Falls der Fehler erneut auftritt, sende den obigen Text. Die Daten wurden nicht gelöscht.",
       );
       var button = document.createElement("button");
-      button.textContent = localized("Повторить запуск", "Erneut versuchen");
+      button.textContent = localized(
+        "Повторить запуск",
+        "Erneut versuchen",
+        "Try again",
+      );
       button.onclick = function () {
         location.reload();
       };

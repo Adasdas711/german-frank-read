@@ -242,9 +242,9 @@ describe("German IPA mapping", () => {
 });
 
 describe("reader preferences", () => {
-  it("uses Russian and hides the unannotated copy by default", async () => {
+  it("uses English by default, preserves existing languages and migrates reading preferences", async () => {
     const { defaults, checkedSettings } = await import("../src/storage");
-    expect(defaults.language).toBe("ru");
+    expect(defaults.language).toBe("en");
     expect(defaults.showClean).toBe(false);
     expect(checkedSettings({ readingFlow: "blocks" }).readingFlow).toBe(
       "pages",
@@ -253,18 +253,22 @@ describe("reader preferences", () => {
     expect(
       checkedSettings({ readingFlow: "continuous", bookStyleVersion: 1 })
         .readingFlow,
-    ).toBe("continuous");
+    ).toBe("pages");
+    expect(checkedSettings({ readingFlow: "continuous" }).pageTurn).toBe(
+      "scroll",
+    );
     expect(checkedSettings({ readingFlow: "unexpected" }).readingFlow).toBe(
       "pages",
     );
-    expect(checkedSettings({ language: "en" }).language).toBe("ru");
+    expect(checkedSettings({ language: "en" }).language).toBe("en");
+    expect(checkedSettings({ language: "ru" }).language).toBe("ru");
     const migrated = checkedSettings({
       showClean: true,
       fontSize: 24,
       theme: "dark",
       current: "book-1",
     });
-    expect(migrated.showClean).toBe(false);
+    expect(migrated.showClean).toBe(true);
     expect(migrated).toMatchObject({
       fontSize: 24,
       theme: "dark",
@@ -294,6 +298,85 @@ describe("reader preferences", () => {
     );
     expect(translate("de", "Бременские музыканты")).toBe(
       "Бременские музыканты",
+    );
+  });
+});
+
+describe("Books v2 settings and search", () => {
+  it("validates theme options and preserves an existing installation", async () => {
+    const { checkedSettings } = await import("../src/storage");
+    expect(
+      checkedSettings({
+        language: "ru",
+        showClean: false,
+        current: "uuid",
+        font: "sans",
+        readingFlow: "continuous",
+        rate: 1.25,
+      }),
+    ).toMatchObject({
+      language: "ru",
+      showClean: false,
+      current: "uuid",
+      font: "Golos Text",
+      pageTurn: "scroll",
+      rate: 1.25,
+      designVersion: 2,
+    });
+    expect(
+      checkedSettings({
+        hintColor: "url(javascript:alert(1))",
+        fontSize: 100,
+        lineSpacing: 0,
+        columns: "invalid",
+        recentSearches: ["Esel", 4, null],
+      }),
+    ).toMatchObject({
+      hintColor: "",
+      fontSize: 36,
+      lineSpacing: 1.15,
+      columns: "auto",
+      recentSearches: ["Esel"],
+    });
+  });
+  it("finds every occurrence in original text and maps source offsets to real pages", async () => {
+    const { searchText, pageFor, highlightParts } = await import(
+      "../src/library-model"
+    );
+    const hits = searchText(sample.content, "Esel", [
+      { at: "1.1", offset: 0, preview: "" },
+      { at: "1.1", offset: 30, preview: "" },
+      { at: "1.2", offset: 0, preview: "" },
+    ]);
+    expect(hits.length).toBeGreaterThan(3);
+    expect(hits[0].at).toBe("1.1");
+    expect(hits[0].context).toContain("Esel");
+    expect(
+      pageFor(
+        [
+          { at: "1.1", offset: 0, preview: "" },
+          { at: "1.1", offset: 30, preview: "" },
+        ],
+        "1.1",
+        35,
+      ),
+    ).toBe(2);
+    expect(
+      highlightParts("Mühle und MÜHLE", "mühle").filter((p) => p.match),
+    ).toHaveLength(2);
+    expect(searchText(sample.content, "   ")).toEqual([]);
+  });
+  it("localizes all new interface strings without translating the book", async () => {
+    const { bookLocales } = await import("../src/books-locales");
+    const { translate } = await import("../src/i18n");
+    for (const [key, values] of Object.entries(bookLocales))
+      for (const lang of ["en", "ru", "de"] as const)
+        expect(translate(lang, key)).toBe(values[lang]);
+    expect(translate("en", "Page {0} of {1}", { 0: 2, 1: 18 })).toBe(
+      "Page 2 of 18",
+    );
+    expect(translate("ru", "Page {0} of {1}", { 0: 2, 1: 18 })).toBe(
+      "Страница 2 из 18",
     );
   });
 });

@@ -9,7 +9,10 @@ import {
 import { plain, type Chunk, type Content, type Manifest } from "./core";
 import type { Settings } from "./storage";
 import { useT } from "./i18n";
-import { Icon, Toggle } from "./ui";
+import { Icon } from "./ui";
+import { ThemesPanel } from "./themes-panel";
+import { appearanceStyle } from "./appearance";
+export type PageEntry = { at: string; offset: number; preview: string };
 
 type Props = {
   manifest: Manifest;
@@ -23,8 +26,15 @@ type Props = {
   onMode(mode: string): void;
   onJump(at: string): void;
   onComplete(): void;
-  onListen(): void;
+  onListen(text?: string, ipa?: string): void;
+  onIndex?(pages: PageEntry[]): void;
+  onBookmark?(): void;
+  bookmarked?: boolean;
+  bookmarks?: { at: string; offset: number }[];
+  onWords?(): void;
+  measureOnly?: boolean;
   busy: boolean;
+  progressPercent?: number;
   renderFragment(chunks: Chunk[], at: string): ComponentChildren;
   wordPanel: ComponentChildren;
   onDismissWord(): void;
@@ -35,6 +45,7 @@ type Layout = {
   columns: number;
   count: number;
   ready: boolean;
+  leaves?: number;
 };
 const roman = (n: number) =>
   n < 11
@@ -53,6 +64,13 @@ export function PagedReader(props: Props) {
     wordPanel,
   } = props;
   const t = useT();
+  const scrolling = settings.pageTurn === "scroll";
+  const [bookQuery, setBookQuery] = useState(""),
+    [menu, setMenu] = useState(false),
+    [bookmarkView, setBookmarkView] = useState(false);
+  const [pageIndex, setPageIndex] = useState<PageEntry[]>([]);
+  const [pageSources, setPageSources] = useState<string[]>([]);
+  const emittedIndex = useRef("");
   const [controls, setControls] = useState(false),
     [panel, setPanel] = useState<"type" | "contents" | null>(null);
   const [page, setPage] = useState(0);
@@ -86,6 +104,7 @@ export function PagedReader(props: Props) {
   const hide = useCallback(() => {
     setControls(false);
     setPanel(null);
+    setMenu(false);
   }, []);
   const show = () => {
     setControls(true);
@@ -99,6 +118,7 @@ export function PagedReader(props: Props) {
     }, 3500);
   };
   useLayoutEffect(() => {
+    if (props.measureOnly) return;
     document.documentElement.classList.add("reading-pages");
     root.current?.focus({ preventScroll: true });
     return () => {
@@ -131,6 +151,14 @@ export function PagedReader(props: Props) {
 
   function columnOf(element: Element, geometry: Layout) {
     const box = element.getClientRects()[0] || element.getBoundingClientRect();
+    if (scrolling)
+      return Math.max(
+        0,
+        Math.floor(
+          (box.top - text.current!.getBoundingClientRect().top + 1) /
+            viewport.current!.clientHeight,
+        ),
+      );
     const origin = text.current!.getBoundingClientRect().left;
     return Math.max(
       0,
@@ -174,22 +202,131 @@ export function PagedReader(props: Props) {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         if (closed || !viewport.current || !text.current) return;
-        const width = viewport.current.clientWidth;
-        const columns = width >= 940 ? 2 : 1;
+        const width = viewport.current.getBoundingClientRect().width;
+        const columns =
+          scrolling || mode === "parallel"
+            ? 1
+            : settings.columns === "1"
+              ? 1
+              : settings.columns === "2" && width >= 600
+                ? 2
+                : width >= 940
+                  ? 2
+                  : 1;
         const gap =
           columns === 2 ? Math.min(100, Math.max(52, width * 0.075)) : 48;
-        text.current.style.columnCount = String(columns);
+        text.current.style.columnCount = scrolling ? "auto" : String(columns);
         text.current.style.columnGap = gap + "px";
         const columnWidth = (width - gap * (columns - 1)) / columns;
-        const count = Math.max(
-          1,
-          Math.ceil(
-            (text.current.scrollWidth + gap - 0.5) /
-              (columnWidth + gap) /
-              columns,
-          ),
+        const count = scrolling
+          ? Math.max(
+              1,
+              Math.ceil(
+                text.current.scrollHeight / viewport.current.clientHeight,
+              ),
+            )
+          : Math.max(
+              1,
+              Math.ceil(
+                (text.current.scrollWidth + gap - 0.5) /
+                  (columnWidth + gap) /
+                  columns,
+              ),
+            );
+        const next = {
+          width,
+          gap,
+          columns,
+          count,
+          ready: true,
+          leaves: count * columns,
+        };
+        const nodes = [
+          ...text.current.querySelectorAll<HTMLElement>("[data-book-char]"),
+        ];
+        const entries: PageEntry[] = [];
+        const sourceGroups: {
+          key: string;
+          source: string;
+          start: number;
+          end: number;
+        }[][] = [];
+        for (const node of nodes) {
+          const leaf = columnOf(node, next);
+          const address =
+            node.closest<HTMLElement>("[data-reading-at]")!.dataset.readingAt!;
+          const [chapter, fragment] = address.split(".").map((n) => +n - 1);
+          const sourceText = plain(content.c[chapter][fragment]);
+          const char = Number(node.dataset.bookChar) || 0;
+          const copy = Math.floor(char / (sourceText.length + 1));
+          const start = char % (sourceText.length + 1),
+            end = start + (node.textContent?.length || 0);
+          const groups = (sourceGroups[leaf] ||= []);
+          const key = address + ":" + copy;
+          if (groups.at(-1)?.key === key) groups.at(-1)!.end = end;
+          else groups.push({ key, source: sourceText, start, end });
+          if (!entries[leaf]) {
+            const at =
+              node.closest<HTMLElement>("[data-reading-at]")!.dataset
+                .readingAt!;
+            const [ci, fi] = at.split(".").map((n) => +n - 1),
+              offset = Number(node.dataset.bookChar) || 0;
+            const source = plain(content.c[ci][fi]);
+            entries[leaf] = {
+              at,
+              offset,
+              preview: source.slice(
+                offset % (source.length + 1),
+                (offset % (source.length + 1)) + 95,
+              ),
+            };
+          }
+        }
+        let lastLeaf = 0;
+        const walker = document.createTreeWalker(
+          text.current,
+          NodeFilter.SHOW_TEXT,
         );
-        const next = { width, gap, columns, count, ready: true };
+        while (walker.nextNode()) {
+          if (!walker.currentNode.textContent?.trim()) continue;
+          const range = document.createRange();
+          range.selectNodeContents(walker.currentNode);
+          for (const rect of range.getClientRects()) {
+            const origin = text.current.getBoundingClientRect();
+            const leaf = scrolling
+              ? Math.floor(
+                  (rect.top - origin.top + 1) / viewport.current.clientHeight,
+                )
+              : Math.floor((rect.left - origin.left + 1) / (columnWidth + gap));
+            lastLeaf = Math.max(lastLeaf, leaf);
+          }
+        }
+        const leaves = Math.max(1, entries.length, lastLeaf + 1);
+        for (let i = 0; i < leaves; i++)
+          if (!entries[i])
+            entries[i] = entries[i - 1] ||
+              entries.find(Boolean) || { at: "1.1", offset: 0, preview: "" };
+        next.leaves = leaves;
+        next.count = Math.ceil(leaves / columns);
+        const measuredSources = Array.from({ length: leaves }, (_, i) =>
+          (sourceGroups[i] || [])
+            .map(
+              (g) =>
+                g.source.slice(g.start, g.end) +
+                (g.source.slice(g.end).match(/^[^\p{L}\p{M}]*/u)?.[0] || ""),
+            )
+            .join("\n"),
+        );
+        const json = JSON.stringify([entries, measuredSources]);
+        if (
+          document.fonts.status === "loaded" &&
+          json !== emittedIndex.current
+        ) {
+          emittedIndex.current = json;
+          setPageIndex(entries);
+          setPageSources(measuredSources);
+          state.current.props.onIndex?.(entries);
+        }
         const restored = positionFor(next);
         text.current.style.transition = "none";
         setLayout(next);
@@ -218,6 +355,18 @@ export function PagedReader(props: Props) {
     settings.font,
     settings.fontSize,
     settings.showClean,
+    settings.columns,
+    settings.lineSpacing,
+    settings.letterSpacing,
+    settings.wordSpacing,
+    settings.margins,
+    settings.bold,
+    settings.hintSize,
+    settings.customLayout,
+    settings.justify,
+    settings.hintItalic,
+    settings.readingTheme,
+    scrolling,
     pages,
   ]);
   useLayoutEffect(() => {
@@ -229,11 +378,22 @@ export function PagedReader(props: Props) {
   }, [at, offset]);
   // The transform is written every commit, including a reflow with the same page.
   useLayoutEffect(() => {
-    if (text.current)
+    if (text.current && !scrolling)
       text.current.style.transform = `translateX(${-page * (layout.width + layout.gap)}px)`;
+    if (
+      scrolling &&
+      viewport.current &&
+      !scrollActive.current &&
+      lastScrollPage.current !== page
+    ) {
+      viewport.current.scrollTop = page * viewport.current.clientHeight;
+      lastScrollPage.current = page;
+    }
     if (viewport.current) viewport.current.scrollLeft = 0;
   });
 
+  const scrollActive = useRef(false);
+  const lastScrollPage = useRef<number | null>(null);
   function report(next: number) {
     const geometry = state.current.layout;
     const nodes = [
@@ -257,7 +417,7 @@ export function PagedReader(props: Props) {
     const char = Number(word?.dataset.bookChar) || 0;
     anchor.current = { at: address, offset: char };
     lastReported.current = address + ":" + char;
-    state.current.props.onPosition(address, char);
+    if (!props.measureOnly) state.current.props.onPosition(address, char);
   }
   const turn = (delta: number) => {
     if (!state.current.layout.ready) return;
@@ -266,21 +426,87 @@ export function PagedReader(props: Props) {
       Math.min(state.current.layout.count - 1, state.current.page + delta),
     );
     if (next === state.current.page) return;
+    if (
+      text.current &&
+      !scrolling &&
+      !matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      if (settings.pageTurn === "fade")
+        text.current.animate([{ opacity: 0.25 }, { opacity: 1 }], {
+          duration: 180,
+        });
+      if (settings.pageTurn === "curl" && viewport.current && root.current) {
+        const geometry = state.current.layout,
+          box = viewport.current.getBoundingClientRect();
+        const leaf = document.createElement("div");
+        leaf.className = "curl-leaf";
+        leaf.setAttribute("aria-hidden", "true");
+        const width =
+          geometry.columns === 2
+            ? (geometry.width - geometry.gap) / 2
+            : geometry.width;
+        Object.assign(leaf.style, {
+          left: (delta > 0 ? box.right - width : box.left) + "px",
+          top: box.top + "px",
+          width: width + "px",
+          height: box.height + "px",
+          transformOrigin: delta > 0 ? "left center" : "right center",
+        });
+        const snapshot = text.current.cloneNode(true) as HTMLElement;
+        snapshot.classList.add("curl-snapshot");
+        Object.assign(snapshot.style, {
+          width: geometry.width + "px",
+          height: box.height + "px",
+          marginLeft:
+            delta > 0 && geometry.columns === 2
+              ? -(width + geometry.gap) + "px"
+              : "0",
+          transition: "none",
+        });
+        leaf.append(snapshot);
+        root.current.append(leaf);
+        const animation = leaf.animate(
+          [
+            { transform: "perspective(1600px) rotateY(0deg)", opacity: 1 },
+            {
+              transform: `perspective(1600px) rotateY(${delta > 0 ? -115 : 115}deg)`,
+              opacity: 0.7,
+              offset: 0.8,
+            },
+            {
+              transform: `perspective(1600px) rotateY(${delta > 0 ? -155 : 155}deg)`,
+              opacity: 0,
+            },
+          ],
+          {
+            duration: 480,
+            easing: "cubic-bezier(.2,.6,.3,1)",
+            fill: "forwards",
+          },
+        );
+        animation.onfinish = () => leaf.remove();
+      }
+    }
     report(next);
     setPage(next);
     hide();
     state.current.page = next;
-    if (text.current)
+    if (scrolling && viewport.current)
+      viewport.current.scrollTop = next * viewport.current.clientHeight;
+    if (text.current && !scrolling)
       text.current.style.transform = `translateX(${-next * (state.current.layout.width + state.current.layout.gap)}px)`;
   };
   const jumpPage = (next: number) => {
     report(next);
     setPage(next);
     state.current.page = next;
-    if (text.current)
+    if (scrolling && viewport.current)
+      viewport.current.scrollTop = next * viewport.current.clientHeight;
+    if (text.current && !scrolling)
       text.current.style.transform = `translateX(${-next * (state.current.layout.width + state.current.layout.gap)}px)`;
   };
   useLayoutEffect(() => {
+    if (props.measureOnly) return;
     const key = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
@@ -297,7 +523,9 @@ export function PagedReader(props: Props) {
         return;
       const target = event.target as HTMLElement;
       if (
-        target.closest(".folio-popover,.word-panel") ||
+        target.closest(
+          ".folio-popover,.word-panel,.folio-toolbar,.folio-bottom,.reading-menu",
+        ) ||
         ["INPUT", "SELECT", "TEXTAREA"].includes(target.tagName)
       )
         return;
@@ -320,8 +548,9 @@ export function PagedReader(props: Props) {
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, []);
+  }, [scrolling, settings.pageTurn]);
   useLayoutEffect(() => {
+    if (props.measureOnly || scrolling) return;
     let distance = 0,
       last = 0;
     const wheel = (event: WheelEvent) => {
@@ -345,14 +574,56 @@ export function PagedReader(props: Props) {
     };
     root.current!.addEventListener("wheel", wheel, { passive: false });
     return () => root.current?.removeEventListener("wheel", wheel);
-  }, []);
+  }, [scrolling, settings.pageTurn]);
+  const listenPage = () => {
+    const visible = [
+      ...text.current!.querySelectorAll<HTMLElement>("[data-book-char]"),
+    ].filter((node) => {
+      const leaf = columnOf(node, layout);
+      return (
+        leaf >= page * layout.columns && leaf < (page + 1) * layout.columns
+      );
+    });
+    const ipa = visible
+      .map((node) => {
+        const address =
+          node.closest<HTMLElement>("[data-reading-at]")!.dataset.readingAt!;
+        const form = node.textContent || "";
+        return content.x?.[address]?.[form] || content.f[form]?.[0] || "";
+      })
+      .join(" ");
+    const source = pageSources
+      .slice(page * layout.columns, (page + 1) * layout.columns)
+      .join(" ")
+      .trim();
+    const entry = pageIndex[page * layout.columns];
+    const [ci, fi] = (entry?.at || at).split(".").map((n) => +n - 1);
+    props.onListen(
+      source || plain(content.c[ci][fi]),
+      source && ipa ? ipa : undefined,
+    );
+  };
+  const searchSnippet = (text: string, q: string) => {
+    const i = text.toLocaleLowerCase().indexOf(q.toLocaleLowerCase());
+    return "…" + text.slice(Math.max(0, i - 35), i + q.length + 85) + "…";
+  };
   const pageNumber = page * layout.columns + 1;
   return (
     <div
-      class="books-reader"
+      class={
+        "books-reader turn-" +
+        settings.pageTurn +
+        (props.measureOnly ? " pagination-probe" : "") +
+        (scrolling ? " scroll-reader" : "") +
+        (controls || panel || menu ? " controls-visible" : "")
+      }
+      style={appearanceStyle(settings)}
+      aria-hidden={props.measureOnly || undefined}
+      inert={props.measureOnly || undefined}
+      data-mode={mode}
       ref={root}
-      tabIndex={-1}
-      aria-label={t("Чтение книги")}
+      tabIndex={props.measureOnly ? undefined : -1}
+      aria-label={t("Read book")}
       data-ready={layout.ready}
       data-columns={layout.columns}
       onPointerDown={(event) => {
@@ -416,7 +687,7 @@ export function PagedReader(props: Props) {
         )
           return;
         if (window.getSelection()?.toString()) return;
-        if (panel) {
+        if (panel || menu) {
           hide();
           return;
         }
@@ -429,56 +700,118 @@ export function PagedReader(props: Props) {
         }
       }}
     >
-      <div class="folio-running-title">{manifest.title}</div>
-      <header
-        class={"folio-toolbar" + (controls || panel ? " visible" : "")}
-        onFocusCapture={() => setControls(true)}
+      {!props.measureOnly && (
+        <div class="folio-running-title">{manifest.title}</div>
+      )}
+      {!props.measureOnly && (
+        <header
+          class={
+            "folio-toolbar" + (controls || panel || menu ? " visible" : "")
+          }
+          onFocusCapture={() => setControls(true)}
+        >
+          <div class="folio-toolbar-start">
+            <a class="folio-round" href="#/home" aria-label={t("Back")}>
+              <Icon name="back" />
+            </a>
+            <button
+              class="folio-round desktop-contents"
+              aria-label={t("Contents")}
+              aria-expanded={panel === "contents"}
+              onClick={() => {
+                setPanel(panel === "contents" ? null : "contents");
+                setControls(true);
+              }}
+            >
+              <Icon name="menu" />
+            </button>
+          </div>
+          <span class="folio-toolbar-title">{manifest.title}</span>
+          <div class="folio-toolbar-end">
+            <div
+              class="reader-mode-tabs tabs"
+              role="tablist"
+              aria-label={t("Default mode")}
+            >
+              {["frank", "clean", "parallel"].map((value) => (
+                <button
+                  role="tab"
+                  aria-selected={mode === value}
+                  disabled={value === "parallel" && !content.t}
+                  onClick={() => props.onMode(value)}
+                >
+                  {t(
+                    value === "frank"
+                      ? "Frank"
+                      : value === "clean"
+                        ? "Clean"
+                        : "Parallel",
+                  )}
+                </button>
+              ))}
+            </div>
+            <button
+              class="folio-round folio-aa"
+              aria-label={t("Themes & Voice")}
+              onClick={() => {
+                setPanel(panel === "type" ? null : "type");
+                setControls(true);
+              }}
+            >
+              Aa
+            </button>
+            <button
+              class="folio-round desktop-audio"
+              aria-label={t(props.busy ? "Stop audio" : "Listen to page")}
+              onClick={() => listenPage()}
+            >
+              <Icon name={props.busy ? "stop" : "sound"} />
+            </button>
+            <button
+              class={
+                "folio-round desktop-bookmark" +
+                (props.bookmarked ? " marked" : "")
+              }
+              aria-label={t(props.bookmarked ? "Remove bookmark" : "Bookmark")}
+              onClick={props.onBookmark}
+            >
+              <Icon name="bookmark" />
+            </button>
+            <button
+              class="folio-round mobile-reader-menu"
+              aria-label={t("Contents")}
+              onClick={() => {
+                setMenu(!menu);
+                setControls(true);
+              }}
+            >
+              <Icon name={menu ? "close" : "menu"} />
+            </button>
+          </div>
+        </header>
+      )}
+      <div
+        class="folio-viewport"
+        ref={viewport}
+        onScroll={() => {
+          if (!scrolling || props.measureOnly) return;
+          const next = Math.min(
+            layout.count - 1,
+            Math.floor(
+              viewport.current!.scrollTop / viewport.current!.clientHeight,
+            ),
+          );
+          lastScrollPage.current = next;
+          if (next !== page) {
+            scrollActive.current = true;
+            report(next);
+            setPage(next);
+            requestAnimationFrame(() => {
+              scrollActive.current = false;
+            });
+          }
+        }}
       >
-        <div class="folio-toolbar-start">
-          <a
-            class="folio-round"
-            href="#/home"
-            aria-label={t("Назад")}
-            title={t("Назад")}
-          >
-            <Icon name="back" />
-          </a>
-          <button
-            class="folio-round"
-            aria-label={t("Оглавление")}
-            aria-expanded={panel === "contents"}
-            onClick={() => {
-              setPanel(panel === "contents" ? null : "contents");
-              setControls(true);
-            }}
-          >
-            <Icon name="menu" />
-          </button>
-        </div>
-        <span class="folio-toolbar-title">{manifest.title}</span>
-        <div class="folio-toolbar-end">
-          <button
-            class="folio-round"
-            aria-label={t("Прослушать отрывок")}
-            disabled={props.busy}
-            onClick={props.onListen}
-          >
-            <Icon name="sound" />
-          </button>
-          <button
-            class="folio-round folio-aa"
-            aria-label={t("Параметры чтения")}
-            aria-expanded={panel === "type"}
-            onClick={() => {
-              setPanel(panel === "type" ? null : "type");
-              setControls(true);
-            }}
-          >
-            Aa
-          </button>
-        </div>
-      </header>
-      <div class="folio-viewport" ref={viewport}>
         <main
           class="folio-columns"
           ref={text}
@@ -487,6 +820,7 @@ export function PagedReader(props: Props) {
             if (
               (event.target as HTMLElement).closest("[data-book-char]") &&
               !allowLookup.current &&
+              mode !== "clean" &&
               event.detail > 0
             ) {
               event.preventDefault();
@@ -534,192 +868,252 @@ export function PagedReader(props: Props) {
           {pages}
         </main>
       </div>
-      <div class="folio-page-number" aria-live="polite">
-        {pageNumber}
-        {layout.columns === 2
-          ? " – " + Math.min(pageNumber + 1, layout.count * layout.columns)
-          : ""}
-      </div>
-      <footer
-        class={"folio-bottom" + (controls || panel ? " visible" : "")}
-        onFocusCapture={() => setControls(true)}
-      >
-        <button
-          class="folio-round"
-          aria-label={t("Предыдущая страница")}
-          disabled={page === 0}
-          onClick={() => turn(-1)}
-        >
-          <Icon name="back" />
-        </button>
-        <label class="folio-slider">
-          <span>
-            {t("Страница {0} из {1}", {
-              0: pageNumber,
-              1: layout.count * layout.columns,
-            })}
-          </span>
-          <input
-            type="range"
-            min="0"
-            max={layout.count - 1}
-            value={page}
-            aria-label={t("Место в книге")}
-            onInput={(event) => jumpPage(+event.currentTarget.value)}
-          />
-        </label>
-        <button
-          class="folio-round"
-          aria-label={
-            page === layout.count - 1
-              ? t("Завершить чтение")
-              : t("Следующая страница")
-          }
-          onClick={() => {
-            if (page === layout.count - 1) props.onComplete();
-            else turn(1);
-          }}
-        >
-          <Icon name="next" />
-        </button>
-      </footer>
-      {panel && (
-        <section
-          class={"folio-popover " + panel}
-          role="dialog"
-          aria-label={
-            panel === "type" ? t("Параметры чтения") : t("Оглавление")
-          }
-        >
-          <div class="row between">
-            <h2>
-              {panel === "type" ? t("Параметры чтения") : t("Оглавление")}
-            </h2>
+      {!props.measureOnly && (
+        <>
+          <div class="folio-page-number" aria-live="polite">
+            {t("{0} of {1}", { 0: pageNumber, 1: layout.leaves || 1 })}
+          </div>
+          <footer
+            class={"folio-bottom" + (controls || panel ? " visible" : "")}
+            onFocusCapture={() => setControls(true)}
+          >
             <button
               class="folio-round"
-              aria-label={t("Закрыть")}
-              onClick={hide}
+              aria-label={t("Previous page")}
+              disabled={page === 0}
+              onClick={() => turn(-1)}
             >
-              <Icon name="close" />
+              <Icon name="back" />
             </button>
-          </div>
-          {panel === "type" ? (
-            <>
-              <div class="tabs" role="tablist" aria-label={t("Режим чтения")}>
-                {[
-                  ["frank", "Франк"],
-                  ["parallel", "Паралель"],
-                  ["clean", "Оригинал"],
-                ].map(([value, label]) => (
+            <label class="folio-slider">
+              <span>
+                {t("Page {0} of {1}", { 0: pageNumber, 1: layout.leaves || 1 })}
+              </span>
+              <input
+                type="range"
+                min="0"
+                max={layout.count - 1}
+                value={page}
+                aria-label={t("Reading position")}
+                onInput={(e) => jumpPage(+e.currentTarget.value)}
+              />
+            </label>
+            <button
+              class="folio-round"
+              aria-label={t(
+                page === layout.count - 1 ? "Finish reading" : "Next page",
+              )}
+              onClick={() =>
+                page === layout.count - 1 ? props.onComplete() : turn(1)
+              }
+            >
+              <Icon name="next" />
+            </button>
+          </footer>
+          {menu && (
+            <section
+              class="reading-menu glass"
+              role="dialog"
+              aria-label={t("Contents")}
+            >
+              <button
+                onClick={() => {
+                  setPanel("contents");
+                  setMenu(false);
+                }}
+              >
+                <span>
+                  {t("Contents")} ·{" "}
+                  {props.progressPercent ??
+                    Math.round((page / Math.max(1, layout.count - 1)) * 100)}
+                  %
+                </span>
+                <Icon name="menu" />
+              </button>
+              <button
+                onClick={() => {
+                  setPanel("contents");
+                  setMenu(false);
+                  setTimeout(
+                    () =>
+                      root.current
+                        ?.querySelector<HTMLInputElement>(".book-search")
+                        ?.focus(),
+                    30,
+                  );
+                }}
+              >
+                <span>{t("Search Book")}</span>
+                <Icon name="search" />
+              </button>
+              <div class="tabs" role="tablist">
+                {["frank", "clean", "parallel"].map((value) => (
                   <button
                     role="tab"
                     aria-selected={mode === value}
                     disabled={value === "parallel" && !content.t}
                     onClick={() => props.onMode(value)}
                   >
-                    {t(label)}
+                    {t(
+                      value === "frank"
+                        ? "Frank"
+                        : value === "clean"
+                          ? "Clean"
+                          : "Parallel",
+                    )}
                   </button>
                 ))}
               </div>
-              <label class="folio-setting">
-                {t("Размер текста")}
-                <span>{settings.fontSize} px</span>
-                <input
-                  aria-label={t("Размер текста")}
-                  type="range"
-                  min="14"
-                  max="30"
-                  value={settings.fontSize}
-                  onInput={(event) =>
-                    props.onSettings({ fontSize: +event.currentTarget.value })
-                  }
-                />
-              </label>
-              <label class="folio-setting">
-                {t("Шрифт")}
-                <select
-                  aria-label={t("Шрифт")}
-                  value={settings.font}
-                  onChange={(event) =>
-                    props.onSettings({ font: event.currentTarget.value })
-                  }
-                >
-                  <option value="serif">Literata</option>
-                  <option value="sans">Golos Text</option>
-                  <option value="system">{t("Системный")}</option>
-                </select>
-              </label>
-              <label class="folio-setting">
-                {t("Тема")}
-                <select
-                  aria-label={t("Тема")}
-                  value={settings.theme}
-                  onChange={(event) =>
-                    props.onSettings({ theme: event.currentTarget.value })
-                  }
-                >
-                  <option value="system">{t("Как в системе")}</option>
-                  <option value="light">{t("Светлая")}</option>
-                  <option value="dark">{t("Тёмная")}</option>
-                </select>
-              </label>
-              <label class="folio-setting">
-                {t("Вид чтения")}
-                <select
-                  aria-label={t("Вид чтения")}
-                  value="pages"
-                  onChange={(event) =>
-                    props.onSettings({
-                      readingFlow: event.currentTarget
-                        .value as Settings["readingFlow"],
-                    })
-                  }
-                >
-                  <option value="pages">{t("Страницы")}</option>
-                  <option value="continuous">{t("Сплошной текст")}</option>
-                  <option value="blocks">{t("По отрывкам")}</option>
-                </select>
-              </label>
               <button
-                class="folio-listen"
-                disabled={props.busy}
-                onClick={props.onListen}
+                aria-label={t("Themes & Voice")}
+                onClick={() => {
+                  setPanel("type");
+                  setMenu(false);
+                }}
               >
-                <Icon name="sound" />
-                {props.busy ? t("Готовим звук…") : t("Прослушать отрывок")}
+                <span>{t("Themes & Voice")}</span>
+                <span>Aa</span>
               </button>
-              {mode === "frank" && (
-                <Toggle
-                  checked={settings.showClean}
-                  onChange={(showClean) => props.onSettings({ showClean })}
+              <div class="reading-menu-icons">
+                <button
+                  aria-label={t(props.busy ? "Stop audio" : "Listen to page")}
+                  onClick={listenPage}
                 >
-                  {t("Текст без подсказок")}
-                </Toggle>
-              )}
-            </>
-          ) : (
-            <nav aria-label={t("Отрывки")}>
-              {content.c.map((chapter, ci) => (
-                <section>
-                  <h3>{manifest.chapters[ci][0]}</h3>
-                  {chapter.map((_, fi) => (
+                  <Icon name={props.busy ? "stop" : "sound"} />
+                </button>
+                <button
+                  aria-label={t("Without hints")}
+                  aria-pressed={mode === "clean"}
+                  onClick={() =>
+                    props.onMode(mode === "clean" ? "frank" : "clean")
+                  }
+                >
+                  <Icon name="hints" />
+                </button>
+                <button
+                  aria-label={t(
+                    props.bookmarked ? "Remove bookmark" : "Bookmark",
+                  )}
+                  aria-pressed={props.bookmarked}
+                  onClick={props.onBookmark}
+                >
+                  <Icon name="bookmark" />
+                </button>
+                <button aria-label={t("Book words")} onClick={props.onWords}>
+                  <Icon name="words" />
+                </button>
+              </div>
+            </section>
+          )}
+          {panel === "type" && (
+            <section
+              class="folio-popover type glass"
+              role="dialog"
+              aria-label={t("Themes & Voice")}
+            >
+              <ThemesPanel
+                settings={settings}
+                onChange={props.onSettings}
+                onClose={hide}
+              />
+            </section>
+          )}
+          {panel === "contents" && (
+            <section
+              class="folio-popover contents glass"
+              role="dialog"
+              aria-label={t("Pages")}
+            >
+              <div class="row between">
+                <h2>{t("Pages")}</h2>
+                <small>
+                  {t("{0} pages", { 0: pageIndex.length })} ·{" "}
+                  {t("{0}% read", {
+                    0:
+                      props.progressPercent ??
+                      Math.round((page / Math.max(1, layout.count - 1)) * 100),
+                  })}
+                </small>
+                <button class="round" aria-label={t("Close")} onClick={hide}>
+                  <Icon name="close" />
+                </button>
+              </div>
+              <input
+                class="book-search"
+                aria-label={t("Search Book")}
+                placeholder={t("Search Book")}
+                value={bookQuery}
+                onInput={(e) => setBookQuery(e.currentTarget.value)}
+              />
+              <div class="tabs">
+                <button
+                  aria-pressed={!bookmarkView}
+                  onClick={() => setBookmarkView(false)}
+                >
+                  {t("Pages")}
+                </button>
+                <button
+                  aria-pressed={bookmarkView}
+                  onClick={() => setBookmarkView(true)}
+                >
+                  {t("Bookmarks")}
+                </button>
+              </div>
+              <nav>
+                {pageIndex.map((entry, i) => {
+                  const isBookmarked = props.bookmarks?.some((b) => {
+                    const start = pageIndex[i],
+                      end = pageIndex[i + 1];
+                    const key = (x: { at: string; offset: number }) => {
+                      const [c, f] = x.at.split(".").map(Number);
+                      return c * 1e12 + f * 1e7 + x.offset;
+                    };
+                    return key(b) >= key(start) && (!end || key(b) < key(end));
+                  });
+                  if (bookmarkView && !isBookmarked) return null;
+                  if (bookQuery) {
+                    const needle = bookQuery.toLocaleLowerCase();
+                    if (!pageSources[i]?.toLocaleLowerCase().includes(needle))
+                      return null;
+                  }
+                  return (
                     <button
+                      class="page-entry"
                       aria-current={
-                        at === `${ci + 1}.${fi + 1}` ? "location" : undefined
+                        Math.floor(i / layout.columns) === page
+                          ? "location"
+                          : undefined
                       }
                       onClick={() => {
-                        props.onJump(`${ci + 1}.${fi + 1}`);
+                        jumpPage(Math.floor(i / layout.columns));
                         hide();
                       }}
                     >
-                      {t("Отрывок {0}", { 0: fi + 1 })}
+                      <span>
+                        <strong>{t("Page {0}", { 0: i + 1 })}</strong>
+                        <small>
+                          {bookQuery
+                            ? searchSnippet(pageSources[i], bookQuery)
+                            : entry.preview}
+                        </small>
+                      </span>
+                      {isBookmarked ? (
+                        <Icon name="bookmark" size={14} />
+                      ) : i < page * layout.columns ? (
+                        <Icon name="check" size={14} />
+                      ) : Math.floor(i / layout.columns) === page ? (
+                        <em>{t("NOW")}</em>
+                      ) : null}
                     </button>
-                  ))}
-                </section>
-              ))}
-            </nav>
+                  );
+                })}
+                {bookmarkView && !props.bookmarks?.length && (
+                  <p class="muted">{t("No bookmarks yet")}</p>
+                )}
+              </nav>
+            </section>
           )}
-        </section>
+        </>
       )}
       {wordPanel && <div class="folio-word-overlay">{wordPanel}</div>}
     </div>
