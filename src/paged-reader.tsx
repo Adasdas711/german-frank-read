@@ -47,6 +47,14 @@ type Layout = {
   ready: boolean;
   leaves?: number;
 };
+type MeasuredLayout = {
+  layout: Layout;
+  entries: PageEntry[];
+  sources: string[];
+  chapters: number[];
+};
+// Background library measurement and the reader share indexes for the same book.
+const measuredLayouts = new WeakMap<Content, Map<string, MeasuredLayout>>();
 const roman = (n: number) =>
   n < 11
     ? ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"][n - 1]
@@ -227,6 +235,27 @@ export function PagedReader(props: Props) {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         if (closed || !viewport.current || !text.current) return;
+        // Apply the destination column geometry before any layout read. A mode
+        // switch must not lay out the whole novel once with the old columns first.
+        const widthHint = state.current.layout.width || innerWidth;
+        const columnsFor = (w: number) =>
+          scrolling || mode === "parallel"
+            ? 1
+            : settings.columns === "1"
+              ? 1
+              : settings.columns === "2" && w >= 600
+                ? 2
+                : w >= 940
+                  ? 2
+                  : 1;
+        const hintColumns = columnsFor(widthHint);
+        text.current.style.columnCount = scrolling
+          ? "auto"
+          : String(hintColumns);
+        text.current.style.columnGap =
+          (hintColumns === 2
+            ? Math.min(100, Math.max(52, widthHint * 0.075))
+            : 48) + "px";
         const width = viewport.current.getBoundingClientRect().width;
         const columns =
           scrolling || mode === "parallel"
@@ -242,6 +271,49 @@ export function PagedReader(props: Props) {
           columns === 2 ? Math.min(100, Math.max(52, width * 0.075)) : 48;
         text.current.style.columnCount = scrolling ? "auto" : String(columns);
         text.current.style.columnGap = gap + "px";
+        const cacheKey = JSON.stringify([
+          width,
+          viewport.current.clientHeight,
+          mode,
+          settings.font,
+          settings.fontSize,
+          settings.showClean,
+          settings.columns,
+          settings.lineSpacing,
+          settings.letterSpacing,
+          settings.wordSpacing,
+          settings.margins,
+          settings.bold,
+          settings.hintSize,
+          settings.customLayout,
+          settings.justify,
+          settings.hintItalic,
+          settings.readingTheme,
+          settings.followSystem,
+          scrolling,
+        ]);
+        let cache = measuredLayouts.get(content);
+        if (!cache) {
+          cache = new Map();
+          measuredLayouts.set(content, cache);
+        }
+        const cached =
+          document.fonts.status === "loaded" ? cache.get(cacheKey) : undefined;
+        if (cached) {
+          setPageIndex(cached.entries);
+          setPageSources(cached.sources);
+          setChapterPages(cached.chapters);
+          const restored = positionFor(cached.layout);
+          text.current.style.transition = "none";
+          setLayout(cached.layout);
+          setPage(restored);
+          state.current.props.onIndex?.(cached.entries);
+          cancelAnimationFrame(settle);
+          settle = requestAnimationFrame(() => {
+            if (text.current) text.current.style.transition = "";
+          });
+          return;
+        }
         const columnWidth = (width - gap * (columns - 1)) / columns;
         const count = scrolling
           ? Math.max(
@@ -291,36 +363,40 @@ export function PagedReader(props: Props) {
           start: number;
           end: number;
         }[][] = [];
-        for (const node of nodes) {
-          const leaf = leafOf(node);
-          const address =
-            node.closest<HTMLElement>("[data-reading-at]")!.dataset.readingAt!;
-          const [chapter, fragment] = address.split(".").map((n) => +n - 1);
-          const sourceText = sourceTexts.get(address)!;
-          const char = Number(node.dataset.bookChar) || 0;
-          const copy = Math.floor(char / (sourceText.length + 1));
-          const start = char % (sourceText.length + 1),
-            end = start + (node.textContent?.length || 0);
-          const groups = (sourceGroups[leaf] ||= []);
-          const key = address + ":" + copy;
-          if (groups.at(-1)?.key === key) groups.at(-1)!.end = end;
-          else groups.push({ key, source: sourceText, start, end });
-          if (!entries[leaf]) {
-            const at =
+        // Source words are ordered by physical leaf. Locate page boundaries with
+        // binary search, rather than requesting a layout rectangle for every word.
+        let cursor = 0;
+        while (cursor < nodes.length) {
+          const leaf = leafOf(nodes[cursor]);
+          let low = cursor + 1,
+            high = nodes.length;
+          while (low < high) {
+            const mid = (low + high) >>> 1;
+            if (leafOf(nodes[mid]) <= leaf) low = mid + 1;
+            else high = mid;
+          }
+          for (let i = cursor; i < low; i++) {
+            const node = nodes[i];
+            const address =
               node.closest<HTMLElement>("[data-reading-at]")!.dataset
                 .readingAt!;
-            const [ci, fi] = at.split(".").map((n) => +n - 1),
-              offset = Number(node.dataset.bookChar) || 0;
-            const source = sourceText;
-            entries[leaf] = {
-              at,
-              offset,
-              preview: source.slice(
-                offset % (source.length + 1),
-                (offset % (source.length + 1)) + 95,
-              ),
-            };
+            const sourceText = sourceTexts.get(address)!;
+            const char = Number(node.dataset.bookChar) || 0;
+            const copy = Math.floor(char / (sourceText.length + 1));
+            const start = char % (sourceText.length + 1),
+              end = start + (node.textContent?.length || 0);
+            const groups = (sourceGroups[leaf] ||= []),
+              key = address + ":" + copy;
+            if (groups.at(-1)?.key === key) groups.at(-1)!.end = end;
+            else groups.push({ key, source: sourceText, start, end });
+            if (!entries[leaf])
+              entries[leaf] = {
+                at: address,
+                offset: char,
+                preview: sourceText.slice(start, start + 95),
+              };
           }
+          cursor = low;
         }
         let lastLeaf = 0;
         // Paragraph fragments include hints, punctuation and translations. Measuring
@@ -354,6 +430,15 @@ export function PagedReader(props: Props) {
         const chapterStarts = [
           ...text.current.querySelectorAll(".folio-chapter-title"),
         ].map((heading) => columnOf(heading, next) + 1);
+        if (document.fonts.status === "loaded") {
+          cache.set(cacheKey, {
+            layout: next,
+            entries,
+            sources: measuredSources,
+            chapters: chapterStarts,
+          });
+          if (cache.size > 6) cache.delete(cache.keys().next().value!);
+        }
         const json = JSON.stringify([entries, measuredSources, chapterStarts]);
         if (
           document.fonts.status === "loaded" &&
@@ -404,6 +489,7 @@ export function PagedReader(props: Props) {
     settings.justify,
     settings.hintItalic,
     settings.readingTheme,
+    settings.followSystem,
     scrolling,
     pages,
   ]);
@@ -427,7 +513,6 @@ export function PagedReader(props: Props) {
       viewport.current.scrollTop = page * viewport.current.clientHeight;
       lastScrollPage.current = page;
     }
-    if (viewport.current) viewport.current.scrollLeft = 0;
   });
 
   const scrollActive = useRef(false);
@@ -1056,17 +1141,9 @@ export function PagedReader(props: Props) {
             class={"folio-bottom" + (controls || panel ? " visible" : "")}
             onFocusCapture={() => setControls(true)}
           >
-            <button
-              class="folio-round"
-              aria-label={t("Previous page")}
-              disabled={page === 0}
-              onClick={() => turn(-1)}
-            >
-              <Icon name="back" />
-            </button>
             <label class="folio-slider">
               <span>
-                {t("Page {0} of {1}", { 0: pageNumber, 1: layout.leaves || 1 })}
+                {t("{0} of {1}", { 0: pageNumber, 1: layout.leaves || 1 })}
               </span>
               <input
                 type="range"
@@ -1077,17 +1154,6 @@ export function PagedReader(props: Props) {
                 onInput={(e) => jumpPage(+e.currentTarget.value)}
               />
             </label>
-            <button
-              class="folio-round"
-              aria-label={t(
-                page === layout.count - 1 ? "Finish reading" : "Next page",
-              )}
-              onClick={() =>
-                page === layout.count - 1 ? props.onComplete() : turn(1)
-              }
-            >
-              <Icon name="next" />
-            </button>
           </footer>
           {menu && (
             <section
@@ -1217,6 +1283,11 @@ export function PagedReader(props: Props) {
                   <Icon name="close" />
                 </button>
               </div>
+              {page === layout.count - 1 && (
+                <button class="wide quiet" onClick={props.onComplete}>
+                  {t("Finish reading")}
+                </button>
+              )}
               <input
                 class="book-search"
                 aria-label={t("Search Book")}

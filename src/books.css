@@ -1537,12 +1537,12 @@ html.reading-pages body {
   transform: translateX(-50%);
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 0;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.18s;
   z-index: 10;
-  padding: 5px 8px;
+  padding: 8px 16px;
   border-radius: 25px;
   background: color-mix(in srgb, var(--folio-paper) 88%, #888 8%);
   backdrop-filter: blur(20px);
@@ -1554,8 +1554,11 @@ html.reading-pages body {
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  font-size: 9px;
+  font-size: 11px;
   color: var(--folio-muted);
+}
+.controls-visible .folio-page-number {
+  opacity: 0;
 }
 .folio-slider input {
   width: 160px;
@@ -2562,6 +2565,31 @@ html.reading-pages body {
 }
 
 /* Personal collections: the sidebar and the compact library view share the data. */
+@media (max-width: 1100px), (hover: none) and (pointer: coarse) {
+  .books-reader .folio-toolbar {
+    top: auto;
+    bottom: max(72px, calc(env(safe-area-inset-bottom) + 64px));
+  }
+  .books-reader .folio-viewport {
+    top: 58px;
+    bottom: max(124px, calc(env(safe-area-inset-bottom) + 116px));
+  }
+  .books-reader .folio-popover {
+    top: auto;
+    bottom: max(122px, calc(env(safe-area-inset-bottom) + 114px));
+    max-height: calc(100dvh - 148px - env(safe-area-inset-bottom));
+  }
+  .books-reader .reading-menu {
+    bottom: max(122px, calc(env(safe-area-inset-bottom) + 114px));
+    max-height: calc(100dvh - 148px - env(safe-area-inset-bottom));
+    overflow-y: auto;
+  }
+  .books-reader .folio-bottom {
+    bottom: max(14px, calc(env(safe-area-inset-bottom) + 8px));
+    padding: 8px 16px;
+  }
+}
+
 .collection-menu {
   margin-top: 3px;
 }

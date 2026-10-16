@@ -19,7 +19,8 @@
     "build:immensee": "node --experimental-strip-types scripts/immensee.mjs",
     "test:collections": "node tests/collections.mjs",
     "test:gestures": "node tests/gestures.mjs",
-    "test:reader-fixes": "node tests/reader-fixes.mjs"
+    "test:reader-fixes": "node tests/reader-fixes.mjs",
+    "test:reader-dock": "node tests/reader-dock.mjs"
   },
   "dependencies": {
     "espeak-ng": "1.0.2",
