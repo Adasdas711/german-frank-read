@@ -59,7 +59,6 @@ function App() {
       hint: string;
     } | null>(null),
     [busy, setBusy] = useState(false),
-    [toc, setToc] = useState(false),
     [sizeOpen, setSizeOpen] = useState(false),
     [confirm, setConfirm] = useState<{
       title: string;
@@ -639,7 +638,7 @@ function App() {
             </div>
           </header>
           <div class="reader-layout">
-            <nav class={"toc" + (toc ? " open" : "")} aria-label="Отрывки">
+            <nav class="toc" aria-label="Отрывки">
               <div class="eyebrow">Отрывки</div>
               {active.content.c.map((c, ci) => (
                 <div>
@@ -664,13 +663,6 @@ function App() {
             </nav>
             <main>
               <div class="row reader-tools">
-                <button
-                  class="icon"
-                  aria-label="Оглавление"
-                  onClick={() => setToc(!toc)}
-                >
-                  <Icon name="menu" />
-                </button>
                 {mode === "frank" ? (
                   <Toggle
                     checked={settings.showClean}
@@ -727,13 +719,6 @@ function App() {
                 >
                   <Icon name="sound" />
                   {busy ? "Готовим звук…" : "Прослушать отрывок"}
-                </button>
-                <button
-                  class="icon"
-                  aria-label="Остановить воспроизведение"
-                  onClick={stop}
-                >
-                  <Icon name="stop" />
                 </button>
                 <button
                   disabled={index === 0}

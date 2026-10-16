@@ -934,9 +934,6 @@ td input {
     max-height: 200px;
     display: none;
   }
-  .toc.open {
-    display: block;
-  }
   .word-panel {
     grid-column: 1;
   }
@@ -1194,7 +1191,7 @@ td input {
     min-width: 0;
   }
   .reader-actions {
-    grid-template-columns: 44px 44px minmax(0, 1fr);
+    grid-template-columns: 44px minmax(0, 1fr);
   }
   .reader-actions .primary {
     min-width: 0;
