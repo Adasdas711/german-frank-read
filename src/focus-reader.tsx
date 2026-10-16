@@ -1,10 +1,15 @@
 import { useT } from "./i18n";
-import { useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useLayoutEffect, useRef, useState, useCallback } from "preact/hooks";
 import { locate, plain, sentences, type Content, type Chunk } from "./core";
+import { BookFlow, type ReadingFlow } from "./book-flow";
 import { Icon } from "./ui";
 
 type Props = {
   content: Content;
+  chapters: string[];
+  flow: ReadingFlow;
+  layoutKey: string;
+  onPosition(at: string): void;
   at: string;
   mode: string;
   showClean: boolean;
@@ -16,6 +21,10 @@ type Props = {
 
 export function FocusReader({
   content,
+  chapters,
+  flow,
+  layoutKey,
+  onPosition,
   at,
   mode,
   showClean,
@@ -31,7 +40,6 @@ export function FocusReader({
   const touch = useRef<{ x: number; y: number } | null>(null);
   const actions = useRef({ navigate, onExit });
   actions.current = { navigate, onExit };
-  const fragment = locate(content, at);
   function reveal() {
     setControls(true);
     clearTimeout(timer.current);
@@ -77,6 +85,27 @@ export function FocusReader({
       ),
     );
   }
+  const renderFragment = useCallback(
+    (chunks, address) => {
+      const fragment = locate(content, address);
+      return mode === "parallel" ? (
+        (content.t?.[fragment.c]?.[fragment.f] || []).map((translation, i) => (
+          <div class="focus-sentence">
+            <p lang="de">{sentences(plain(chunks))[i]}</p>
+            <p lang="ru" class="focus-translation">
+              {translation}
+            </p>
+          </div>
+        ))
+      ) : (
+        <>
+          {mode === "frank" && <p lang="de">{hinted(chunks)}</p>}
+          {(mode !== "frank" || showClean) && <p lang="de">{plain(chunks)}</p>}
+        </>
+      );
+    },
+    [content, mode, showClean],
+  );
   return (
     <div
       class="focus-view"
@@ -106,25 +135,16 @@ export function FocusReader({
         tabIndex={-1}
         aria-label={t("Чтение без отвлечений")}
       >
-        {mode === "parallel" ? (
-          (content.t?.[fragment.c]?.[fragment.f] || []).map(
-            (translation, i) => (
-              <div class="focus-sentence">
-                <p lang="de">{sentences(plain(fragment.chunks))[i]}</p>
-                <p lang="ru" class="focus-translation">
-                  {translation}
-                </p>
-              </div>
-            ),
-          )
-        ) : (
-          <>
-            {mode === "frank" && <p lang="de">{hinted(fragment.chunks)}</p>}
-            {(mode !== "frank" || showClean) && (
-              <p lang="de">{plain(fragment.chunks)}</p>
-            )}
-          </>
-        )}
+        <BookFlow
+          content={content}
+          chapters={chapters}
+          at={at}
+          flow={flow}
+          layoutKey={layoutKey}
+          onPosition={onPosition}
+        >
+          {renderFragment}
+        </BookFlow>
       </main>
       <div
         class={"focus-toolbar" + (controls ? " is-visible" : "")}

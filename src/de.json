@@ -350,5 +350,11 @@
   "Синтезатор не ответил за 45 секунд.": "Der Sprachsynthesizer hat nach 45 Sekunden nicht geantwortet.",
   "Системный голос недоступен. Выберите eSpeak NG.": "Die Systemstimme ist nicht verfügbar. Wähle eSpeak NG.",
   "Немецкий системный голос не установлен. Выберите eSpeak NG.": "Keine deutsche Systemstimme installiert. Wähle eSpeak NG.",
-  "Неподдерживаемый символ IPA:": "Nicht unterstütztes IPA-Zeichen:"
+  "Неподдерживаемый символ IPA:": "Nicht unterstütztes IPA-Zeichen:",
+  "Вид чтения": "Leseansicht",
+  "По отрывкам": "Abschnittsweise",
+  "Сплошной текст": "Fortlaufend",
+  "Место в книге": "Leseposition",
+  "Отрывок {0} из {1}": "Abschnitt {0} von {1}",
+  "Отрывок {0}": "Abschnitt {0}"
 }

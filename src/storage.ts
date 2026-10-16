@@ -1,4 +1,5 @@
 import type { Book } from "./core";
+import type { ReadingFlow } from "./book-flow";
 import type { Language } from "./i18n";
 export type Progress = {
   book: string;
@@ -24,6 +25,7 @@ export type Settings = {
   fontSize: number;
   theme: string;
   showClean: boolean;
+  readingFlow: ReadingFlow;
   language: Language;
   readingDefaultsVersion: 1;
   voice: string;
@@ -35,6 +37,7 @@ export const defaults: Settings = {
   fontSize: 19,
   theme: "system",
   showClean: false,
+  readingFlow: "blocks",
   language: "ru",
   readingDefaultsVersion: 1,
   voice: "espeak",
@@ -156,6 +159,7 @@ export function checkedSettings(s: any): Settings {
         ? s.showClean
         : false,
     language: s?.language === "de" ? "de" : "ru",
+    readingFlow: s?.readingFlow === "continuous" ? "continuous" : "blocks",
     readingDefaultsVersion: 1,
     voice: ["espeak", "system"].includes(s?.voice) ? s.voice : "espeak",
     rate: Number.isFinite(s?.rate) ? Math.max(0.5, Math.min(1.5, s.rate)) : 1,

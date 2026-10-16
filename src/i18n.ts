@@ -1,5 +1,5 @@
 import { createContext } from "preact";
-import { useContext } from "preact/hooks";
+import { useContext, useMemo } from "preact/hooks";
 import german from "./de.json";
 export type Language = "ru" | "de";
 export const LocaleContext = createContext<Language>("ru");
@@ -25,7 +25,10 @@ export function translate(
 export const createTranslator =
   (language: Language) => (text: string, params?: Record<string, unknown>) =>
     translate(language, text, params);
-export const useT = () => createTranslator(useContext(LocaleContext));
+export const useT = () => {
+  const language = useContext(LocaleContext);
+  return useMemo(() => createTranslator(language), [language]);
+};
 const patterns = Object.entries(dictionary)
   .filter(([key]) => /\{\d+\}/.test(key))
   .map(([key, value]) => {

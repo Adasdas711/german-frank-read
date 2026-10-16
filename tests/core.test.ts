@@ -181,6 +181,13 @@ describe("reader preferences", () => {
     const { defaults, checkedSettings } = await import("../src/storage");
     expect(defaults.language).toBe("ru");
     expect(defaults.showClean).toBe(false);
+    expect(checkedSettings({}).readingFlow).toBe("blocks");
+    expect(checkedSettings({ readingFlow: "continuous" }).readingFlow).toBe(
+      "continuous",
+    );
+    expect(checkedSettings({ readingFlow: "unexpected" }).readingFlow).toBe(
+      "blocks",
+    );
     expect(checkedSettings({ language: "en" }).language).toBe("ru");
     const migrated = checkedSettings({
       showClean: true,

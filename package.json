@@ -13,7 +13,8 @@
     "test:startup": "node tests/startup.mjs",
     "test:layout": "node tests/layout.mjs",
     "test:focus": "node tests/focus.mjs",
-    "test:i18n": "node tests/i18n.mjs"
+    "test:i18n": "node tests/i18n.mjs",
+    "test:book": "node tests/book-flow.mjs"
   },
   "dependencies": {
     "espeak-ng": "1.0.2",
