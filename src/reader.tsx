@@ -759,13 +759,18 @@ function App() {
               <main>
                 <div class="row reader-tools">
                   <button
-                    class="toc-toggle"
+                    class="icon toc-toggle"
                     aria-controls="reader-fragments"
                     aria-expanded={tocOpen}
+                    aria-label={
+                      tocOpen ? t("Скрыть отрывки") : t("Показать отрывки")
+                    }
+                    title={
+                      tocOpen ? t("Скрыть отрывки") : t("Показать отрывки")
+                    }
                     onClick={() => setTocOpen((open) => !open)}
                   >
                     <Icon name={tocOpen ? "back" : "next"} />
-                    {tocOpen ? t("Скрыть отрывки") : t("Показать отрывки")}
                   </button>
                   {mode === "frank" ? (
                     <Toggle
@@ -829,14 +834,6 @@ function App() {
                   >
                     <Icon name="sound" />
                     {busy ? t("Готовим звук…") : t("Прослушать отрывок")}
-                  </button>
-                  <button
-                    disabled={index === 0}
-                    class="icon"
-                    aria-label={t("Предыдущий отрывок")}
-                    onClick={() => navigate(-1)}
-                  >
-                    <Icon name="back" />
                   </button>
                   <button class="primary" onClick={() => navigate(1)}>
                     {index === total - 1
