@@ -3,6 +3,7 @@ import { viteSingleFile } from "vite-plugin-singlefile";
 import { readFile, writeFile, rm, mkdir, copyFile } from "node:fs/promises";
 import { gzipSync } from "node:zlib";
 import { createHash } from "node:crypto";
+import "./full-books.mjs";
 await writeFile(
   "src/wasm-base64.txt",
   gzipSync(await readFile("node_modules/espeak-ng/dist/espeak-ng.wasm"), {

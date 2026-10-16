@@ -21,12 +21,15 @@ function record(manifest, content) {
   });
   return { manifest, bytes: [...bytes] };
 }
-const old = structuredClone(demos[0]);
+const legacy = JSON.parse(
+  await readFile("tests/fixtures/legacy-books.json", "utf8"),
+);
+const legacyEntries = unzipSync(Buffer.from(legacy[0], "base64"));
+const old = {
+  manifest: JSON.parse(strFromU8(legacyEntries["manifest.json"])),
+  content: JSON.parse(strFromU8(legacyEntries["book.json"])),
+};
 old.manifest.revision = 1;
-old.manifest.chapters[0][1] = 3;
-old.manifest.stats = { fragments: 3, words: 94 };
-old.content.c[0] = old.content.c[0].slice(0, 3);
-old.content.t[0] = old.content.t[0].slice(0, 3);
 const newer = structuredClone(demos[1]);
 newer.manifest.revision = 8;
 newer.manifest.title = "Eigene Ausgabe";
@@ -103,9 +106,23 @@ try {
             at: "1.3",
             mode: "frank",
             percent: 67,
+            bookmarks: [
+              { at: "1.3", offset: 0, createdAt: "2026-10-15T12:00:00.000Z" },
+            ],
             updatedAt: "2026-10-15T12:00:00.000Z",
           },
           word.book,
+        );
+        tx.objectStore("settings").put(
+          [
+            {
+              id: "legacy-shelf",
+              name: "My shelf",
+              bookIds: [word.book],
+              updatedAt: "2026-10-15T12:00:00.000Z",
+            },
+          ],
+          "collections",
         );
         tx.objectStore("settings").put(
           {
@@ -139,10 +156,7 @@ try {
     },
   );
   await page.reload();
-  await page
-    .getByRole("button", { name: "Weiterlesen", exact: true })
-    .first()
-    .waitFor();
+  await page.locator(".continue-open").first().waitFor();
   const snapshot = await page.evaluate(async () => {
     const db = await new Promise((resolve) => {
       const r = indexedDB.open("franka-v2");
@@ -157,17 +171,24 @@ try {
       books: (await all("books")).map((b) => b.manifest),
       words: await all("words"),
       progress: await all("progress"),
+      collections: await new Promise((resolve) => {
+        const q = db
+          .transaction("settings")
+          .objectStore("settings")
+          .get("collections");
+        q.onsuccess = () => resolve(q.result);
+      }),
     };
     db.close();
     return result;
   });
   assert.equal(
     snapshot.books.find((b) => b.id === old.manifest.id).revision,
-    2,
+    3,
   );
   assert.equal(
     snapshot.books.find((b) => b.id === old.manifest.id).stats.words,
-    946,
+    1099,
   );
   assert.equal(
     snapshot.books.find((b) => b.id === newer.manifest.id).revision,
@@ -192,11 +213,16 @@ try {
   );
   assert.equal(
     snapshot.progress.find((p) => p.book === old.manifest.id).at,
-    "1.3",
+    "1.2",
   );
   assert.equal(
     snapshot.progress.find((p) => p.book === old.manifest.id).percent,
     7,
+  );
+  assert.deepEqual(snapshot.collections[0].bookIds, [old.manifest.id]);
+  assert.equal(
+    snapshot.progress.find((p) => p.book === old.manifest.id).bookmarks[0].at,
+    "1.2",
   );
   const prefs = await page.evaluate(async () => {
     const d = await new Promise((r) => {
@@ -212,20 +238,17 @@ try {
   assert.equal(prefs.font, "Golos Text");
   assert.equal(prefs.pageTurn, "scroll");
   assert.equal(prefs.showClean, true);
-  await page
-    .getByRole("button", { name: "Weiterlesen", exact: true })
-    .first()
-    .click();
+  await page.locator(".continue-open").first().click();
   await page.locator(".books-reader[data-ready=true]").waitFor();
-  assert.match(page.url(), /1\.3\/frank$/);
-  assert.equal(await page.locator(".folio-fragment").count(), 30);
+  assert.match(page.url(), /1\.2\/frank$/);
+  assert.equal(await page.locator(".folio-fragment").count(), 24);
   assert.ok(await page.locator(".scroll-reader").count());
   await page.reload();
   await page.locator(".books-reader[data-ready=true]").waitFor();
-  assert.match(page.url(), /1\.3\/frank$/);
+  assert.match(page.url(), /1\.2\/frank$/);
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: expanded demos in all formats; revision upgrade preserves bookmarks, words, preferences, deleted books and newer editions",
+    "PASS: supplied complete editions in all modes; upgrade remaps reading anchors and preserves words, preferences, deleted books and newer editions",
   );
 } finally {
   await browser.close();

@@ -1,0 +1,41 @@
+[
+  {
+    "title": "Die Bremer Stadtmusikanten",
+    "id": "6f1c2a9e-3b7d-4f0a-9c55-2e8b1d4a7c10",
+    "revision": 3,
+    "file": "die-bremer-stadtmusikanten-demo.fbook",
+    "source": "books/supplied/die-bremer-stadtmusikanten.fbook",
+    "sha256": "8945ba3b2ecf7572071339c78f765373601036fa3f86bc4a97bc8f44d8fbd978",
+    "sourceId": "5334667b-bcb1-45e5-9623-596c1f438ecc",
+    "stats": {
+      "fragments": 24,
+      "words": 1099
+    }
+  },
+  {
+    "title": "Rotkäppchen",
+    "id": "a2d660a2-2354-4f3a-b302-2937bd6e31bf",
+    "revision": 3,
+    "file": "rotkappchen-demo.fbook",
+    "source": "books/supplied/rotkappchen.fbook",
+    "sha256": "ab53935c7e7aab44d5f2ee475d8578b6dedffedcea790616fce879263e97f882",
+    "sourceId": "13995176-97c1-4f2d-ab2f-16c2d4168fda",
+    "stats": {
+      "fragments": 14,
+      "words": 1258
+    }
+  },
+  {
+    "title": "Die Verwandlung",
+    "id": "90aa7c85-a77f-4b44-833f-1d54812cab1b",
+    "revision": 3,
+    "file": "die-verwandlung-demo.fbook",
+    "source": "books/supplied/die-verwandlung.fbook",
+    "sha256": "e5be5b076f0dce9292a65cb6c5cb925a735f36340f06617420d48fd2e90e93f0",
+    "sourceId": "9c07cf64-ceb5-4378-a0ac-525014ce2b34",
+    "stats": {
+      "fragments": 117,
+      "words": 19145
+    }
+  }
+]

@@ -19,7 +19,10 @@ import {
 } from "../src/builder-core";
 import { parseBackup } from "../src/transfer";
 const bytes = new Uint8Array(
-  readFileSync("books/die-bremer-stadtmusikanten-demo.fbook"),
+  Buffer.from(
+    JSON.parse(readFileSync("tests/fixtures/legacy-books.json", "utf8"))[0],
+    "base64",
+  ),
 );
 const sample = readBook(bytes);
 const source = JSON.parse(readFileSync("src/demo-source.json", "utf8"))[0];
@@ -84,37 +87,31 @@ describe("fbook v2", () => {
   it("computes standard CRC32", () =>
     expect(crc32(strToU8("123456789"))).toBe(0xcbf43926));
 });
-describe("expanded examples", () => {
-  it("ships ten times more original words with aligned hints, translations and IPA", () => {
+describe("supplied full editions", () => {
+  it("embeds every supplied book intact with stable site identities", () => {
     const embedded = JSON.parse(readFileSync("src/demos.json", "utf8"));
-    const sources = JSON.parse(readFileSync("src/demo-source.json", "utf8"));
-    for (const [index, [name, previous]] of [
-      ["die-bremer-stadtmusikanten", 94],
-      ["rotkappchen", 59],
-      ["die-verwandlung", 20],
-    ].entries()) {
-      const bytes = new Uint8Array(
-        readFileSync("books/" + name + "-demo.fbook"),
-      );
-      const b = readBook(bytes);
-      expect(b.manifest.revision).toBe(2);
-      expect(b.manifest.stats.words).toBeGreaterThanOrEqual(
-        Number(previous) * 10,
-      );
+    const catalog = JSON.parse(readFileSync("books/catalog.json", "utf8"));
+    expect(catalog).toHaveLength(3);
+    for (const [i, item] of catalog.entries()) {
+      const b = readBook(new Uint8Array(readFileSync("books/" + item.file)));
+      const original = readBook(new Uint8Array(readFileSync(item.source)));
+      expect(b.manifest.id).toBe(item.id);
+      expect(b.manifest.revision).toBe(3);
+      expect(b.manifest.stats).toEqual(item.stats);
+      expect(b.content).toEqual(original.content);
       expect(
-        readBook(new Uint8Array(Buffer.from(embedded[index], "base64"))),
+        readBook(new Uint8Array(Buffer.from(embedded[i], "base64"))),
       ).toEqual(b);
-      const paragraphs = b.content.c.flat().map(plain);
-      expect(new Set(paragraphs).size).toBe(paragraphs.length);
-      checkSource(sources[index]);
-      expect(paragraphs).toEqual(
-        sources[index].chapters.flatMap((c) =>
-          c.fragments.map((f) =>
-            f.chunks.map((c) => (typeof c === "string" ? c : c[0])).join(""),
-          ),
-        ),
-      );
+      expect(b.manifest.annotation).toBe("auto");
     }
+    const kafka = readBook(
+      new Uint8Array(readFileSync("books/die-verwandlung-demo.fbook")),
+    );
+    expect(kafka.manifest.chapters).toHaveLength(3);
+    expect(kafka.manifest.stats.words).toBe(19145);
+    expect(plain(kafka.content.c[2].at(-1)!)).toContain(
+      "ihren jungen Körper dehnte.",
+    );
   });
 });
 describe("builder", () => {

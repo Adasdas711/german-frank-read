@@ -1,6 +1,7 @@
-import { addresses, readBook, type Book } from "./core";
+import { readBook, type Book, type Content } from "./core";
 import * as store from "./storage";
 import type { Progress } from "./storage";
+import { upgradeProgress } from "./book-upgrade";
 
 export async function ensureDemos(
   packedBooks: string[],
@@ -20,10 +21,20 @@ export async function ensureDemos(
     const progress = old
       ? await store.get<Progress>("progress", book.manifest.id)
       : undefined;
-    const index = progress ? addresses(book.content).indexOf(progress.at) : -1;
+    let oldContent: Content | undefined;
+    if (progress && old) {
+      try {
+        oldContent = readBook(old.bytes).content;
+      } catch {
+        /* Recover invalid old anchors without blocking startup. */
+      }
+    }
+    const upgraded = progress
+      ? upgradeProgress(progress, oldContent, book.content)
+      : undefined;
     const db = await store.db();
     await new Promise<void>((resolve, reject) => {
-      // Upgrade the file and its percentage together; words and the address stay intact.
+      // Upgrade file and reading anchors together; vocabulary and memberships stay intact.
       const transaction = db.transaction(["books", "progress"], "readwrite");
       transaction.objectStore("books").put(
         {
@@ -33,14 +44,8 @@ export async function ensureDemos(
         },
         book.manifest.id,
       );
-      if (progress && index >= 0)
-        transaction.objectStore("progress").put(
-          {
-            ...progress,
-            percent: Math.round((index / book.manifest.stats.fragments) * 100),
-          },
-          book.manifest.id,
-        );
+      if (upgraded)
+        transaction.objectStore("progress").put(upgraded, book.manifest.id);
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);
       transaction.onabort = () => reject(transaction.error);
