@@ -1278,6 +1278,13 @@ html.reading-pages body {
   text-overflow: ellipsis;
   pointer-events: none;
 }
+.folio-columns,
+.folio-columns * {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+}
 .folio-viewport {
   position: absolute;
   inset: 88px var(--margins) 78px;

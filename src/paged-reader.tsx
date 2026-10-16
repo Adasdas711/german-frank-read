@@ -89,8 +89,15 @@ export function PagedReader(props: Props) {
   state.current = { props, page, layout };
   const anchor = useRef({ at, offset });
   const lastReported = useRef<string | null>(null);
-  const touch = useRef<{ x: number; y: number } | null>(null),
-    swiped = useRef(false);
+  const gesture = useRef<{
+      id: number;
+      x: number;
+      y: number;
+      started: number;
+      moved: boolean;
+      type: string;
+    } | null>(null),
+    suppressClick = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout>>();
   const lookupTimer = useRef<ReturnType<typeof setTimeout>>();
   const allowLookup = useRef(false),
@@ -430,6 +437,19 @@ export function PagedReader(props: Props) {
     lastReported.current = address + ":" + char;
     if (!props.measureOnly) state.current.props.onPosition(address, char);
   }
+  const clearTurnAnimations = () => {
+    text.current?.getAnimations().forEach((animation) => animation.cancel());
+    root.current?.querySelectorAll(".curl-leaf").forEach((leaf) => {
+      leaf.getAnimations().forEach((animation) => animation.cancel());
+      leaf.remove();
+    });
+  };
+  useLayoutEffect(() => {
+    clearTurnAnimations();
+    clearTimeout(lookupTimer.current);
+    gesture.current = null;
+    suppressClick.current = false;
+  }, [mode, settings.pageTurn]);
   const turn = (delta: number) => {
     if (!state.current.layout.ready) return;
     const next = Math.max(
@@ -437,6 +457,7 @@ export function PagedReader(props: Props) {
       Math.min(state.current.layout.count - 1, state.current.page + delta),
     );
     if (next === state.current.page) return;
+    clearTurnAnimations();
     if (
       text.current &&
       !scrolling &&
@@ -463,17 +484,83 @@ export function PagedReader(props: Props) {
           height: box.height + "px",
           transformOrigin: delta > 0 ? "left center" : "right center",
         });
-        const snapshot = text.current.cloneNode(true) as HTMLElement;
-        snapshot.classList.add("curl-snapshot");
-        Object.assign(snapshot.style, {
-          width: geometry.width + "px",
-          height: box.height + "px",
-          marginLeft:
-            delta > 0 && geometry.columns === 2
-              ? -(width + geometry.gap) + "px"
-              : "0",
-          transition: "none",
-        });
+        // Paint only the visible leaf. Cloning the entire novel here blocks input
+        // and makes a single trackpad gesture look like several separate gestures.
+        const snapshot = document.createElement("div");
+        snapshot.className = "curl-snapshot";
+        const left = delta > 0 ? box.right - width : box.left;
+        const visibleRect = (rect: DOMRect) =>
+          rect.width > 0 &&
+          rect.left >= left - 1 &&
+          rect.right <= left + width + 1 &&
+          rect.bottom > box.top &&
+          rect.top < box.bottom;
+        const nodes = [
+          ...text.current.querySelectorAll<HTMLElement>("[data-book-char]"),
+        ];
+        const targetLeaf =
+          state.current.page * geometry.columns +
+          (delta > 0 ? geometry.columns - 1 : 0);
+        let lo = 0,
+          hi = nodes.length;
+        while (lo < hi) {
+          const mid = (lo + hi) >>> 1;
+          if (columnOf(nodes[mid], geometry) < targetLeaf) lo = mid + 1;
+          else hi = mid;
+        }
+        const first = nodes[lo];
+        if (first && columnOf(first, geometry) === targetLeaf) {
+          const walker = document.createTreeWalker(
+            text.current,
+            NodeFilter.SHOW_TEXT,
+          );
+          const range = document.createRange();
+          const visibleNode = (node: Node) => {
+            range.selectNodeContents(node);
+            return [...range.getClientRects()].some(visibleRect);
+          };
+          walker.currentNode = first.firstChild!;
+          let begin = walker.currentNode;
+          while (walker.previousNode()) {
+            if (!walker.currentNode.textContent?.trim()) continue;
+            if (!visibleNode(walker.currentNode)) break;
+            begin = walker.currentNode;
+          }
+          walker.currentNode = begin;
+          const styles = new Map<Element, CSSStyleDeclaration>();
+          do {
+            const node = walker.currentNode,
+              value = node.textContent || "";
+            if (!value.trim()) continue;
+            if (!visibleNode(node)) break;
+            const parent = node.parentElement!;
+            let style = styles.get(parent);
+            if (!style) {
+              style = getComputedStyle(parent);
+              styles.set(parent, style);
+            }
+            for (const match of value.matchAll(/\S+/g)) {
+              range.setStart(node, match.index!);
+              range.setEnd(node, match.index! + match[0].length);
+              const rects = [...range.getClientRects()].filter(visibleRect);
+              if (!rects.length) continue;
+              const rect = rects[0];
+              const span = document.createElement("span");
+              span.textContent = match[0];
+              Object.assign(span.style, {
+                position: "absolute",
+                left: rect.left - left + "px",
+                top: rect.top - box.top + "px",
+                font: style.font,
+                color: style.color,
+                letterSpacing: style.letterSpacing,
+                lineHeight: rect.height + "px",
+                whiteSpace: "pre",
+              });
+              snapshot.append(span);
+            }
+          } while (walker.nextNode());
+        }
         leaf.append(snapshot);
         root.current.append(leaf);
         const animation = leaf.animate(
@@ -508,6 +595,7 @@ export function PagedReader(props: Props) {
       text.current.style.transform = `translateX(${-next * (state.current.layout.width + state.current.layout.gap)}px)`;
   };
   const jumpPage = (next: number) => {
+    clearTurnAnimations();
     report(next);
     setPage(next);
     state.current.page = next;
@@ -563,29 +651,60 @@ export function PagedReader(props: Props) {
   useLayoutEffect(() => {
     if (props.measureOnly || scrolling) return;
     let distance = 0,
-      last = 0;
+      lastEvent = 0,
+      turned = false;
     const wheel = (event: WheelEvent) => {
       if (
         event.ctrlKey ||
-        (event.target as HTMLElement).closest(".folio-popover,.word-panel")
+        (event.target as HTMLElement).closest(
+          ".folio-popover,.word-panel,.folio-toolbar,.folio-bottom,.reading-menu",
+        )
       )
         return;
       event.preventDefault();
+      const now = performance.now();
+      if (now - lastEvent > 300) {
+        distance = 0;
+        turned = false;
+      }
+      lastEvent = now;
       const amount =
         (Math.abs(event.deltaX) > Math.abs(event.deltaY)
           ? event.deltaX
-          : event.deltaY) * (event.deltaMode === 1 ? 16 : 1);
+          : event.deltaY) *
+        (event.deltaMode === 1
+          ? 16
+          : event.deltaMode === 2
+            ? viewport.current!.clientHeight
+            : 1);
       if (Math.sign(distance) !== Math.sign(amount)) distance = 0;
       distance += amount;
-      if (Math.abs(distance) > 45 && performance.now() - last > 380) {
+      if (!turned && Math.abs(distance) >= 45) {
+        turned = true;
         turn(distance > 0 ? 1 : -1);
-        distance = 0;
-        last = performance.now();
       }
     };
     root.current!.addEventListener("wheel", wheel, { passive: false });
     return () => root.current?.removeEventListener("wheel", wheel);
   }, [scrolling, settings.pageTurn]);
+  const isEdge = (x: number) => {
+    if (scrolling) return false;
+    const box = root.current!.getBoundingClientRect();
+    const fraction = (x - box.left) / box.width;
+    return fraction < 0.12 || fraction > 0.88;
+  };
+  const tap = (x: number) => {
+    if (panel || menu || wordPanel) {
+      hide();
+      props.onDismissWord();
+      return;
+    }
+    if (isEdge(x)) {
+      const box = root.current!.getBoundingClientRect();
+      turn(x - box.left < box.width / 2 ? -1 : 1);
+    } else if (controls) hide();
+    else show();
+  };
   const listenPage = () => {
     const visible = [
       ...text.current!.querySelectorAll<HTMLElement>("[data-book-char]"),
@@ -637,78 +756,108 @@ export function PagedReader(props: Props) {
       aria-label={t("Read book")}
       data-ready={layout.ready}
       data-columns={layout.columns}
+      onDragStart={(event) => {
+        if ((event.target as HTMLElement).closest(".folio-columns"))
+          event.preventDefault();
+      }}
       onPointerDown={(event) => {
-        swiped.current = false;
-        longPressed.current = false;
         clearTimeout(lookupTimer.current);
-        const word = (event.target as HTMLElement).closest<HTMLElement>(
-          "[data-book-char]",
-        );
-        if (word && event.pointerType === "touch")
-          lookupTimer.current = setTimeout(() => {
-            longPressed.current = true;
-            openWord(word);
-          }, 550);
+        gesture.current = null;
+        longPressed.current = false;
+        if (!event.isPrimary || event.button !== 0) {
+          gesture.current = null;
+          suppressClick.current = true;
+          return;
+        }
+        const target = event.target as HTMLElement;
         if (
-          event.pointerType === "touch" &&
-          !(event.target as HTMLElement).closest(
-            ".folio-toolbar,.folio-popover,.folio-bottom,.word-panel",
+          target.closest(
+            ".folio-toolbar,.folio-popover,.folio-bottom,.word-panel,.reading-menu",
           )
         )
-          touch.current = { x: event.clientX, y: event.clientY };
+          return;
+        suppressClick.current = false;
+        gesture.current = {
+          id: event.pointerId,
+          x: event.clientX,
+          y: event.clientY,
+          started: performance.now(),
+          moved: false,
+          type: event.pointerType,
+        };
+        const word = target.closest<HTMLElement>("[data-book-char]");
+        if (word && event.pointerType !== "mouse")
+          lookupTimer.current = setTimeout(() => {
+            if (!gesture.current || gesture.current.moved) return;
+            longPressed.current = true;
+            suppressClick.current = true;
+            openWord(word);
+          }, 550);
       }}
       onPointerMove={(event) => {
-        const start = touch.current;
-        if (
-          start &&
-          (Math.abs(event.clientX - start.x) > 12 ||
-            Math.abs(event.clientY - start.y) > 12)
-        )
+        const start = gesture.current;
+        if (!start || start.id !== event.pointerId) return;
+        if (Math.hypot(event.clientX - start.x, event.clientY - start.y) > 10) {
+          start.moved = true;
+          suppressClick.current = true;
           clearTimeout(lookupTimer.current);
+        }
       }}
       onPointerCancel={() => {
-        touch.current = null;
+        gesture.current = null;
+        suppressClick.current = true;
         clearTimeout(lookupTimer.current);
       }}
       onPointerUp={(event) => {
         clearTimeout(lookupTimer.current);
-        const start = touch.current;
-        touch.current = null;
-        if (!start || window.getSelection()?.toString()) return;
+        const start = gesture.current;
+        gesture.current = null;
+        if (!start || start.id !== event.pointerId) return;
         const dx = event.clientX - start.x,
           dy = event.clientY - start.y;
-        if (Math.abs(dx) > 64 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-          swiped.current = true;
+        const moved = start.moved || Math.hypot(dx, dy) > 10;
+        suppressClick.current =
+          moved ||
+          longPressed.current ||
+          performance.now() - start.started > 450;
+        if (
+          !scrolling &&
+          start.type !== "mouse" &&
+          !longPressed.current &&
+          Math.abs(dx) > 64 &&
+          Math.abs(dx) > Math.abs(dy) * 1.5
+        )
           turn(dx < 0 ? 1 : -1);
-        }
       }}
       onClickCapture={(event) => {
-        if ((swiped.current || longPressed.current) && !allowLookup.current) {
-          longPressed.current = false;
+        if (allowLookup.current) return;
+        const target = event.target as HTMLElement;
+        if (
+          target.closest(
+            ".folio-toolbar,.folio-popover,.folio-bottom,.word-panel,.reading-menu",
+          )
+        )
+          return;
+        if (suppressClick.current && event.detail !== 0) {
           event.preventDefault();
           event.stopPropagation();
-          swiped.current = false;
+          return;
+        }
+        const word = target.closest("[data-book-char]");
+        if (word && event.detail > 0 && mode !== "clean") {
+          event.preventDefault();
+          event.stopPropagation();
+          if (event.detail === 1) tap(event.clientX);
         }
       }}
       onClick={(event) => {
         if (
           (event.target as HTMLElement).closest(
-            "button,a,input,select,label,.folio-popover,.word-panel",
+            "button,a,input,select,label,.folio-popover,.word-panel,.reading-menu",
           )
         )
           return;
-        if (window.getSelection()?.toString()) return;
-        if (panel || menu) {
-          hide();
-          return;
-        }
-        const fraction = event.clientX / innerWidth;
-        if (fraction < 0.12) turn(-1);
-        else if (fraction > 0.88) turn(1);
-        else {
-          if (controls) hide();
-          else show();
-        }
+        if (event.detail <= 1) tap(event.clientX);
       }}
     >
       {!props.measureOnly && (
@@ -827,20 +976,8 @@ export function PagedReader(props: Props) {
           class="folio-columns"
           ref={text}
           aria-label={t("Текст книги")}
-          onClickCapture={(event) => {
-            if (
-              (event.target as HTMLElement).closest("[data-book-char]") &&
-              !allowLookup.current &&
-              mode !== "clean" &&
-              event.detail > 0
-            ) {
-              event.preventDefault();
-              event.stopPropagation();
-              if (controls) hide();
-              else show();
-            }
-          }}
           onDblClick={(event) => {
+            if (suppressClick.current) return;
             const word = (event.target as HTMLElement).closest<HTMLElement>(
               "[data-book-char]",
             );
@@ -856,7 +993,12 @@ export function PagedReader(props: Props) {
             );
             if (word) {
               event.preventDefault();
-              openWord(word);
+              if (!longPressed.current) {
+                clearTimeout(lookupTimer.current);
+                longPressed.current = true;
+                suppressClick.current = true;
+                openWord(word);
+              }
             }
           }}
           style={{ visibility: layout.ready ? "visible" : "hidden" }}
@@ -865,7 +1007,7 @@ export function PagedReader(props: Props) {
               "[data-book-char]",
             );
             if (viewport.current) viewport.current.scrollLeft = 0;
-            if (word && layout.ready) {
+            if (word && layout.ready && !gesture.current) {
               const target = Math.floor(
                 columnOf(word, layout) / layout.columns,
               );
