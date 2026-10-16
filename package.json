@@ -18,7 +18,8 @@
     "test:experience": "node tests/experience.mjs",
     "build:immensee": "node --experimental-strip-types scripts/immensee.mjs",
     "test:collections": "node tests/collections.mjs",
-    "test:gestures": "node tests/gestures.mjs"
+    "test:gestures": "node tests/gestures.mjs",
+    "test:reader-fixes": "node tests/reader-fixes.mjs"
   },
   "dependencies": {
     "espeak-ng": "1.0.2",

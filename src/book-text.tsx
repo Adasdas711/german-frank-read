@@ -1,5 +1,8 @@
 import type { Chunk, Content, Manifest } from "./core";
-import { plain, words, sentences } from "./core";
+import { plain, words } from "./core";
+import { memo } from "preact/compat";
+import { useMemo } from "preact/hooks";
+import { readingSentences } from "./reading-text";
 export type WordSelection = {
   form: string;
   at: string;
@@ -7,7 +10,7 @@ export type WordSelection = {
   translation: string;
   hint: string;
 };
-export function BookText({
+export const BookText = memo(function BookText({
   chunks,
   address,
   content,
@@ -26,17 +29,18 @@ export function BookText({
 }) {
   const source = plain(chunks),
     [ci, fi] = address.split(".").map((n) => +n - 1);
-  const lines = sentences(source),
-    translations = content.t?.[ci]?.[fi] || [];
+  const lines = useMemo(
+    () => readingSentences(source, content.t?.[ci]?.[fi] || []),
+    [source, content, ci, fi],
+  );
   const phrase = (offset: number) => {
-    let cursor = 0;
-    for (let i = 0; i < lines.length; i++) {
-      const start = source.indexOf(lines[i], cursor);
-      cursor = start + lines[i].length;
-      if (offset < cursor)
-        return { context: lines[i], translation: translations[i] || "" };
-    }
-    return { context: source, translation: translations.join(" ") };
+    const row = lines.find((row) => offset < row.end);
+    return row
+      ? { context: row.text, translation: row.translation }
+      : {
+          context: source,
+          translation: lines.map((row) => row.translation).join(" "),
+        };
   };
   const sourceHint = (offset: number) => {
     let start = 0;
@@ -84,50 +88,61 @@ export function BookText({
         );
       });
   };
-  const annotated = () => {
-    let pos = 0;
-    return chunks.map((chunk, i) => {
-      const start = pos;
-      pos += typeof chunk === "string" ? chunk.length : chunk[0].length;
-      if (typeof chunk === "string") return text(chunk, start);
-      const hint =
-        content.g[chunk[1]] +
-        (chunk[2] != null ? " = " + content.g[chunk[2]] : "");
+  // All modes share the same original-word nodes. Switching changes layout,
+  // not thousands of interactive elements; source offsets and focus survive.
+  const inlineText = useMemo(() => {
+    let cursor = 0;
+    const pieces = chunks.map((chunk) => {
+      const value = typeof chunk === "string" ? chunk : chunk[0];
+      const start = cursor;
+      cursor += value.length;
+      return { chunk, value, start, end: cursor };
+    });
+    let previous = 0;
+    return lines.map((line, i) => {
+      const start = previous,
+        end = i === lines.length - 1 ? source.length : line.end;
+      previous = end;
+      const original = pieces
+        .filter((piece) => piece.end > start && piece.start < end)
+        .map((piece) => {
+          const from = Math.max(start, piece.start),
+            to = Math.min(end, piece.end);
+          const hint =
+            typeof piece.chunk === "string"
+              ? ""
+              : content.g[piece.chunk[1]] +
+                (piece.chunk[2] != null
+                  ? " = " + content.g[piece.chunk[2]]
+                  : "");
+          return (
+            <span key={piece.start}>
+              {text(source.slice(from, to), from, hint)}
+              {hint && to === piece.end && (
+                <span class="hint" lang={manifest.hintLang}>
+                  {" "}
+                  ({hint})
+                </span>
+              )}
+            </span>
+          );
+        });
       return (
-        <span key={i}>
-          {text(chunk[0], start, hint)}{" "}
-          <span class="hint" lang={manifest.hintLang}>
-            ({hint})
+        <span class="sentence-row parallel-row" key={line.start}>
+          <span class="sentence-original" lang={manifest.lang}>
+            {original}
+          </span>
+          <span class="translation" lang={manifest.hintLang}>
+            {line.translation}
           </span>
         </span>
       );
     });
-  };
-  if (mode === "parallel") {
-    let cursor = 0;
-    return (
-      <section class="reading-panel parallel-panel">
-        {lines.map((line, i) => {
-          const start = source.indexOf(line, cursor);
-          cursor = start + line.length;
-          return (
-            <div class="parallel-row">
-              <p lang={manifest.lang}>{text(line, start, translations[i])}</p>
-              <p class="translation" lang={manifest.hintLang}>
-                {translations[i]}
-              </p>
-            </div>
-          );
-        })}
-      </section>
-    );
-  }
+  }, [chunks, content, manifest, address, onWord, lines]);
   return (
-    <div class="reading-columns">
+    <div class="reading-columns" key="inline">
       <section class="reading-panel">
-        <p lang={manifest.lang}>
-          {mode === "frank" ? annotated() : text(source, 0)}
-        </p>
+        <p lang={manifest.lang}>{inlineText}</p>
       </section>
       {mode === "frank" && repeat && (
         <section class="reading-panel repeat-panel">
@@ -136,4 +151,4 @@ export function BookText({
       )}
     </div>
   );
-}
+});

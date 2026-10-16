@@ -1280,7 +1280,7 @@ function App() {
                       <span>{t("To Anki")}</span>
                     </button>
                     <button
-                      class="pill glass"
+                      class="pill glass word-selection-toggle"
                       onClick={() => {
                         setSelecting(!selecting);
                         setSelection(new Set());

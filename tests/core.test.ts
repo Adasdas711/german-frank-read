@@ -223,6 +223,40 @@ describe("backup validation", () => {
 });
 
 import { toPhonemes } from "../src/ipa";
+import { readingSentences } from "../src/reading-text";
+describe("Reader quotation boundaries", () => {
+  it("keeps German closing quotes with their sentence and legacy translations aligned", () => {
+    const rows = readingSentences(
+      "„Ein Engel?“ sagte sie. „Hatte er denn Flügel?“",
+      ["Ангел?", "сказала она.", "У него были крылья?", "“"],
+    );
+    expect(rows.map((row) => row.text)).toEqual([
+      "„Ein Engel?“",
+      "sagte sie.",
+      "„Hatte er denn Flügel?“",
+    ]);
+    expect(rows.map((row) => row.translation)).toEqual([
+      "Ангел?",
+      "сказала она.",
+      "У него были крылья?",
+    ]);
+  });
+  it("preserves the full Immensee original without quotation-only parallel rows", () => {
+    const book = readBook(new Uint8Array(readFileSync("books/immensee.fbook")));
+    for (const [ci, chapter] of book.content.c.entries())
+      for (const [fi, chunks] of chapter.entries()) {
+        const source = plain(chunks),
+          rows = readingSentences(source, book.content.t![ci][fi]);
+        expect(
+          rows
+            .map((row) => row.text)
+            .join("")
+            .replace(/\s/g, ""),
+        ).toBe(source.replace(/\s/g, ""));
+        expect(rows.every((row) => /[\p{L}\p{N}]/u.test(row.text))).toBe(true);
+      }
+  });
+});
 describe("German IPA mapping", () => {
   it("covers every IPA form in shipped demos", () => {
     for (const name of [

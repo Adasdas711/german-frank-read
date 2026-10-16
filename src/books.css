@@ -1371,11 +1371,28 @@ html.reading-pages body {
   cursor: pointer;
   text-align: inherit;
 }
+.books-reader:not([data-mode="frank"]) .hint {
+  display: none;
+}
+.books-reader:not([data-mode="parallel"]) .sentence-row,
+.books-reader:not([data-mode="parallel"]) .sentence-original {
+  display: contents;
+}
+.books-reader:not([data-mode="parallel"]) .sentence-row > .translation {
+  display: none;
+}
 .folio-columns .word:hover,
 .folio-columns .word.chosen {
-  background: #8882;
-  color: inherit;
+  background: var(--folio-ink) !important;
+  color: var(--folio-paper) !important;
   filter: none;
+}
+.library-heading .pill.word-selection-toggle {
+  width: auto;
+  min-width: max-content;
+  padding: 7px 13px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .folio-columns .parallel-row {
   display: grid;

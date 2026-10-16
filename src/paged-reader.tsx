@@ -157,6 +157,17 @@ export function PagedReader(props: Props) {
     [content, manifest, renderFragment],
   );
 
+  const sourceTexts = useMemo(
+    () =>
+      new Map<string, string>(
+        content.c.flatMap((chapter, ci) =>
+          chapter.map(
+            (chunks, fi) => [`${ci + 1}.${fi + 1}`, plain(chunks)] as const,
+          ),
+        ),
+      ),
+    [content],
+  );
   function columnOf(element: Element, geometry: Layout) {
     const box = element.getClientRects()[0] || element.getBoundingClientRect();
     if (scrolling)
@@ -258,6 +269,21 @@ export function PagedReader(props: Props) {
         const nodes = [
           ...text.current.querySelectorAll<HTMLElement>("[data-book-char]"),
         ];
+        const origin = text.current.getBoundingClientRect();
+        const viewportHeight = viewport.current.clientHeight;
+        const stride = (width + gap) / columns;
+        const leafOf = (element: Element) => {
+          const rect =
+            element.getClientRects()[0] || element.getBoundingClientRect();
+          return Math.max(
+            0,
+            Math.floor(
+              scrolling
+                ? (rect.top - origin.top + 1) / viewportHeight
+                : (rect.left - origin.left + 1) / stride,
+            ),
+          );
+        };
         const entries: PageEntry[] = [];
         const sourceGroups: {
           key: string;
@@ -266,11 +292,11 @@ export function PagedReader(props: Props) {
           end: number;
         }[][] = [];
         for (const node of nodes) {
-          const leaf = columnOf(node, next);
+          const leaf = leafOf(node);
           const address =
             node.closest<HTMLElement>("[data-reading-at]")!.dataset.readingAt!;
           const [chapter, fragment] = address.split(".").map((n) => +n - 1);
-          const sourceText = plain(content.c[chapter][fragment]);
+          const sourceText = sourceTexts.get(address)!;
           const char = Number(node.dataset.bookChar) || 0;
           const copy = Math.floor(char / (sourceText.length + 1));
           const start = char % (sourceText.length + 1),
@@ -285,7 +311,7 @@ export function PagedReader(props: Props) {
                 .readingAt!;
             const [ci, fi] = at.split(".").map((n) => +n - 1),
               offset = Number(node.dataset.bookChar) || 0;
-            const source = plain(content.c[ci][fi]);
+            const source = sourceText;
             entries[leaf] = {
               at,
               offset,
@@ -297,20 +323,14 @@ export function PagedReader(props: Props) {
           }
         }
         let lastLeaf = 0;
-        const walker = document.createTreeWalker(
-          text.current,
-          NodeFilter.SHOW_TEXT,
-        );
-        while (walker.nextNode()) {
-          if (!walker.currentNode.textContent?.trim()) continue;
-          const range = document.createRange();
-          range.selectNodeContents(walker.currentNode);
-          for (const rect of range.getClientRects()) {
-            const origin = text.current.getBoundingClientRect();
+        // Paragraph fragments include hints, punctuation and translations. Measuring
+        // their boxes avoids a Range/layout read for every text node in the novel.
+        for (const element of text.current.querySelectorAll(
+          ".reading-panel p,.folio-chapter-title",
+        )) {
+          for (const rect of element.getClientRects()) {
             const leaf = scrolling
-              ? Math.floor(
-                  (rect.top - origin.top + 1) / viewport.current.clientHeight,
-                )
+              ? Math.floor((rect.bottom - origin.top - 0.5) / viewportHeight)
               : Math.floor((rect.left - origin.left + 1) / (columnWidth + gap));
             lastLeaf = Math.max(lastLeaf, leaf);
           }
@@ -517,13 +537,16 @@ export function PagedReader(props: Props) {
           const range = document.createRange();
           const visibleNode = (node: Node) => {
             range.selectNodeContents(node);
-            return [...range.getClientRects()].some(visibleRect);
+            const rects = [...range.getClientRects()];
+            return rects.length ? rects.some(visibleRect) : null;
           };
           walker.currentNode = first.firstChild!;
           let begin = walker.currentNode;
           while (walker.previousNode()) {
             if (!walker.currentNode.textContent?.trim()) continue;
-            if (!visibleNode(walker.currentNode)) break;
+            const shown = visibleNode(walker.currentNode);
+            if (shown === null) continue;
+            if (!shown) break;
             begin = walker.currentNode;
           }
           walker.currentNode = begin;
@@ -532,7 +555,9 @@ export function PagedReader(props: Props) {
             const node = walker.currentNode,
               value = node.textContent || "";
             if (!value.trim()) continue;
-            if (!visibleNode(node)) break;
+            const shown = visibleNode(node);
+            if (shown === null) continue;
+            if (!shown) break;
             const parent = node.parentElement!;
             let style = styles.get(parent);
             if (!style) {
@@ -553,6 +578,7 @@ export function PagedReader(props: Props) {
                 top: rect.top - box.top + "px",
                 font: style.font,
                 color: style.color,
+                backgroundColor: style.backgroundColor,
                 letterSpacing: style.letterSpacing,
                 lineHeight: rect.height + "px",
                 whiteSpace: "pre",
