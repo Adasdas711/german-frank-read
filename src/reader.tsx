@@ -900,6 +900,24 @@ function App() {
     );
     notify(t("Book moved"));
   };
+  const visibleFilters = filters.filter(
+    (value) => !settings.hiddenLibraryFolders.includes(value),
+  );
+  const deleteLibraryFolder = (value: string) => {
+    if (value === "all") return;
+    setConfirm({
+      title: t("Delete folder {0}?", { 0: t(filterLabel(value)) }),
+      text: t("The books will stay in your library."),
+      action: async () => {
+        await saveSettings({
+          hiddenLibraryFolders: [
+            ...new Set([...settingsRef.current.hiddenLibraryFolders, value]),
+          ],
+        });
+        if (libraryFilter === value) setLibraryFilter("all");
+      },
+    });
+  };
   const deleteCollection = () => {
     if (!editingCollection) return;
     const id = editingCollection.id;
@@ -1242,34 +1260,47 @@ function App() {
               {t("Home")}
             </button>
             <h3>{t("Library")}</h3>
-            {filters.map((value) => (
-              <button
-                class={
-                  "sidebar-item" +
-                  (page === "library" &&
-                  !collectionFilter &&
-                  libraryFilter === value
-                    ? " active"
-                    : "")
-                }
-                onClick={() => {
-                  setLibraryFilter(value);
-                  setCollectionFilter("");
-                  navigate("library");
-                }}
-              >
-                <Icon
-                  name={
-                    value === "all"
-                      ? "book"
-                      : value === "finished"
-                        ? "check"
-                        : "texts"
+            {visibleFilters.map((value) => (
+              <div class="collection-nav-row" key={value}>
+                <button
+                  class={
+                    "sidebar-item" +
+                    (page === "library" &&
+                    !collectionFilter &&
+                    libraryFilter === value
+                      ? " active"
+                      : "")
                   }
-                  size={17}
-                />
-                {t(filterLabel(value))}
-              </button>
+                  onClick={() => {
+                    setLibraryFilter(value);
+                    setCollectionFilter("");
+                    navigate("library");
+                  }}
+                >
+                  <Icon
+                    name={
+                      value === "all"
+                        ? "book"
+                        : value === "finished"
+                          ? "check"
+                          : "texts"
+                    }
+                    size={17}
+                  />
+                  <span>{t(filterLabel(value))}</span>
+                </button>
+                {value !== "all" && (
+                  <button
+                    class="collection-manage round quiet"
+                    aria-label={t("Delete folder {0}", {
+                      0: t(filterLabel(value)),
+                    })}
+                    onClick={() => deleteLibraryFolder(value)}
+                  >
+                    <Icon name="trash" size={14} />
+                  </button>
+                )}
+              </div>
             ))}
             <h3>{t("Words")}</h3>
             <button
@@ -1353,6 +1384,19 @@ function App() {
             <header class="library-heading">
               <h1>{title}</h1>
               <div class="row">
+                {page === "library" &&
+                  !collectionFilter &&
+                  libraryFilter !== "all" && (
+                    <button
+                      class="round glass delete-library-folder"
+                      aria-label={t("Delete folder {0}", {
+                        0: t(filterLabel(libraryFilter)),
+                      })}
+                      onClick={() => deleteLibraryFolder(libraryFilter)}
+                    >
+                      <Icon name="trash" />
+                    </button>
+                  )}
                 {page === "library" && (
                   <button
                     class="pill glass"
@@ -1490,7 +1534,7 @@ function App() {
                   role="tablist"
                   aria-label={t("Library")}
                 >
-                  {filters.map((value) => (
+                  {visibleFilters.map((value) => (
                     <button
                       role="tab"
                       aria-selected={

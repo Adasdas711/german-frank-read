@@ -22,6 +22,8 @@ const rows: [string, string, string][] = [
     "Книги в коллекции",
     "Bücher in dieser Sammlung",
   ],
+  ["Delete folder {0}", "Удалить папку «{0}»", "Ordner {0} löschen"],
+  ["Delete folder {0}?", "Удалить папку «{0}»?", "Ordner {0} löschen?"],
   ["Delete Collection", "Удалить коллекцию", "Sammlung löschen"],
   [
     "Delete collection {0}?",

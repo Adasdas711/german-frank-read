@@ -56,6 +56,7 @@ export type Settings = {
   columns: string;
   justify: boolean;
   recentSearches: string[];
+  hiddenLibraryFolders: string[];
 };
 export const defaults: Settings = {
   font: "Literata",
@@ -88,6 +89,7 @@ export const defaults: Settings = {
   columns: "auto",
   justify: true,
   recentSearches: [],
+  hiddenLibraryFolders: [],
 };
 let dbPromise: Promise<IDBDatabase> | undefined;
 export function db() {
@@ -305,6 +307,11 @@ export function checkedSettings(s: any): Settings {
     wordSpacing: num("wordSpacing", 0, 0.6),
     margins: num("margins", 3, 14),
     columns: ["auto", "1", "2"].includes(s?.columns) ? s.columns : "auto",
+    hiddenLibraryFolders: Array.isArray(s?.hiddenLibraryFolders)
+      ? ["A2", "B1", "B2", "reading", "finished"].filter((id) =>
+          s.hiddenLibraryFolders.includes(id),
+        )
+      : [],
     recentSearches: Array.isArray(s?.recentSearches)
       ? s.recentSearches.filter((x) => typeof x === "string").slice(0, 8)
       : [],
