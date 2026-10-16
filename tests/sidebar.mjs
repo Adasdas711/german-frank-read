@@ -61,7 +61,7 @@ try {
     db.close();
   });
   await p.reload();
-  await p.getByRole("heading", { name: "Reading", exact: true }).waitFor();
+  await p.getByRole("heading", { name: "Continue", exact: true }).waitFor();
   assert.equal(
     await p.locator(".continue-card").count(),
     2,

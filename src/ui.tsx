@@ -264,7 +264,7 @@ export function ContextMenu({
     node.style.top =
       Math.max(8, Math.min(y, innerHeight - rect.height - 8)) + "px";
   }, [x, y, children]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const node = menu.current;
     const items = () =>
       Array.from(

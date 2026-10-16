@@ -2938,3 +2938,219 @@ html.reading-pages body {
 .continue-copy h3 {
   overflow-wrap: anywhere;
 }
+
+/* Interface text stays still while dragging; editing fields keep native selection. */
+html,
+body,
+#app,
+#app * {
+  user-select: none;
+  -webkit-user-select: none;
+}
+#app input,
+#app textarea,
+#app [contenteditable="true"],
+#app [contenteditable="true"] * {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+.continue-card {
+  flex-basis: min(360px, 88%);
+  display: block;
+  padding: 0;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--reading-cover) 34%, var(--panel));
+}
+.continue-open {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 14px;
+  width: 100%;
+  min-height: 124px;
+  padding: 14px;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font-weight: 400;
+}
+.continue-open:hover {
+  background: #ffffff08;
+}
+.continue-open .book-cover.small {
+  width: 64px;
+  min-width: 64px;
+  flex-basis: 64px;
+  height: 96px;
+}
+.continue-copy h3 {
+  margin: 0 0 4px;
+  font-size: 17px;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.continue-copy p {
+  font-size: 15px;
+  line-height: 1.35;
+  color: inherit;
+  opacity: 0.86;
+  margin: 0 0 4px;
+}
+.continue-copy .continue-meta {
+  font-size: 12px;
+  color: inherit;
+  opacity: 0.75;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.search-page .library-heading {
+  margin-bottom: 0;
+}
+.search-page .search-controls {
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 48px;
+}
+.search-page .search-field {
+  flex: none;
+  width: min(620px, 100%);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 18px;
+  background: transparent;
+  box-shadow: 0 8px 24px #0001;
+}
+.search-page .search-field:focus-within {
+  border-color: var(--muted);
+}
+.search-page .search-field input {
+  font-size: 16px;
+  padding: 13px 0;
+}
+.search-page .search-controls .tabs {
+  min-width: 0;
+  width: min(440px, 100%);
+}
+.recently-viewed-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+.recently-viewed-heading h2 {
+  margin: 0;
+  font-size: 26px;
+}
+.search-clear {
+  color: #0a84ff;
+  font-size: 15px;
+  padding: 4px;
+}
+.search-page .search-result-list {
+  background: none;
+  max-width: none;
+  border-radius: 0;
+}
+.search-book-row {
+  display: flex;
+  align-items: center;
+  padding: 28px 0;
+  gap: 24px;
+  border-bottom: 1px solid var(--border);
+}
+.search-book-cover {
+  padding: 0;
+  border: 0;
+  background: none;
+  flex: none;
+  border-radius: 4px;
+}
+.search-book-row .book-cover.small {
+  width: 104px;
+  min-width: 104px;
+  height: 156px;
+  flex-basis: 104px;
+}
+.search-book-copy {
+  min-width: 0;
+}
+.search-book-title {
+  display: block;
+  padding: 0;
+  background: none;
+  border: 0;
+  min-height: 0;
+  border-radius: 0;
+  font-size: 19px;
+  text-align: left;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.search-book-copy p {
+  font-size: 17px;
+  margin: 4px 0;
+  color: var(--text);
+}
+.search-book-copy small {
+  display: block;
+  font-size: 14px;
+  color: var(--muted);
+}
+.search-book-read {
+  margin-top: 12px;
+  background: #8882;
+  min-height: 32px;
+  padding: 5px 18px;
+}
+.search-empty {
+  margin-top: 28px;
+  font-size: 14px;
+}
+@media (max-width: 700px) {
+  .continue-open {
+    padding: 12px;
+    gap: 12px;
+  }
+  .continue-copy h3 {
+    font-size: 16px;
+  }
+  .continue-copy p {
+    font-size: 13px;
+  }
+  .continue-copy .continue-meta {
+    font-size: 11px;
+  }
+  .search-page .search-controls {
+    margin-bottom: 32px;
+  }
+  .recently-viewed-heading h2 {
+    font-size: 23px;
+  }
+  .search-book-row {
+    gap: 18px;
+    padding: 24px 0;
+  }
+  .search-book-row .book-cover.small {
+    width: 80px;
+    min-width: 80px;
+    flex-basis: 80px;
+    height: 120px;
+  }
+  .search-book-title {
+    font-size: 16px;
+  }
+  .search-book-copy p {
+    font-size: 15px;
+  }
+  .search-book-copy small {
+    font-size: 12px;
+  }
+}

@@ -35,10 +35,7 @@ try {
   await page.goto("http://127.0.0.1:4174/german-frank-read/slow/", {
     waitUntil: "commit",
   });
-  await page
-    .getByRole("button", { name: "Continue", exact: true })
-    .first()
-    .waitFor({ timeout: 15000 });
+  await page.locator(".continue-open").first().waitFor({ timeout: 15000 });
   assert.equal(await page.evaluate(() => document.readyState), "loading");
   assert.equal(await page.locator("#espeak-wasm").count(), 0);
   for (const res of held) res.end(tail);

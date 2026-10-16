@@ -1,11 +1,5 @@
 import type { Manifest } from "./core";
-export function BookCover({
-  manifest,
-  small = false,
-}: {
-  manifest: Manifest;
-  small?: boolean;
-}) {
+export function bookColor(manifest: Manifest) {
   const colors = [
     "#228a80",
     "#a53937",
@@ -25,6 +19,16 @@ export function BookCover({
               [...manifest.id].reduce((s, c) => s + c.charCodeAt(0), 0) %
                 colors.length
             ];
+  return color;
+}
+export function BookCover({
+  manifest,
+  small = false,
+}: {
+  manifest: Manifest;
+  small?: boolean;
+}) {
+  const color = bookColor(manifest);
   const letter = manifest.title
     .replace(/^(Die|Der|Das|Ein|Eine)\s+/, "")
     .charAt(0);

@@ -120,7 +120,7 @@ try {
       details: [...n.children].map((c) =>
         [
           ".book-cover",
-          ".continue-copy>small:first-child",
+          ".continue-meta",
           ".continue-copy h3",
           ".continue-copy p",
         ].every((s) => getComputedStyle(c.querySelector(s)).display !== "none"),

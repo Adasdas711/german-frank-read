@@ -65,10 +65,7 @@ const base =
 const wait = () => page.waitForTimeout(200);
 try {
   await page.goto(base);
-  await page
-    .getByRole("button", { name: "Continue", exact: true })
-    .first()
-    .click();
+  await page.locator(".continue-open").first().click();
   await page.locator(".books-reader[data-ready=true]").waitFor();
   await page.mouse.click(720, 60);
   await page.getByRole("tab", { name: "Clean", exact: true }).click();

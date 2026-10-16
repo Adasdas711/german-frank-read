@@ -56,6 +56,7 @@ export type Settings = {
   columns: string;
   justify: boolean;
   recentSearches: string[];
+  recentlyViewed: string[];
   hiddenLibraryFolders: string[];
   levelOrder: string[];
 };
@@ -90,6 +91,7 @@ export const defaults: Settings = {
   columns: "auto",
   justify: true,
   recentSearches: [],
+  recentlyViewed: [],
   hiddenLibraryFolders: [],
   levelOrder: ["A2", "B1", "B2"],
 };
@@ -324,6 +326,18 @@ export function checkedSettings(s: any): Settings {
           s.hiddenLibraryFolders.includes(id),
         )
       : [],
+    recentlyViewed: Array.isArray(s?.recentlyViewed)
+      ? ([
+          ...new Set(
+            s.recentlyViewed.filter(
+              (id) =>
+                typeof id === "string" && id.length > 0 && id.length <= 160,
+            ),
+          ),
+        ].slice(0, 20) as string[])
+      : typeof s?.current === "string"
+        ? [s.current]
+        : [],
     recentSearches: Array.isArray(s?.recentSearches)
       ? s.recentSearches.filter((x) => typeof x === "string").slice(0, 8)
       : [],

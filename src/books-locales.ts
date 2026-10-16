@@ -5,6 +5,14 @@ const rows: [string, string, string][] = [
   ["{0} chapters", "{0} глав", "{0} Kapitel"],
 
   ["Levels", "Уровни", "Niveaus"],
+  ["Continue reading {0}", "Продолжить чтение «{0}»", "{0} weiterlesen"],
+  ["Clear", "Очистить", "Löschen"],
+  ["Recently Viewed", "Недавно просмотренные", "Zuletzt angesehen"],
+  [
+    "Books you open will appear here.",
+    "Здесь появятся книги, которые вы открывали.",
+    "Hier erscheinen Bücher, die du geöffnet hast.",
+  ],
   ["Book options", "Действия с книгой", "Buchoptionen"],
   ["Book options for {0}", "Действия с книгой «{0}»", "Optionen für {0}"],
   ["Remove from Folder", "Убрать из папки", "Aus Sammlung entfernen"],

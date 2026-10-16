@@ -96,10 +96,7 @@ const appearance = async (page) => {
   await page.locator(".theme-grid").waitFor();
 };
 const openBook = async (page) => {
-  await page
-    .getByRole("button", { name: "Continue", exact: true })
-    .first()
-    .click();
+  await page.locator(".continue-open").first().click();
   await page.locator(".books-reader[data-ready=true]").waitFor();
   await page.waitForTimeout(100);
 };
@@ -127,7 +124,7 @@ const visibleWord = (page) =>
 try {
   const { context, page } = await fresh();
   assert.equal((await value(page, "settings", "app")).language, "en");
-  assert.equal(await page.locator(".book-cover").count(), 6);
+  assert.equal(await page.locator(".book-cover").count(), 2);
   await page.screenshot({ path: ".test-results/experience/home-mac.png" });
   const homeStatus = await page
     .locator(".continue-card")
@@ -144,7 +141,8 @@ try {
   await page.keyboard.press("Control+Meta+s");
   await openBook(page);
   const initialPage = await page.locator(".folio-page-number").textContent();
-  assert.ok(homeStatus.includes(initialPage.split(" of ")[1].split(" ")[0]));
+  assert.match(homeStatus, /Book · [AB][12] · \d+%/);
+  assert.match(initialPage, /\d+ of \d+/);
   assert.equal(
     await page.locator(".books-reader").getAttribute("data-columns"),
     "2",

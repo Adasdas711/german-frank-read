@@ -22,7 +22,7 @@ import { LocaleContext, createTranslator, translateMessage } from "./i18n";
 import { Icon, Modal, Toggle, ProgressBar, ContextMenu } from "./ui";
 import { PagedReader, type PageEntry } from "./paged-reader";
 import { BookText, type WordSelection } from "./book-text";
-import { BookCover } from "./book-cover";
+import { BookCover, bookColor } from "./book-cover";
 import {
   CollectionMenu,
   LevelMenu,
@@ -294,6 +294,28 @@ function App() {
     setSettings(next);
     await store.put("settings", "app", next);
   }, []);
+  const rememberBook = (id: string) => {
+    if (settingsRef.current.recentlyViewed[0] === id) return;
+    void run(() =>
+      saveSettings({
+        recentlyViewed: [
+          id,
+          ...settingsRef.current.recentlyViewed.filter((value) => value !== id),
+        ].slice(0, 20),
+      }),
+    );
+  };
+  const clearRecentlyViewed = async () => {
+    const next = { ...settingsRef.current, recentlyViewed: [] };
+    await store.put("settings", "app", next);
+    settingsRef.current = next;
+    setSettings(next);
+  };
+  const showDetails = (book: Book) => {
+    rememberBook(book.manifest.id);
+    setDetails(book);
+    setOverlay("details");
+  };
   const saveCollections = useCallback(async (list: BookCollection[]) => {
     const checked = checkedCollections(list);
     collectionsRef.current = checked;
@@ -502,6 +524,7 @@ function App() {
       location.hash = `/read/${bookId}/${at}/frank`;
       return;
     }
+    rememberBook(bookId);
     if (settings.current !== bookId)
       void run(() => saveSettings({ current: bookId }));
     if (!currentProgress)
@@ -1057,6 +1080,35 @@ function App() {
     );
     notify(t("Book removed from folder"));
   };
+  const searchBookRow = (b: Book) => (
+    <article
+      class="book-result search-book-row"
+      key={b.manifest.id}
+      data-book={b.manifest.id}
+      onContextMenu={(event) => openBookMenu(b, event)}
+    >
+      <button
+        class="search-book-cover"
+        aria-label={b.manifest.title}
+        onClick={() => showDetails(b)}
+      >
+        <BookCover manifest={b.manifest} small />
+      </button>
+      <div class="search-book-copy">
+        <button class="search-book-title" onClick={() => showDetails(b)}>
+          {query.trim() ? marked(b.manifest.title) : b.manifest.title}
+        </button>
+        <p>{query.trim() ? marked(b.manifest.author) : b.manifest.author}</p>
+        <small>
+          {t("Book")} · {b.manifest.level} ·{" "}
+          {progress.find((p) => p.book === b.manifest.id)?.percent || 0}%
+        </small>
+        <button class="search-book-read pill" onClick={() => go(b)}>
+          {t("Read")}
+        </button>
+      </div>
+    </article>
+  );
   const card = (b: Book) => (
     <article
       class="shelf-book"
@@ -1070,8 +1122,7 @@ function App() {
         class="cover-open"
         aria-label={b.manifest.title}
         onClick={() => {
-          setDetails(b);
-          setOverlay("details");
+          showDetails(b);
         }}
       >
         <BookCover manifest={b.manifest} />
@@ -1197,11 +1248,9 @@ function App() {
   const runningBooks = startedBooks.length
     ? startedBooks
     : orderedReadingBooks.slice(0, 2);
-  const recentBooks = [...books]
-    .sort((a, b) =>
-      ((b as any).addedAt || "").localeCompare((a as any).addedAt || ""),
-    )
-    .slice(0, 4);
+  const recentlyViewedBooks = settings.recentlyViewed
+    .map((id) => books.find((b) => b.manifest.id === id))
+    .filter((b): b is Book => !!b);
   const filteredBooks = collectionFilter
     ? books.filter((b) =>
         collections
@@ -1516,7 +1565,9 @@ function App() {
               {t("Settings")}
             </button>
           </aside>
-          <main class="library-main">
+          <main
+            class={"library-main" + (page === "search" ? " search-page" : "")}
+          >
             <div class="collapsed-tools">
               <button
                 class="round glass"
@@ -1536,7 +1587,7 @@ function App() {
               </button>
             </div>
             <header class="library-heading">
-              <h1>{title}</h1>
+              <h1 class={page === "search" ? "sr-only" : ""}>{title}</h1>
               <div class="row">
                 {page === "library" &&
                   !collectionFilter &&
@@ -1598,7 +1649,7 @@ function App() {
             {page === "home" && (
               <>
                 <section class="home-section">
-                  <h2>{t("Reading")}</h2>
+                  <h2>{t("Continue")}</h2>
                   <div
                     class="continue-shelf"
                     ref={readingShelf}
@@ -1624,38 +1675,33 @@ function App() {
                       });
                     }}
                   >
-                    {runningBooks.map((b, i) => (
+                    {runningBooks.map((b) => (
                       <article
                         class="continue-card"
                         data-book={b.manifest.id}
                         onContextMenu={(event) => openBookMenu(b, event)}
                         key={b.manifest.id}
-                        onClick={(e) => {
-                          if (!(e.target as HTMLElement).closest("button"))
-                            go(b);
-                        }}
+                        style={{ "--reading-cover": bookColor(b.manifest) }}
                       >
-                        <BookCover manifest={b.manifest} small />
-                        <div class="continue-copy">
-                          <small>
-                            {i === 0 ? t("Reading now") + " · " : ""}
-                            {b.manifest.level}
-                          </small>
-                          <h3>{b.manifest.title}</h3>
-                          <p>{b.manifest.author}</p>
-                          <small>
-                            {pageStatus(b)} ·{" "}
-                            {progress.find((p) => p.book === b.manifest.id)
-                              ?.percent || 0}
-                            %
-                            {b.manifest.annotation === "auto"
-                              ? " · " + t("Auto text")
-                              : ""}
-                          </small>
-                          <button class="primary" onClick={() => go(b)}>
-                            {t("Continue")}
-                          </button>
-                        </div>
+                        <button
+                          class="continue-open"
+                          aria-label={t("Continue reading {0}", {
+                            0: b.manifest.title,
+                          })}
+                          onClick={() => go(b)}
+                        >
+                          <BookCover manifest={b.manifest} small />
+                          <div class="continue-copy">
+                            <h3>{b.manifest.title}</h3>
+                            <p>{b.manifest.author}</p>
+                            <small class="continue-meta">
+                              {t("Book")} · {b.manifest.level} ·{" "}
+                              {progress.find((p) => p.book === b.manifest.id)
+                                ?.percent || 0}
+                              %
+                            </small>
+                          </div>
+                        </button>
                       </article>
                     ))}
                   </div>
@@ -1692,17 +1738,6 @@ function App() {
                       <Icon name="download" size={15} />
                       {t("To Anki")}
                     </button>
-                  </div>
-                </section>
-                <section class="home-section">
-                  <div class="row between">
-                    <h2>{t("Recently Added")}</h2>
-                    <button class="quiet" onClick={() => navigate("library")}>
-                      <Icon name="next" />
-                    </button>
-                  </div>
-                  <div class="book-grid recently-added">
-                    {recentBooks.map(card)}
                   </div>
                 </section>
               </>
@@ -1931,7 +1966,7 @@ function App() {
                     <input
                       ref={searchRef}
                       aria-label={t("Search your library")}
-                      placeholder={t("Search your library")}
+                      placeholder={t("German with Frank")}
                       value={query}
                       onInput={(e) => {
                         setQuery(e.currentTarget.value);
@@ -1948,49 +1983,44 @@ function App() {
                       </button>
                     )}
                   </label>
-                  <div class="tabs" role="tablist" aria-label={t("Search")}>
-                    {[
-                      ["books", "Books"],
-                      ["words", "Saved Words"],
-                      ["text", "In Text"],
-                    ].map(([value, label]) => (
-                      <button
-                        role="tab"
-                        aria-selected={searchScope === value}
-                        onClick={() => setSearchScope(value)}
-                      >
-                        {t(label)}
-                      </button>
-                    ))}
-                  </div>
+                  {query.trim() && (
+                    <div class="tabs" role="tablist" aria-label={t("Search")}>
+                      {[
+                        ["books", "Books"],
+                        ["words", "Saved Words"],
+                        ["text", "In Text"],
+                      ].map(([value, label]) => (
+                        <button
+                          role="tab"
+                          aria-selected={searchScope === value}
+                          onClick={() => setSearchScope(value)}
+                        >
+                          {t(label)}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 {!query.trim() ? (
-                  <section class="recent-searches">
-                    <div class="row between">
-                      <h2>{t("Recent searches")}</h2>
-                      {settings.recentSearches.length > 0 && (
-                        <button
-                          class="quiet"
-                          aria-label={t("Clear recent searches")}
-                          onClick={() =>
-                            void run(() => saveSettings({ recentSearches: [] }))
-                          }
-                        >
-                          <Icon name="trash" />
-                        </button>
-                      )}
-                    </div>
-                    {settings.recentSearches.map((q) => (
-                      <button onClick={() => setQuery(q)}>
-                        <Icon name="search" size={18} />
-                        {q}
+                  <section class="recently-viewed">
+                    <div class="recently-viewed-heading">
+                      <h2>{t("Recently Viewed")}</h2>
+                      <button
+                        class="quiet search-clear"
+                        disabled={!recentlyViewedBooks.length}
+                        onClick={() => void run(clearRecentlyViewed)}
+                      >
+                        {t("Clear")}
                       </button>
-                    ))}
-                    <p class="muted">
-                      {t(
-                        "Search the German text of every book in your library.",
-                      )}
-                    </p>
+                    </div>
+                    <div class="recently-viewed-list">
+                      {recentlyViewedBooks.map(searchBookRow)}
+                    </div>
+                    {!recentlyViewedBooks.length && (
+                      <p class="search-empty muted">
+                        {t("Books you open will appear here.")}
+                      </p>
+                    )}
                   </section>
                 ) : searchScope === "books" ? (
                   <>
@@ -1998,25 +2028,7 @@ function App() {
                       {t("{0} books", { 0: foundBooks.length })}
                     </p>
                     <div class="search-result-list glass-group">
-                      {foundBooks.map((b) => (
-                        <button
-                          class="book-result"
-                          onContextMenu={(event) => openBookMenu(b, event)}
-                          onClick={() => {
-                            setDetails(b);
-                            setOverlay("details");
-                          }}
-                        >
-                          <BookCover manifest={b.manifest} small />
-                          <span>
-                            <strong>{marked(b.manifest.title)}</strong>
-                            <small>
-                              {marked(b.manifest.author)} · {b.manifest.level}
-                            </small>
-                          </span>
-                          <small>{status(b)}</small>
-                        </button>
-                      ))}
+                      {foundBooks.map(searchBookRow)}
                     </div>
                     {!foundBooks.length && (
                       <p class="muted">{t("No results")}</p>

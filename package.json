@@ -25,7 +25,8 @@
     "test:pwa-selection": "node tests/pwa-selection.mjs",
     "test:folders": "node tests/folders.mjs",
     "test:sidebar": "node tests/sidebar.mjs",
-    "test:reading-menu": "node tests/reading-menu.mjs"
+    "test:reading-menu": "node tests/reading-menu.mjs",
+    "test:apple-home": "node tests/apple-home.mjs"
   },
   "dependencies": {
     "espeak-ng": "1.0.2",
