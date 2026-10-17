@@ -14,6 +14,7 @@ const rows: [string, string, string][] = [
     "Hier erscheinen Bücher, die du geöffnet hast.",
   ],
   ["Book options", "Действия с книгой", "Buchoptionen"],
+  ["{0} words", "{0} слов", "{0} Wörter"],
   ["Reading tools", "Настройки чтения", "Leseeinstellungen"],
   ["Exit reading", "Выйти из чтения", "Leseansicht schließen"],
   ["Share", "Поделиться", "Teilen"],

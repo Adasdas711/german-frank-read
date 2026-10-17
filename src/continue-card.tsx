@@ -1,119 +1,33 @@
-import { useEffect, useRef } from "preact/hooks";
 import type { Book } from "./core";
 import { BookCover, bookColor } from "./book-cover";
 import { useT } from "./i18n";
 import { Icon, ContextMenu } from "./ui";
+import { BookSurface } from "./book-surface";
 
 export function ContinueCard({
   book,
   percent,
   onOpen,
   onMenu,
+  menuOpen,
 }: {
   book: Book;
   percent: number;
   onOpen(): void;
   onMenu(x: number, y: number): void;
+  menuOpen?: boolean;
 }) {
   const t = useT();
-  const card = useRef<HTMLElement>(null);
-  const openMenu = useRef(onMenu);
-  openMenu.current = onMenu;
-  const press = useRef<{
-    id: number;
-    x: number;
-    y: number;
-    timer: ReturnType<typeof setTimeout>;
-  } | null>(null);
-  const suppressClick = useRef(false);
-  const cancel = () => {
-    if (press.current) clearTimeout(press.current.timer);
-    press.current = null;
-  };
-  useEffect(() => {
-    const move = (event: PointerEvent) => {
-      const p = press.current;
-      if (
-        p &&
-        event.pointerId === p.id &&
-        Math.hypot(event.clientX - p.x, event.clientY - p.y) > 10
-      )
-        cancel();
-    };
-    const anotherFinger = (event: PointerEvent) => {
-      // Some touch browsers omit the synthetic click after a long press. A
-      // fresh physical interaction must still be able to use the open menu.
-      suppressClick.current = false;
-      if (press.current && event.pointerId !== press.current.id) cancel();
-    };
-    const click = (event: MouseEvent) => {
-      // Suppress the release click even if the newly opened menu is its target.
-      if (!suppressClick.current || event.detail === 0) return;
-      suppressClick.current = false;
-      event.preventDefault();
-      event.stopPropagation();
-    };
-    document.addEventListener("pointermove", move, { passive: true });
-    document.addEventListener("pointerdown", anotherFinger, true);
-    document.addEventListener("click", click, true);
-    document.addEventListener("pointerup", cancel);
-    document.addEventListener("pointercancel", cancel);
-    document.addEventListener("scroll", cancel, true);
-    document.addEventListener("visibilitychange", cancel);
-    window.addEventListener("blur", cancel);
-    return () => {
-      cancel();
-      document.removeEventListener("pointermove", move);
-      document.removeEventListener("pointerdown", anotherFinger, true);
-      document.removeEventListener("click", click, true);
-      document.removeEventListener("pointerup", cancel);
-      document.removeEventListener("pointercancel", cancel);
-      document.removeEventListener("scroll", cancel, true);
-      document.removeEventListener("visibilitychange", cancel);
-      window.removeEventListener("blur", cancel);
-    };
-  }, []);
-  const showMenu = () => {
-    cancel();
-    const r = card.current!.getBoundingClientRect();
-    openMenu.current(r.left, r.bottom + 8);
-  };
   return (
-    <article
-      ref={card}
+    <BookSurface
+      menuOpen={menuOpen}
       class="continue-card"
       data-book={book.manifest.id}
       style={{ "--reading-cover": bookColor(book.manifest) }}
-      onPointerDown={(event) => {
-        if (!event.isPrimary) {
-          cancel();
-          return;
-        }
-        suppressClick.current = false;
-        if (
-          event.pointerType === "mouse" ||
-          event.button !== 0 ||
-          (event.target as HTMLElement).closest(".continue-more")
-        )
-          return;
-        cancel();
-        press.current = {
-          id: event.pointerId,
-          x: event.clientX,
-          y: event.clientY,
-          timer: setTimeout(() => {
-            suppressClick.current = true;
-            showMenu();
-          }, 500),
-        };
-      }}
+      onHold={onMenu}
       onContextMenu={(event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        if (press.current) suppressClick.current = true;
-        cancel();
-        if (event.clientX === 0 && event.clientY === 0) showMenu();
-        else openMenu.current(event.clientX, event.clientY);
+        const rect = event.currentTarget.getBoundingClientRect();
+        onMenu(event.clientX || rect.left, event.clientY || rect.bottom + 8);
       }}
     >
       <button
@@ -134,11 +48,16 @@ export function ContinueCard({
         class="continue-more quiet"
         aria-label={t("Book options for {0}", { 0: book.manifest.title })}
         aria-haspopup="menu"
-        onClick={showMenu}
+        onClick={(event) => {
+          const rect = event.currentTarget
+            .closest("[data-book-surface]")!
+            .getBoundingClientRect();
+          onMenu(rect.left, rect.bottom + 8);
+        }}
       >
         <Icon name="more" />
       </button>
-    </article>
+    </BookSurface>
   );
 }
 

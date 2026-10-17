@@ -173,10 +173,12 @@ export function Modal({
   title,
   children,
   onClose,
+  className = "",
 }: {
   title: string;
   children: any;
   onClose: () => void;
+  className?: string;
 }) {
   const t = useT();
   const ref = useRef<HTMLDivElement>(null);
@@ -216,7 +218,7 @@ export function Modal({
       }}
     >
       <div
-        class="modal"
+        class={"modal " + className}
         role="dialog"
         aria-modal="true"
         aria-label={title}

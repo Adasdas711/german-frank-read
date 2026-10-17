@@ -25,6 +25,7 @@ import { PagedReader, type PageEntry } from "./paged-reader";
 import { BookText, type WordSelection } from "./book-text";
 import { BookCover } from "./book-cover";
 import { ContinueCard, ContinueMenu } from "./continue-card";
+import { BookSurface } from "./book-surface";
 import {
   CollectionMenu,
   LevelMenu,
@@ -236,10 +237,25 @@ function App() {
     bookId = parts[1],
     at = parts[2] || "1.1",
     mode = parts[3] || settings.defaultMode;
-  const decoded = useMemo(
-    () => new Map(books.map((b) => [b.manifest.id, readBook(b.bytes)])),
-    [books],
+  const decodedCache = useRef(
+    new WeakMap<Uint8Array, ReturnType<typeof readBook>>(),
   );
+  const decoded = useMemo(() => {
+    const byId = new Map(books.map((book) => [book.manifest.id, book]));
+    return {
+      has: (id: string) => byId.has(id),
+      get: (id: string) => {
+        const book = byId.get(id);
+        if (!book) return undefined;
+        let result = decodedCache.current.get(book.bytes);
+        if (!result) {
+          result = readBook(book.bytes);
+          decodedCache.current.set(book.bytes, result);
+        }
+        return result;
+      },
+    };
+  }, [books]);
   const active = page === "read" ? decoded.get(bookId) : null;
   useEffect(() => {
     if (!ready) return;
@@ -598,7 +614,7 @@ function App() {
   };
   const signature = useCallback(
     (id: string) => {
-      const b = decoded.get(id),
+      const b = books.find((book) => book.manifest.id === id),
         p = progress.find((x) => x.book === id);
       return JSON.stringify([
         viewportSize,
@@ -622,7 +638,7 @@ function App() {
         settings.justify,
       ]);
     },
-    [decoded, progress, viewportSize, mode, settings, page, bookId],
+    [books, progress, viewportSize, mode, settings, page, bookId],
   );
   const recordIndex = useCallback(
     (id: string, sig: string, pages: PageEntry[]) =>
@@ -638,29 +654,6 @@ function App() {
     indexCache[id]?.signature === signature(id)
       ? indexCache[id].pages
       : undefined;
-  const measureBook =
-    page !== "read"
-      ? books.find((b) => !pageEntries(b.manifest.id))
-      : undefined;
-  const measured = measureBook ? decoded.get(measureBook.manifest.id) : null;
-  const measureMode = measured
-    ? progress.find((p) => p.book === measured.manifest.id)?.mode ||
-      settings.defaultMode
-    : "frank";
-  const renderMeasure = useCallback(
-    (chunks: Chunk[], address: string) =>
-      measured ? (
-        <BookText
-          chunks={chunks}
-          address={address}
-          content={measured.content}
-          manifest={measured.manifest}
-          mode={measureMode}
-          repeat={settings.showClean}
-        />
-      ) : null,
-    [measured, measureMode, settings.showClean],
-  );
   const status = (b: Book) => {
     const p = progress.find((x) => x.book === b.manifest.id);
     return p?.percent === 100 ? t("Finished") : p ? `${p.percent}%` : t("NEW");
@@ -1073,6 +1066,16 @@ function App() {
       y: anchored ? rect.bottom : event.clientY || rect.bottom,
     });
   };
+  const openTouchBookMenu = (book: Book, x: number, y: number) => {
+    setFolderMenu(null);
+    setBookMenu({
+      book,
+      folder: page === "library" ? collectionFilter : "",
+      x,
+      y,
+      continued: true,
+    });
+  };
   const foldersForBook = (
     book: Book,
     folder = page === "library" ? collectionFilter : "",
@@ -1175,7 +1178,9 @@ function App() {
     }
   };
   const searchBookRow = (b: Book) => (
-    <article
+    <BookSurface
+      menuOpen={bookMenu?.book.manifest.id === b.manifest.id}
+      onHold={(x, y) => openTouchBookMenu(b, x, y)}
       class="book-result search-book-row"
       key={b.manifest.id}
       data-book={b.manifest.id}
@@ -1201,10 +1206,12 @@ function App() {
           {t("Read")}
         </button>
       </div>
-    </article>
+    </BookSurface>
   );
   const card = (b: Book) => (
-    <article
+    <BookSurface
+      menuOpen={bookMenu?.book.manifest.id === b.manifest.id}
+      onHold={(x, y) => openTouchBookMenu(b, x, y)}
       class="shelf-book"
       data-book={b.manifest.id}
       onContextMenu={(event) => openBookMenu(b, event)}
@@ -1240,7 +1247,7 @@ function App() {
           ···
         </button>
       </div>
-    </article>
+    </BookSurface>
   );
   const bookMini = (id: string) => {
     const b = books.find((b) => b.manifest.id === id);
@@ -1298,7 +1305,10 @@ function App() {
             {w.context}
           </span>
         </button>
-        <button
+        <BookSurface
+          as="button"
+          menuOpen={bookMenu?.book.manifest.id === b?.manifest.id}
+          onHold={b ? (x, y) => openTouchBookMenu(b, x, y) : undefined}
           class="word-book"
           onContextMenu={(event) => {
             if (b) openBookMenu(b, event);
@@ -1308,7 +1318,7 @@ function App() {
         >
           {bookMini(w.book)}
           <span>{b?.manifest.title || t("Unknown book")}</span>
-        </button>
+        </BookSurface>
         {!w.inAnki && <span class="new-word-dot" title={t("New word")} />}
       </div>
     );
@@ -1380,7 +1390,7 @@ function App() {
   );
   const foundText = useMemo(
     () =>
-      query.trim()
+      page === "search" && searchScope === "text" && query.trim()
         ? books
             .map((b) => ({
               book: b,
@@ -1392,7 +1402,7 @@ function App() {
             }))
             .filter((x) => x.hits.length)
         : [],
-    [books, query, indexCache, decoded],
+    [books, query, indexCache, decoded, page, searchScope],
   );
   if (!ready)
     return (
@@ -1773,6 +1783,7 @@ function App() {
                   >
                     {runningBooks.map((b) => (
                       <ContinueCard
+                        menuOpen={bookMenu?.book.manifest.id === b.manifest.id}
                         book={b}
                         key={b.manifest.id}
                         percent={
@@ -1969,7 +1980,16 @@ function App() {
                         b = books.find((b) => b.manifest.id === id);
                       return (
                         <section class="word-group glass-group">
-                          <header>
+                          <BookSurface
+                            as="header"
+                            menuOpen={bookMenu?.book.manifest.id === id}
+                            data-book={id}
+                            onHold={
+                              b
+                                ? (x, y) => openTouchBookMenu(b, x, y)
+                                : undefined
+                            }
+                          >
                             <div class="mini-cover">{bookMini(id)}</div>
                             <div>
                               <h3>{b?.manifest.title || t("Unknown book")}</h3>
@@ -2005,7 +2025,7 @@ function App() {
                                 {t("To Anki")}
                               </button>
                             )}
-                          </header>
+                          </BookSurface>
                           <div class={selecting ? "is-selecting" : ""}>
                             {list.map(wordRow)}
                           </div>
@@ -2160,7 +2180,15 @@ function App() {
                     </p>
                     {foundText.map(({ book: b, hits }) => (
                       <section class="text-results">
-                        <div class="result-book-heading">
+                        <BookSurface
+                          as="div"
+                          class="result-book-heading"
+                          menuOpen={
+                            bookMenu?.book.manifest.id === b.manifest.id
+                          }
+                          data-book={b.manifest.id}
+                          onHold={(x, y) => openTouchBookMenu(b, x, y)}
+                        >
                           <BookCover manifest={b.manifest} small />
                           <div>
                             <h3>{b.manifest.title}</h3>
@@ -2168,7 +2196,7 @@ function App() {
                               {t("{0} results", { 0: hits.length })}
                             </small>
                           </div>
-                        </div>
+                        </BookSurface>
                         <div class="glass-group">
                           {(expanded.has(b.manifest.id)
                             ? hits
@@ -2182,7 +2210,9 @@ function App() {
                               <small>
                                 {pageEntries(b.manifest.id)
                                   ? t("Page {0}", { 0: hit.page })
-                                  : "…"}
+                                  : b.manifest.chapters[
+                                      Number(hit.at.split(".")[0]) - 1
+                                    ]?.[0]}
                               </small>
                             </button>
                           ))}
@@ -2222,40 +2252,6 @@ function App() {
             ))}
           </nav>
         </div>
-      )}
-      {measured && (
-        <PagedReader
-          key={
-            "measure-" +
-            measured.manifest.id +
-            "-" +
-            signature(measured.manifest.id)
-          }
-          measureOnly
-          manifest={measured.manifest}
-          content={measured.content}
-          settings={settings}
-          mode={measureMode}
-          at="1.1"
-          offset={0}
-          onPosition={() => {}}
-          onSettings={() => {}}
-          onMode={() => {}}
-          onJump={() => {}}
-          onComplete={() => {}}
-          onListen={() => {}}
-          busy={false}
-          renderFragment={renderMeasure}
-          wordPanel={null}
-          onDismissWord={() => {}}
-          onIndex={(entries) =>
-            recordIndex(
-              measured.manifest.id,
-              signature(measured.manifest.id),
-              entries,
-            )
-          }
-        />
       )}
       {renaming && (
         <Modal
@@ -2335,7 +2331,11 @@ function App() {
         />
       )}
       {overlay === "details" && details && (
-        <Modal title={details.manifest.title} onClose={() => setOverlay("")}>
+        <Modal
+          title={details.manifest.title}
+          className="book-details-modal"
+          onClose={() => setOverlay("")}
+        >
           <div class="book-details">
             <BookCover manifest={details.manifest} />
             <div>
@@ -2351,7 +2351,11 @@ function App() {
                   ? t("{0} pages", {
                       0: pageEntries(details.manifest.id)!.length,
                     })
-                  : "…"}
+                  : t("{0} words", {
+                      0: details.manifest.stats.words.toLocaleString(
+                        settings.language,
+                      ),
+                    })}
               </small>
               <h2>{details.manifest.title}</h2>
               <p>
@@ -2367,7 +2371,9 @@ function App() {
                 }
               />
               <small class="muted">
-                {pageStatus(details)} ·{" "}
+                {pageEntries(details.manifest.id) && (
+                  <>{pageStatus(details)} · </>
+                )}
                 {progress.find((p) => p.book === details.manifest.id)
                   ?.percent || 0}
                 %

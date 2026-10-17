@@ -12,6 +12,7 @@ import { useT } from "./i18n";
 import { Icon } from "./ui";
 import { ThemesPanel } from "./themes-panel";
 import { appearanceStyle } from "./appearance";
+import { useTouchActions } from "./touch-actions";
 export type PageEntry = { at: string; offset: number; preview: string };
 
 type Props = {
@@ -53,7 +54,7 @@ type MeasuredLayout = {
   sources: string[];
   chapters: number[];
 };
-// Background library measurement and the reader share indexes for the same book.
+// Reuse exact layout indexes when reopening a book with the same settings.
 const measuredLayouts = new WeakMap<Content, Map<string, MeasuredLayout>>();
 const roman = (n: number) =>
   n < 11
@@ -94,6 +95,7 @@ export function PagedReader(props: Props) {
     text = useRef<HTMLDivElement>(null),
     root = useRef<HTMLDivElement>(null);
   const state = useRef({ props, page, layout });
+  useTouchActions(root, props.measureOnly);
   state.current = { props, page, layout };
   const anchor = useRef({ at, offset });
   const lastReported = useRef<string | null>(null);

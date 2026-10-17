@@ -1,5 +1,5 @@
 import type { Chunk, Content, Manifest } from "./core";
-import { plain, words } from "./core";
+import { plain } from "./core";
 import { memo } from "preact/compat";
 import { useMemo } from "preact/hooks";
 import { readingSentences } from "./reading-text";
@@ -59,27 +59,21 @@ export const BookText = memo(function BookText({
     }
     return "";
   };
-  const text = (s: string, base: number, hint = "") => {
+  const text = (s: string, base: number) => {
     let pos = base;
     return s
       .split(/([\p{L}\p{M}]+(?:[’'-][\p{L}\p{M}]+)*)/gu)
       .map((part, i) => {
         const offset = pos;
         pos += part.length;
-        return words(part).length ? (
+        // The split captures words at odd indexes; avoid tokenizing each one a
+        // second time when opening a complete novel.
+        return i % 2 === 1 ? (
           <button
             key={i}
             class="word"
             lang={manifest.lang}
             data-book-char={offset}
-            onClick={() =>
-              onWord?.({
-                form: part,
-                at: address,
-                hint: hint || sourceHint(offset % (source.length + 1)),
-                ...phrase(offset % (source.length + 1)),
-              })
-            }
           >
             {part}
           </button>
@@ -117,7 +111,7 @@ export const BookText = memo(function BookText({
                   : "");
           return (
             <span key={piece.start}>
-              {text(source.slice(from, to), from, hint)}
+              {text(source.slice(from, to), from)}
               {hint && to === piece.end && (
                 <span class="hint" lang={manifest.hintLang}>
                   {" "}
@@ -138,9 +132,30 @@ export const BookText = memo(function BookText({
         </span>
       );
     });
-  }, [chunks, content, manifest, address, onWord, lines]);
+  }, [chunks, content, manifest, address, lines]);
   return (
-    <div class="reading-columns" key="inline">
+    <div
+      class="reading-columns"
+      key="inline"
+      onClick={
+        onWord
+          ? (event) => {
+              const word = (event.target as Element).closest<HTMLElement>(
+                "[data-book-char]",
+              );
+              if (!word || !event.currentTarget.contains(word)) return;
+              const offset =
+                Number(word.dataset.bookChar) % (source.length + 1);
+              onWord({
+                form: word.textContent || "",
+                at: address,
+                hint: sourceHint(offset),
+                ...phrase(offset),
+              });
+            }
+          : undefined
+      }
+    >
       <section class="reading-panel">
         <p lang={manifest.lang}>{inlineText}</p>
       </section>
