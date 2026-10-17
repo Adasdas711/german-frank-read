@@ -9,6 +9,7 @@ import {
 } from "./appearance";
 import { useT } from "./i18n";
 import { Icon, Toggle } from "./ui";
+import { InterfaceSize } from "./interface-size";
 export function ThemesPanel({
   settings,
   onChange,
@@ -103,7 +104,7 @@ export function ThemesPanel({
               onClick={() =>
                 onChange({ fontSize: Math.min(36, settings.fontSize + 1) })
               }
-              style={{ fontSize: 22 }}
+              style={{ fontSize: "calc(22px * var(--ui-scale))" }}
             >
               A
             </button>
@@ -147,6 +148,7 @@ export function ThemesPanel({
               </div>
             )}
           </div>
+          <InterfaceSize settings={settings} onChange={onChange} readingOnly />
           <div class="theme-grid">
             {themes.map((theme) => (
               <button

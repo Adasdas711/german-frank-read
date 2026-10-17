@@ -280,6 +280,19 @@ describe("reader preferences", () => {
     const { defaults, checkedSettings } = await import("../src/storage");
     expect(defaults.language).toBe("en");
     expect(defaults.showClean).toBe(false);
+    expect(checkedSettings({})).toMatchObject({
+      uiScale: 100,
+      readingUiScale: 100,
+    });
+    expect(
+      checkedSettings({ uiScale: 140, readingUiScale: 95, fontSize: 24 }),
+    ).toMatchObject({ uiScale: 140, readingUiScale: 95, fontSize: 24 });
+    expect(
+      checkedSettings({ uiScale: Infinity, readingUiScale: "150" }),
+    ).toMatchObject({ uiScale: 100, readingUiScale: 100 });
+    expect(checkedSettings({ uiScale: 999, readingUiScale: -1 })).toMatchObject(
+      { uiScale: 160, readingUiScale: 80 },
+    );
     expect(checkedSettings({ readingFlow: "blocks" }).readingFlow).toBe(
       "pages",
     );

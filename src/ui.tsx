@@ -157,6 +157,8 @@ export function Icon({ name, size = 20 }: { name: string; size?: number }) {
     <svg
       width={size}
       height={size}
+      style={{ "--icon-size": size + "px" }}
+      class="ui-icon"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"

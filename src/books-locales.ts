@@ -1,5 +1,13 @@
 // The book's own text is never passed through this dictionary.
 const rows: [string, string, string][] = [
+  ["Interface size", "Размер интерфейса", "Oberflächengröße"],
+  ["App interface", "Интерфейс приложения", "App-Oberfläche"],
+  ["Reading controls", "Элементы управления чтением", "Lesebedienelemente"],
+  [
+    "Reset interface size",
+    "Сбросить размер интерфейса",
+    "Oberflächengröße zurücksetzen",
+  ],
   ["Chapters", "Главы", "Kapitel"],
   ["Chapter {0}", "Глава {0}", "Kapitel {0}"],
   ["{0} chapters", "{0} глав", "{0} Kapitel"],

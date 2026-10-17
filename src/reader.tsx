@@ -43,6 +43,7 @@ import {
   type BookCollection,
 } from "./collections";
 import { ThemesPanel } from "./themes-panel";
+import { InterfaceSize } from "./interface-size";
 import {
   exportBackup,
   parseBackup,
@@ -400,6 +401,12 @@ function App() {
     return () => window.removeEventListener("hashchange", change);
   }, []);
   useLayoutEffect(() => {
+    document.documentElement.style.setProperty(
+      "--ui-scale",
+      String((settings.uiScale / 100) * 1.25),
+    );
+  }, [settings.uiScale]);
+  useLayoutEffect(() => {
     document.documentElement.lang = settings.language;
     document.documentElement.dataset.theme = settings.theme;
     document.title = t("German with Frank");
@@ -624,6 +631,7 @@ function App() {
           : p?.mode || settings.defaultMode,
         settings.font,
         settings.fontSize,
+        settings.readingUiScale,
         settings.showClean,
         settings.pageTurn,
         settings.bold,
@@ -2624,6 +2632,10 @@ function App() {
               </span>
             </button>
           </div>
+          <InterfaceSize
+            settings={settings}
+            onChange={(p) => void run(() => saveSettings(p))}
+          />
           <h3 class="group-label">{t("Reading")}</h3>
           <div class="group">
             <button

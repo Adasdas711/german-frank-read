@@ -25,6 +25,8 @@ export type SavedWord = {
   partOfSpeech?: string;
 };
 export type Settings = {
+  uiScale: number;
+  readingUiScale: number;
   font: string;
   fontSize: number;
   theme: string;
@@ -62,6 +64,8 @@ export type Settings = {
   hiddenContinueBooks: string[];
 };
 export const defaults: Settings = {
+  uiScale: 100,
+  readingUiScale: 100,
   font: "Literata",
   fontSize: 19,
   theme: "dark",
@@ -254,6 +258,8 @@ export function checkedSettings(s: any): Settings {
   ];
   return {
     ...defaults,
+    uiScale: num("uiScale", 80, 160),
+    readingUiScale: num("readingUiScale", 80, 160),
     font: knownFonts.includes(s?.font)
       ? s.font
       : s?.font === "sans"

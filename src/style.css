@@ -1,4 +1,5 @@
 @import "./fonts.css";
+/* Shared with the builder, which keeps its original size when no scale is set. */
 :root {
   font-family: "Golos Text", system-ui, sans-serif;
   color: var(--text);
@@ -58,7 +59,7 @@ body {
   min-height: 100dvh;
   background: var(--bg);
   color: var(--text);
-  font-size: 15px;
+  font-size: calc(15px * var(--ui-scale, 1));
 }
 button,
 input,
@@ -79,16 +80,16 @@ a {
 }
 button,
 .btn {
-  min-height: 44px;
-  padding: 10px 18px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  min-height: calc(44px * var(--ui-scale, 1));
+  padding: calc(10px * var(--ui-scale, 1)) calc(18px * var(--ui-scale, 1));
+  border: calc(1px * var(--ui-scale, 1)) solid var(--border);
+  border-radius: calc(12px * var(--ui-scale, 1));
   background: var(--panel);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: calc(8px * var(--ui-scale, 1));
   font-weight: 500;
   line-height: 1.4;
 }
@@ -106,8 +107,8 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 summary:focus-visible {
-  outline: 3px solid var(--teal);
-  outline-offset: 4px;
+  outline: calc(3px * var(--ui-scale, 1)) solid var(--teal);
+  outline-offset: calc(4px * var(--ui-scale, 1));
 }
 .primary {
   background: var(--button);
@@ -124,14 +125,14 @@ summary:focus-visible {
   color: #b34332;
 }
 .icon {
-  padding: 10px;
-  min-width: 44px;
+  padding: calc(10px * var(--ui-scale, 1));
+  min-width: calc(44px * var(--ui-scale, 1));
 }
 .muted {
   color: var(--muted);
 }
 .eyebrow {
-  font-size: 12px;
+  font-size: calc(12px * var(--ui-scale, 1));
   letter-spacing: 0.06em;
   text-transform: uppercase;
   font-weight: 500;
@@ -143,34 +144,34 @@ h2 {
   font-family: "Literata", Georgia, serif;
 }
 h1 {
-  font-size: 32px;
+  font-size: calc(32px * var(--ui-scale, 1));
   line-height: 1.3;
   margin: 0;
 }
 h2 {
-  font-size: 23px;
+  font-size: calc(23px * var(--ui-scale, 1));
   line-height: 1.4;
   margin: 0;
 }
 h3 {
-  font-size: 16px;
+  font-size: calc(16px * var(--ui-scale, 1));
   margin: 0;
 }
 p {
   line-height: 1.65;
 }
 small {
-  font-size: 13px;
+  font-size: calc(13px * var(--ui-scale, 1));
 }
 .stack {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: calc(20px * var(--ui-scale, 1));
 }
 .row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: calc(12px * var(--ui-scale, 1));
   flex-wrap: wrap;
 }
 .between {
@@ -181,60 +182,61 @@ small {
   min-width: 0;
 }
 .page {
-  max-width: 1100px;
+  max-width: calc(1100px * var(--ui-scale, 1));
   margin: auto;
-  padding: 48px 32px 80px;
+  padding: calc(48px * var(--ui-scale, 1)) calc(32px * var(--ui-scale, 1))
+    calc(80px * var(--ui-scale, 1));
 }
 .page-title {
-  margin-bottom: 28px;
+  margin-bottom: calc(28px * var(--ui-scale, 1));
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: calc(16px * var(--ui-scale, 1));
 }
 .panel {
   background: var(--panel);
-  border-radius: 20px;
-  padding: 28px;
+  border-radius: calc(20px * var(--ui-scale, 1));
+  padding: calc(28px * var(--ui-scale, 1));
 }
 .line {
-  height: 1px;
+  height: calc(1px * var(--ui-scale, 1));
   background: var(--border);
-  margin: 8px 0;
+  margin: calc(8px * var(--ui-scale, 1)) 0;
 }
 .app-header {
   background: var(--panel);
-  border-bottom: 1px solid var(--border);
+  border-bottom: calc(1px * var(--ui-scale, 1)) solid var(--border);
 }
 .header-inner {
-  max-width: 1100px;
+  max-width: calc(1100px * var(--ui-scale, 1));
   margin: auto;
-  min-height: 76px;
-  padding: 12px 32px;
+  min-height: calc(76px * var(--ui-scale, 1));
+  padding: calc(12px * var(--ui-scale, 1)) calc(32px * var(--ui-scale, 1));
   display: flex;
-  gap: 28px;
+  gap: calc(28px * var(--ui-scale, 1));
   align-items: center;
 }
 .brand {
   font:
-    600 22px/1.3 "Literata",
+    600 calc(22px * var(--ui-scale, 1)) / 1.3 "Literata",
     Georgia,
     serif;
   color: var(--text);
 }
 .nav {
   display: flex;
-  gap: 4px;
+  gap: calc(4px * var(--ui-scale, 1));
 }
 .nav a {
-  min-height: 44px;
-  padding: 12px 14px;
+  min-height: calc(44px * var(--ui-scale, 1));
+  padding: calc(12px * var(--ui-scale, 1)) calc(14px * var(--ui-scale, 1));
   color: var(--muted);
   font-weight: 500;
-  border-radius: 10px;
+  border-radius: calc(10px * var(--ui-scale, 1));
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: calc(8px * var(--ui-scale, 1));
 }
 .nav a[aria-current="page"] {
   color: var(--teal);
@@ -251,10 +253,10 @@ small {
 .hero {
   background: #1a1d21;
   color: #f4f4f0;
-  border-radius: 28px;
-  padding: 40px;
+  border-radius: calc(28px * var(--ui-scale, 1));
+  padding: calc(40px * var(--ui-scale, 1));
   display: flex;
-  gap: 32px;
+  gap: calc(32px * var(--ui-scale, 1));
   align-items: flex-end;
   justify-content: space-between;
 }
@@ -263,12 +265,12 @@ small {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: calc(16px * var(--ui-scale, 1));
 }
 .hero h2 {
-  font-size: 40px;
+  font-size: calc(40px * var(--ui-scale, 1));
   line-height: 1.2;
-  max-width: 700px;
+  max-width: calc(700px * var(--ui-scale, 1));
 }
 .hero .muted {
   color: #c9cfcf;
@@ -277,27 +279,27 @@ small {
   color: #b9c3c2;
 }
 .hero .btn {
-  min-height: 56px;
-  padding: 14px 28px;
-  font-size: 17px;
+  min-height: calc(56px * var(--ui-scale, 1));
+  padding: calc(14px * var(--ui-scale, 1)) calc(28px * var(--ui-scale, 1));
+  font-size: calc(17px * var(--ui-scale, 1));
   white-space: nowrap;
 }
 .hero blockquote {
   font:
-    italic 20px/1.65 "Literata",
+    italic calc(20px * var(--ui-scale, 1)) / 1.65 "Literata",
     serif;
-  margin: 8px 0 0;
-  padding-top: 18px;
-  border-top: 1px solid #3a4046;
+  margin: calc(8px * var(--ui-scale, 1)) 0 0;
+  padding-top: calc(18px * var(--ui-scale, 1));
+  border-top: calc(1px * var(--ui-scale, 1)) solid #3a4046;
   color: #dde2e1;
 }
 .badge {
   display: inline-block;
-  border-radius: 8px;
+  border-radius: calc(8px * var(--ui-scale, 1));
   background: var(--soft);
   color: var(--teal);
-  font-size: 13px;
-  padding: 5px 10px;
+  font-size: calc(13px * var(--ui-scale, 1));
+  padding: calc(5px * var(--ui-scale, 1)) calc(10px * var(--ui-scale, 1));
   font-weight: 600;
 }
 .hero .badge {
@@ -305,11 +307,11 @@ small {
   color: #10201e;
 }
 .progress {
-  height: 6px;
+  height: calc(6px * var(--ui-scale, 1));
   background: var(--border);
-  border-radius: 3px;
+  border-radius: calc(3px * var(--ui-scale, 1));
   overflow: hidden;
-  margin: 12px 0 8px;
+  margin: calc(12px * var(--ui-scale, 1)) 0 calc(8px * var(--ui-scale, 1));
 }
 .progress > div {
   height: 100%;
@@ -317,30 +319,30 @@ small {
 }
 .hero .progress {
   background: #3a4046;
-  max-width: 460px;
+  max-width: calc(460px * var(--ui-scale, 1));
 }
 .hero .progress > div {
   background: #7fc8be;
 }
 .hint-note {
-  font-size: 13px;
+  font-size: calc(13px * var(--ui-scale, 1));
   color: var(--muted);
   line-height: 1.6;
-  margin: 22px 0;
+  margin: calc(22px * var(--ui-scale, 1)) 0;
 }
 .book-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
+  gap: calc(18px * var(--ui-scale, 1));
 }
 .book-card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: calc(12px * var(--ui-scale, 1));
 }
 .book-card h3 {
   font:
-    600 23px/1.35 "Literata",
+    600 calc(23px * var(--ui-scale, 1)) / 1.35 "Literata",
     serif;
 }
 .book-card p {
@@ -348,29 +350,29 @@ small {
   color: var(--muted);
 }
 .tag {
-  font-size: 12px;
+  font-size: calc(12px * var(--ui-scale, 1));
   color: var(--muted);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: calc(6px * var(--ui-scale, 1));
 }
 .tag.verified {
   color: var(--teal);
 }
 .dot {
-  width: 6px;
-  height: 6px;
+  width: calc(6px * var(--ui-scale, 1));
+  height: calc(6px * var(--ui-scale, 1));
   border-radius: 50%;
   background: #bf9859;
   display: inline-block;
 }
 .drop-zone {
-  border: 1.5px dashed var(--border);
-  border-radius: 16px;
-  padding: 24px;
+  border: calc(1.5px * var(--ui-scale, 1)) dashed var(--border);
+  border-radius: calc(16px * var(--ui-scale, 1));
+  padding: calc(24px * var(--ui-scale, 1));
   text-align: center;
   color: var(--muted);
-  margin-bottom: 28px;
+  margin-bottom: calc(28px * var(--ui-scale, 1));
 }
 .drop-zone.over {
   border-color: var(--teal);
@@ -379,79 +381,82 @@ small {
 .text-input,
 select,
 textarea {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 11px 12px;
+  border: calc(1px * var(--ui-scale, 1)) solid var(--border);
+  border-radius: calc(10px * var(--ui-scale, 1));
+  padding: calc(11px * var(--ui-scale, 1)) calc(12px * var(--ui-scale, 1));
   background: var(--panel);
-  min-height: 44px;
+  min-height: calc(44px * var(--ui-scale, 1));
   max-width: 100%;
 }
 textarea {
   width: 100%;
-  min-height: 240px;
+  min-height: calc(240px * var(--ui-scale, 1));
   line-height: 1.6;
   font-family: ui-monospace, monospace;
-  font-size: 13px;
+  font-size: calc(13px * var(--ui-scale, 1));
   resize: vertical;
 }
 .search {
-  width: 260px;
+  width: calc(260px * var(--ui-scale, 1));
 }
 .tabs {
   display: flex;
-  padding: 4px;
-  border-radius: 12px;
+  padding: calc(4px * var(--ui-scale, 1));
+  border-radius: calc(12px * var(--ui-scale, 1));
   background: var(--border);
-  gap: 4px;
+  gap: calc(4px * var(--ui-scale, 1));
 }
 .tabs button {
   border: 0;
   background: transparent;
   flex: 1;
-  border-radius: 9px;
+  border-radius: calc(9px * var(--ui-scale, 1));
   white-space: nowrap;
-  min-height: 40px;
-  padding: 8px 14px;
+  min-height: calc(40px * var(--ui-scale, 1));
+  padding: calc(8px * var(--ui-scale, 1)) calc(14px * var(--ui-scale, 1));
 }
 .tabs button[aria-selected="true"] {
   background: var(--panel);
   font-weight: 600;
 }
 .reader-header .header-inner {
-  max-width: 1440px;
-  gap: 20px;
+  max-width: calc(1440px * var(--ui-scale, 1));
+  gap: calc(20px * var(--ui-scale, 1));
   flex-wrap: wrap;
 }
 .reader-header .tabs {
-  width: 340px;
+  width: calc(340px * var(--ui-scale, 1));
 }
 .reader-title {
   flex: 1;
-  min-width: 180px;
+  min-width: calc(180px * var(--ui-scale, 1));
 }
 .reader-title h1 {
-  font-size: 19px;
+  font-size: calc(19px * var(--ui-scale, 1));
 }
 .reader-title small {
   color: var(--muted);
 }
 .reader-layout {
-  max-width: 1440px;
+  max-width: calc(1440px * var(--ui-scale, 1));
   margin: auto;
-  padding: 28px 32px 60px;
+  padding: calc(28px * var(--ui-scale, 1)) calc(32px * var(--ui-scale, 1))
+    calc(60px * var(--ui-scale, 1));
   display: grid;
-  grid-template-columns: 210px minmax(0, 1fr) 280px;
-  gap: 28px;
+  grid-template-columns: calc(210px * var(--ui-scale, 1)) minmax(0, 1fr) calc(
+      280px * var(--ui-scale, 1)
+    );
+  gap: calc(28px * var(--ui-scale, 1));
   align-items: start;
 }
 .toc {
   position: sticky;
-  top: 24px;
+  top: calc(24px * var(--ui-scale, 1));
   max-height: 80vh;
   overflow: auto;
 }
 .toc .eyebrow {
-  padding: 0 12px 8px;
+  padding: 0 calc(12px * var(--ui-scale, 1)) calc(8px * var(--ui-scale, 1));
 }
 .toc button {
   border: 0;
@@ -460,37 +465,40 @@ textarea {
   justify-content: flex-start;
   text-align: left;
   color: var(--muted);
-  padding: 12px;
-  font-size: 14px;
+  padding: calc(12px * var(--ui-scale, 1));
+  font-size: calc(14px * var(--ui-scale, 1));
 }
 .toc button.active {
   background: var(--panel);
   color: var(--text);
   font-weight: 600;
-  box-shadow: inset 3px 0 0 var(--teal);
+  box-shadow: inset calc(3px * var(--ui-scale, 1)) 0 0 var(--teal);
 }
 .toc summary {
   cursor: pointer;
-  padding: 10px 12px;
+  padding: calc(10px * var(--ui-scale, 1)) calc(12px * var(--ui-scale, 1));
 }
 .reading-columns {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(100%, calc(290px * var(--ui-scale, 1))), 1fr)
+  );
+  gap: calc(20px * var(--ui-scale, 1));
 }
 .reading-columns > .reading-panel:only-child {
   grid-column: 1 / -1;
 }
 .reading-panel {
-  padding: 28px;
-  border-radius: 20px;
+  padding: calc(28px * var(--ui-scale, 1));
+  border-radius: calc(20px * var(--ui-scale, 1));
   background: var(--panel);
 }
 .reading-panel p {
   font-family: var(--reading);
   font-size: var(--size);
   line-height: 1.85;
-  margin: 10px 0 0;
+  margin: calc(10px * var(--ui-scale, 1)) 0 0;
 }
 .hint {
   font-family: "Golos Text", sans-serif;
@@ -499,13 +507,13 @@ textarea {
 }
 .uncertain {
   text-decoration: underline dotted #ac7426;
-  text-underline-offset: 5px;
+  text-underline-offset: calc(5px * var(--ui-scale, 1));
 }
 .word {
   border: 0 !important;
   padding: 0 !important;
   background: none !important;
-  border-radius: 3px !important;
+  border-radius: calc(3px * var(--ui-scale, 1)) !important;
   min-height: 0 !important;
   display: inline !important;
   font: inherit !important;
@@ -520,9 +528,9 @@ textarea {
 .parallel-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 28px;
-  padding: 16px 0;
-  border-bottom: 1px solid var(--border);
+  gap: calc(28px * var(--ui-scale, 1));
+  padding: calc(16px * var(--ui-scale, 1)) 0;
+  border-bottom: calc(1px * var(--ui-scale, 1)) solid var(--border);
 }
 .parallel-row:last-child {
   border: 0;
@@ -534,55 +542,55 @@ textarea {
 }
 .word-panel {
   position: sticky;
-  top: 24px;
+  top: calc(24px * var(--ui-scale, 1));
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: calc(14px * var(--ui-scale, 1));
 }
 .word-panel h2 {
-  font-size: 26px;
+  font-size: calc(26px * var(--ui-scale, 1));
 }
 .context {
   background: var(--bg);
-  border-radius: 12px;
-  padding: 14px;
-  font-size: 14px;
+  border-radius: calc(12px * var(--ui-scale, 1));
+  padding: calc(14px * var(--ui-scale, 1));
+  font-size: calc(14px * var(--ui-scale, 1));
   line-height: 1.6;
   overflow-wrap: anywhere;
 }
 .ipa {
   font-family: "Literata", serif;
-  font-size: 17px;
+  font-size: calc(17px * var(--ui-scale, 1));
   color: var(--muted);
 }
 .reader-actions {
-  margin-top: 20px;
+  margin-top: calc(20px * var(--ui-scale, 1));
   display: flex;
-  gap: 12px;
+  gap: calc(12px * var(--ui-scale, 1));
   justify-content: space-between;
   flex-wrap: wrap;
 }
 .reader-info {
-  margin: 16px 0 0;
-  font-size: 13px;
+  margin: calc(16px * var(--ui-scale, 1)) 0 0;
+  font-size: calc(13px * var(--ui-scale, 1));
   color: var(--muted);
   display: flex;
-  gap: 12px;
+  gap: calc(12px * var(--ui-scale, 1));
   align-items: center;
 }
 .switch-label {
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-height: 44px;
+  gap: calc(10px * var(--ui-scale, 1));
+  min-height: calc(44px * var(--ui-scale, 1));
   cursor: pointer;
 }
 .switch-label input {
   appearance: none;
   position: relative;
-  width: 40px;
-  height: 24px;
-  border-radius: 14px;
+  width: calc(40px * var(--ui-scale, 1));
+  height: calc(24px * var(--ui-scale, 1));
+  border-radius: calc(14px * var(--ui-scale, 1));
   background: #bdbdb6;
   cursor: pointer;
   flex: none;
@@ -592,42 +600,42 @@ textarea {
   content: "";
   position: absolute;
   background: #fff;
-  width: 20px;
-  height: 20px;
+  width: calc(20px * var(--ui-scale, 1));
+  height: calc(20px * var(--ui-scale, 1));
   border-radius: 50%;
-  top: 2px;
-  left: 2px;
+  top: calc(2px * var(--ui-scale, 1));
+  left: calc(2px * var(--ui-scale, 1));
 }
 .switch-label input:checked {
   background: var(--teal);
 }
 .switch-label input:checked:after {
-  left: 18px;
+  left: calc(18px * var(--ui-scale, 1));
 }
 .reader-tools {
   justify-content: flex-end;
-  margin-bottom: 16px;
+  margin-bottom: calc(16px * var(--ui-scale, 1));
 }
 .empty {
-  padding: 48px 24px;
+  padding: calc(48px * var(--ui-scale, 1)) calc(24px * var(--ui-scale, 1));
   text-align: center;
-  max-width: 600px;
+  max-width: calc(600px * var(--ui-scale, 1));
   margin: auto;
 }
 .empty svg {
-  margin-bottom: 12px;
+  margin-bottom: calc(12px * var(--ui-scale, 1));
   color: var(--teal);
 }
 .empty h2 {
-  margin-bottom: 10px;
+  margin-bottom: calc(10px * var(--ui-scale, 1));
 }
 .empty p {
   color: var(--muted);
 }
 .words-layout {
   display: grid;
-  grid-template-columns: 230px 1fr;
-  gap: 24px;
+  grid-template-columns: calc(230px * var(--ui-scale, 1)) 1fr;
+  gap: calc(24px * var(--ui-scale, 1));
 }
 .book-filter button {
   width: 100%;
@@ -637,57 +645,57 @@ textarea {
 }
 .book-filter button.active {
   background: var(--panel);
-  box-shadow: inset 3px 0 var(--teal);
+  box-shadow: inset calc(3px * var(--ui-scale, 1)) 0 var(--teal);
 }
 .word-list {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: calc(14px * var(--ui-scale, 1));
 }
 .word-entry {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 10px;
-  padding: 22px 24px;
+  gap: calc(10px * var(--ui-scale, 1));
+  padding: calc(22px * var(--ui-scale, 1)) calc(24px * var(--ui-scale, 1));
 }
 .word-entry h3 {
   font:
-    600 23px "Literata",
+    600 calc(23px * var(--ui-scale, 1)) "Literata",
     serif;
-  margin-bottom: 6px;
+  margin-bottom: calc(6px * var(--ui-scale, 1));
 }
 .word-entry .context {
-  margin-top: 12px;
+  margin-top: calc(12px * var(--ui-scale, 1));
 }
 .word-entry .status {
   color: var(--teal);
-  font-size: 12px;
+  font-size: calc(12px * var(--ui-scale, 1));
 }
 .settings-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 24px;
+  gap: calc(24px * var(--ui-scale, 1));
   align-items: start;
 }
 .setting-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 20px;
-  padding: 16px 0;
-  border-bottom: 1px solid var(--border);
+  gap: calc(20px * var(--ui-scale, 1));
+  padding: calc(16px * var(--ui-scale, 1)) 0;
+  border-bottom: calc(1px * var(--ui-scale, 1)) solid var(--border);
 }
 .setting-row:last-child {
   border: 0;
 }
 .setting-row input[type="range"] {
-  max-width: 180px;
+  max-width: calc(180px * var(--ui-scale, 1));
   accent-color: var(--teal);
 }
 .setting-row label {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: calc(6px * var(--ui-scale, 1));
 }
 .setting-row small {
   color: var(--muted);
@@ -697,29 +705,30 @@ textarea {
   font-family: var(--reading);
   font-size: var(--size);
   line-height: 1.7;
-  margin-top: 20px;
-  padding: 18px;
+  margin-top: calc(20px * var(--ui-scale, 1));
+  padding: calc(18px * var(--ui-scale, 1));
   background: var(--bg);
-  border-radius: 12px;
+  border-radius: calc(12px * var(--ui-scale, 1));
 }
 .toast {
   position: fixed;
-  bottom: 24px;
+  bottom: calc(24px * var(--ui-scale, 1));
   left: 50%;
   transform: translateX(-50%);
   background: var(--button);
   color: var(--onbutton);
-  padding: 14px 22px;
-  border-radius: 12px;
+  padding: calc(14px * var(--ui-scale, 1)) calc(22px * var(--ui-scale, 1));
+  border-radius: calc(12px * var(--ui-scale, 1));
   z-index: 1000;
-  box-shadow: 0 8px 30px #0002;
-  max-width: calc(100% - 32px);
-  min-width: 260px;
-  font-size: 14px;
+  box-shadow: 0 calc(8px * var(--ui-scale, 1)) calc(30px * var(--ui-scale, 1))
+    #0002;
+  max-width: calc(100% - calc(32px * var(--ui-scale, 1)));
+  min-width: calc(260px * var(--ui-scale, 1));
+  font-size: calc(14px * var(--ui-scale, 1));
   line-height: 1.5;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: calc(16px * var(--ui-scale, 1));
 }
 .toast.error {
   background: #803725;
@@ -730,8 +739,8 @@ textarea {
   color: inherit;
   border: 0;
   padding: 0;
-  min-width: 30px;
-  min-height: 30px;
+  min-width: calc(30px * var(--ui-scale, 1));
+  min-height: calc(30px * var(--ui-scale, 1));
 }
 .modal-backdrop {
   position: fixed;
@@ -741,70 +750,71 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: calc(20px * var(--ui-scale, 1));
 }
 .modal {
   background: var(--panel);
-  border-radius: 20px;
-  padding: 28px;
-  width: 480px;
+  border-radius: calc(20px * var(--ui-scale, 1));
+  padding: calc(28px * var(--ui-scale, 1));
+  width: calc(480px * var(--ui-scale, 1));
   max-width: 100%;
   max-height: 90vh;
   overflow: auto;
-  box-shadow: 0 16px 60px #0003;
+  box-shadow: 0 calc(16px * var(--ui-scale, 1)) calc(60px * var(--ui-scale, 1))
+    #0003;
 }
 .modal p {
   color: var(--muted);
 }
 .modal .row {
   justify-content: flex-end;
-  margin-top: 24px;
+  margin-top: calc(24px * var(--ui-scale, 1));
 }
 .notice {
-  padding: 14px 18px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  font-size: 13px;
+  padding: calc(14px * var(--ui-scale, 1)) calc(18px * var(--ui-scale, 1));
+  border: calc(1px * var(--ui-scale, 1)) solid var(--border);
+  border-radius: calc(12px * var(--ui-scale, 1));
+  font-size: calc(13px * var(--ui-scale, 1));
   line-height: 1.6;
   color: var(--muted);
   background: var(--panel);
 }
 .builder-page {
-  max-width: 1300px;
+  max-width: calc(1300px * var(--ui-scale, 1));
 }
 .builder-grid {
   display: grid;
-  grid-template-columns: 230px minmax(0, 1fr);
-  gap: 24px;
+  grid-template-columns: calc(230px * var(--ui-scale, 1)) minmax(0, 1fr);
+  gap: calc(24px * var(--ui-scale, 1));
 }
 .builder-grid textarea {
-  min-height: 320px;
+  min-height: calc(320px * var(--ui-scale, 1));
 }
 .field {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 14px;
+  gap: calc(8px * var(--ui-scale, 1));
+  margin-bottom: calc(14px * var(--ui-scale, 1));
 }
 .field-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: calc(16px * var(--ui-scale, 1));
 }
 .builder-nav button {
   width: 100%;
   justify-content: flex-start;
-  margin-bottom: 6px;
+  margin-bottom: calc(6px * var(--ui-scale, 1));
 }
 .diff {
-  max-height: 300px;
+  max-height: calc(300px * var(--ui-scale, 1));
   overflow: auto;
   font:
-    13px/1.8 ui-monospace,
+    calc(13px * var(--ui-scale, 1)) / 1.8 ui-monospace,
     monospace;
-  padding: 16px;
+  padding: calc(16px * var(--ui-scale, 1));
   background: var(--bg);
-  border-radius: 12px;
+  border-radius: calc(12px * var(--ui-scale, 1));
 }
 .diff del {
   background: #f8d9d1;
@@ -818,55 +828,55 @@ textarea {
 table {
   border-collapse: collapse;
   width: 100%;
-  font-size: 14px;
+  font-size: calc(14px * var(--ui-scale, 1));
 }
 td,
 th {
   text-align: left;
-  padding: 10px;
-  border-bottom: 1px solid var(--border);
+  padding: calc(10px * var(--ui-scale, 1));
+  border-bottom: calc(1px * var(--ui-scale, 1)) solid var(--border);
 }
 td input {
-  max-width: 180px;
+  max-width: calc(180px * var(--ui-scale, 1));
 }
 .scroll-table {
   overflow: auto;
 }
 .builder-chunk {
-  border-bottom: 1px solid var(--border);
-  padding: 16px 0;
+  border-bottom: calc(1px * var(--ui-scale, 1)) solid var(--border);
+  padding: calc(16px * var(--ui-scale, 1)) 0;
 }
 .builder-chunk input {
   width: 100%;
-  margin-top: 8px;
+  margin-top: calc(8px * var(--ui-scale, 1));
 }
 .checklist label {
   display: flex;
-  gap: 10px;
+  gap: calc(10px * var(--ui-scale, 1));
   align-items: flex-start;
-  margin: 14px 0;
+  margin: calc(14px * var(--ui-scale, 1)) 0;
   line-height: 1.5;
 }
 .checklist input {
   accent-color: var(--teal);
-  margin-top: 4px;
+  margin-top: calc(4px * var(--ui-scale, 1));
 }
 .bottom-note {
-  margin-top: 40px;
+  margin-top: calc(40px * var(--ui-scale, 1));
   color: var(--muted);
-  font-size: 13px;
+  font-size: calc(13px * var(--ui-scale, 1));
   text-align: center;
 }
 .sr-only {
   position: absolute;
-  width: 1px;
-  height: 1px;
+  width: calc(1px * var(--ui-scale, 1));
+  height: calc(1px * var(--ui-scale, 1));
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
 }
 @media (max-width: 1190px) {
   .reader-layout {
-    grid-template-columns: 180px minmax(0, 1fr);
+    grid-template-columns: calc(180px * var(--ui-scale, 1)) minmax(0, 1fr);
   }
   .word-panel {
     grid-column: 2;
@@ -874,16 +884,16 @@ td input {
     max-width: 100%;
   }
   .reader-title {
-    min-width: 200px;
+    min-width: calc(200px * var(--ui-scale, 1));
   }
   .header-inner {
-    gap: 20px;
+    gap: calc(20px * var(--ui-scale, 1));
   }
   .brand {
-    font-size: 20px;
+    font-size: calc(20px * var(--ui-scale, 1));
   }
   .reader-header .tabs {
-    width: 310px;
+    width: calc(310px * var(--ui-scale, 1));
   }
   .hero {
     flex-direction: column;
@@ -895,11 +905,11 @@ td input {
 }
 @media (max-width: 900px) {
   .header-inner {
-    padding: 14px 24px;
-    min-height: 76px;
+    padding: calc(14px * var(--ui-scale, 1)) calc(24px * var(--ui-scale, 1));
+    min-height: calc(76px * var(--ui-scale, 1));
   }
   .brand {
-    font-size: 22px;
+    font-size: calc(22px * var(--ui-scale, 1));
   }
   .app-header:not(.reader-header) .nav {
     position: fixed;
@@ -908,16 +918,17 @@ td input {
     right: 0;
     z-index: 100;
     background: var(--panel);
-    border-top: 1px solid var(--border);
+    border-top: calc(1px * var(--ui-scale, 1)) solid var(--border);
     justify-content: space-around;
-    padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+    padding: calc(8px * var(--ui-scale, 1)) calc(12px * var(--ui-scale, 1))
+      calc(calc(8px * var(--ui-scale, 1)) + env(safe-area-inset-bottom));
   }
   .nav a {
     flex: 1;
     flex-direction: column;
-    font-size: 12px;
-    gap: 4px;
-    padding: 5px 8px;
+    font-size: calc(12px * var(--ui-scale, 1));
+    gap: calc(4px * var(--ui-scale, 1));
+    padding: calc(5px * var(--ui-scale, 1)) calc(8px * var(--ui-scale, 1));
   }
   .nav svg {
     display: block;
@@ -926,21 +937,22 @@ td input {
     background: none;
   }
   .page {
-    padding: 32px 24px 110px;
+    padding: calc(32px * var(--ui-scale, 1)) calc(24px * var(--ui-scale, 1))
+      calc(110px * var(--ui-scale, 1));
   }
   .reader-layout {
     grid-template-columns: minmax(0, 1fr);
-    padding: 24px;
+    padding: calc(24px * var(--ui-scale, 1));
   }
   .toc {
     position: static;
-    max-height: 200px;
+    max-height: calc(200px * var(--ui-scale, 1));
   }
   .word-panel {
     grid-column: 1;
   }
   .reader-header .header-inner {
-    gap: 12px;
+    gap: calc(12px * var(--ui-scale, 1));
   }
   .reader-header .tabs {
     order: 4;
@@ -953,19 +965,19 @@ td input {
     font-size: 0;
   }
   .reader-header .back svg {
-    width: 20px;
+    width: calc(20px * var(--ui-scale, 1));
   }
   .reading-columns {
     grid-template-columns: 1fr 1fr;
   }
   .settings-grid {
-    gap: 20px;
+    gap: calc(20px * var(--ui-scale, 1));
   }
   .hero h2 {
-    font-size: 36px;
+    font-size: calc(36px * var(--ui-scale, 1));
   }
   .hero {
-    padding: 32px;
+    padding: calc(32px * var(--ui-scale, 1));
   }
   .reader-actions .muted {
     display: none;
@@ -975,7 +987,7 @@ td input {
   }
   .builder-nav {
     display: flex;
-    gap: 8px;
+    gap: calc(8px * var(--ui-scale, 1));
     overflow: auto;
   }
   .builder-nav button {
@@ -984,48 +996,49 @@ td input {
     flex-shrink: 0;
   }
   .toast {
-    bottom: 94px;
+    bottom: calc(94px * var(--ui-scale, 1));
   }
 }
 @media (max-width: 600px) {
   .page {
-    padding: 24px 20px 110px;
+    padding: calc(24px * var(--ui-scale, 1)) calc(20px * var(--ui-scale, 1))
+      calc(110px * var(--ui-scale, 1));
   }
   .brand {
-    font-size: 21px;
+    font-size: calc(21px * var(--ui-scale, 1));
   }
   .header-inner {
-    padding: 14px 20px;
+    padding: calc(14px * var(--ui-scale, 1)) calc(20px * var(--ui-scale, 1));
   }
   .hero {
-    padding: 26px 24px;
-    border-radius: 24px;
-    gap: 26px;
+    padding: calc(26px * var(--ui-scale, 1)) calc(24px * var(--ui-scale, 1));
+    border-radius: calc(24px * var(--ui-scale, 1));
+    gap: calc(26px * var(--ui-scale, 1));
   }
   .hero h2 {
-    font-size: 30px;
+    font-size: calc(30px * var(--ui-scale, 1));
   }
   .hero blockquote {
-    font-size: 18px;
+    font-size: calc(18px * var(--ui-scale, 1));
   }
   .hero .btn {
     align-self: stretch;
   }
   .hero-copy {
-    gap: 14px;
+    gap: calc(14px * var(--ui-scale, 1));
   }
   .hero .row {
-    gap: 8px;
+    gap: calc(8px * var(--ui-scale, 1));
   }
   .hero .badge {
-    font-size: 12px;
+    font-size: calc(12px * var(--ui-scale, 1));
   }
   .page-title {
     align-items: flex-start;
-    margin-bottom: 24px;
+    margin-bottom: calc(24px * var(--ui-scale, 1));
   }
   h1 {
-    font-size: 28px;
+    font-size: calc(28px * var(--ui-scale, 1));
   }
   .book-grid,
   .settings-grid,
@@ -1034,35 +1047,36 @@ td input {
     grid-template-columns: 1fr;
   }
   .panel {
-    padding: 22px;
+    padding: calc(22px * var(--ui-scale, 1));
   }
   .book-card h3 {
-    font-size: 22px;
+    font-size: calc(22px * var(--ui-scale, 1));
   }
   .reader-layout {
-    padding: 20px 16px 40px;
-    gap: 16px;
+    padding: calc(20px * var(--ui-scale, 1)) calc(16px * var(--ui-scale, 1))
+      calc(40px * var(--ui-scale, 1));
+    gap: calc(16px * var(--ui-scale, 1));
   }
   .reading-columns {
     grid-template-columns: 1fr;
   }
   .reading-panel {
-    padding: 22px;
+    padding: calc(22px * var(--ui-scale, 1));
   }
   .reader-header .header-inner {
-    padding: 12px 16px;
+    padding: calc(12px * var(--ui-scale, 1)) calc(16px * var(--ui-scale, 1));
   }
   .reader-title h1 {
-    font-size: 17px;
+    font-size: calc(17px * var(--ui-scale, 1));
   }
   .reader-title small {
-    font-size: 12px;
+    font-size: calc(12px * var(--ui-scale, 1));
   }
   .reader-header .tabs {
     width: 100%;
   }
   .reader-header .tabs button {
-    padding: 8px 10px;
+    padding: calc(8px * var(--ui-scale, 1)) calc(10px * var(--ui-scale, 1));
   }
   .reader-actions {
     display: grid;
@@ -1072,11 +1086,11 @@ td input {
     grid-column: 1/-1;
   }
   .reader-actions .primary {
-    padding: 12px;
+    padding: calc(12px * var(--ui-scale, 1));
   }
   .parallel-row {
     grid-template-columns: 1fr;
-    gap: 8px;
+    gap: calc(8px * var(--ui-scale, 1));
   }
   .parallel-row p {
     margin: 0;
@@ -1092,7 +1106,7 @@ td input {
   }
   .book-filter {
     display: flex;
-    gap: 8px;
+    gap: calc(8px * var(--ui-scale, 1));
     overflow: auto;
   }
   .book-filter button {
@@ -1100,40 +1114,40 @@ td input {
     white-space: nowrap;
   }
   .word-entry {
-    padding: 20px;
+    padding: calc(20px * var(--ui-scale, 1));
   }
   .word-entry .row {
-    gap: 4px;
+    gap: calc(4px * var(--ui-scale, 1));
   }
   .setting-row {
-    gap: 12px;
+    gap: calc(12px * var(--ui-scale, 1));
   }
   .setting-row input[type="range"] {
-    max-width: 135px;
+    max-width: calc(135px * var(--ui-scale, 1));
   }
   .tabs {
     max-width: 100%;
   }
   .bottom-note {
-    margin-top: 24px;
+    margin-top: calc(24px * var(--ui-scale, 1));
   }
   .word-panel .close-word {
     position: absolute;
-    top: 12px;
-    right: 12px;
+    top: calc(12px * var(--ui-scale, 1));
+    right: calc(12px * var(--ui-scale, 1));
   }
   .drop-zone {
-    padding: 20px;
+    padding: calc(20px * var(--ui-scale, 1));
   }
   .builder-page {
-    padding-bottom: 40px;
+    padding-bottom: calc(40px * var(--ui-scale, 1));
   }
   .builder-chunk .row {
     flex-direction: column;
     align-items: stretch;
   }
   .modal {
-    padding: 24px;
+    padding: calc(24px * var(--ui-scale, 1));
   }
 }
 @media (prefers-reduced-motion: no-preference) {
@@ -1149,7 +1163,7 @@ td input {
   @keyframes appear {
     from {
       opacity: 0;
-      translate: 0 8px;
+      translate: 0 calc(8px * var(--ui-scale, 1));
     }
     to {
       opacity: 1;
@@ -1194,8 +1208,8 @@ td input {
   }
   .reader-actions .primary {
     min-width: 0;
-    padding: 10px;
-    font-size: 11px;
+    padding: calc(10px * var(--ui-scale, 1));
+    font-size: calc(11px * var(--ui-scale, 1));
   }
   .reader-actions .listen {
     grid-column: 1/-1;
@@ -1206,13 +1220,13 @@ td input {
   display: none;
 }
 .reader-layout.toc-collapsed {
-  grid-template-columns: minmax(0, 1fr) 280px;
+  grid-template-columns: minmax(0, 1fr) calc(280px * var(--ui-scale, 1));
 }
 .reader-tools {
   justify-content: space-between;
 }
 .toc-toggle {
-  width: 44px;
+  width: calc(44px * var(--ui-scale, 1));
   flex-shrink: 0;
 }
 @media (max-width: 1190px) {
@@ -1230,9 +1244,14 @@ td input {
   touch-action: pan-y pinch-zoom;
 }
 .focus-reader {
-  width: min(100%, 900px);
+  width: min(100%, calc(900px * var(--ui-scale, 1)));
   margin: 0 auto;
-  padding: clamp(64px, 10vh, 110px) 40px 20vh;
+  padding: clamp(
+      calc(64px * var(--ui-scale, 1)),
+      10vh,
+      calc(110px * var(--ui-scale, 1))
+    )
+    calc(40px * var(--ui-scale, 1)) 20vh;
   min-height: 100vh;
   min-height: 100dvh;
   outline: none;
@@ -1252,12 +1271,12 @@ td input {
   font-size: 0.8em;
 }
 .focus-parallel {
-  width: min(100%, 1120px);
+  width: min(100%, calc(1120px * var(--ui-scale, 1)));
 }
 .focus-sentence {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 40px;
+  gap: calc(40px * var(--ui-scale, 1));
 }
 .focus-translation {
   font-family: "Golos Text", sans-serif;
@@ -1266,16 +1285,17 @@ td input {
 }
 .focus-toolbar {
   position: fixed;
-  top: max(16px, env(safe-area-inset-top));
-  right: max(20px, env(safe-area-inset-right));
+  top: max(calc(16px * var(--ui-scale, 1)), env(safe-area-inset-top));
+  right: max(calc(20px * var(--ui-scale, 1)), env(safe-area-inset-right));
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px;
+  gap: calc(8px * var(--ui-scale, 1));
+  padding: calc(6px * var(--ui-scale, 1));
   background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  box-shadow: 0 4px 24px #0001;
+  border: calc(1px * var(--ui-scale, 1)) solid var(--border);
+  border-radius: calc(14px * var(--ui-scale, 1));
+  box-shadow: 0 calc(4px * var(--ui-scale, 1)) calc(24px * var(--ui-scale, 1))
+    #0001;
   opacity: 0;
   pointer-events: none;
   z-index: 100;
@@ -1293,25 +1313,26 @@ td input {
   background: var(--bg);
 }
 .focus-counter {
-  font-size: 12px;
+  font-size: calc(12px * var(--ui-scale, 1));
   color: var(--muted);
-  min-width: 40px;
+  min-width: calc(40px * var(--ui-scale, 1));
   text-align: center;
 }
 .focus-exit {
-  font-size: 13px;
+  font-size: calc(13px * var(--ui-scale, 1));
 }
 @media (max-width: 600px) {
   .focus-entry {
-    width: 44px;
-    min-width: 44px;
-    padding: 10px;
+    width: calc(44px * var(--ui-scale, 1));
+    min-width: calc(44px * var(--ui-scale, 1));
+    padding: calc(10px * var(--ui-scale, 1));
   }
   .focus-entry span {
     display: none;
   }
   .focus-reader {
-    padding: 76px 24px 20vh;
+    padding: calc(76px * var(--ui-scale, 1)) calc(24px * var(--ui-scale, 1))
+      20vh;
   }
   .focus-sentence {
     grid-template-columns: minmax(0, 1fr);
@@ -1322,9 +1343,9 @@ td input {
     margin-bottom: 1em;
   }
   .focus-toolbar {
-    top: max(12px, env(safe-area-inset-top));
-    right: max(12px, env(safe-area-inset-right));
-    gap: 3px;
+    top: max(calc(12px * var(--ui-scale, 1)), env(safe-area-inset-top));
+    right: max(calc(12px * var(--ui-scale, 1)), env(safe-area-inset-right));
+    gap: calc(3px * var(--ui-scale, 1));
   }
 }
 @media (prefers-reduced-motion: no-preference) {
@@ -1340,99 +1361,109 @@ td input {
   z-index: 30;
 }
 .reader-header .header-inner {
-  max-width: 1500px;
-  min-height: 68px;
-  gap: 16px;
+  max-width: calc(1500px * var(--ui-scale, 1));
+  min-height: calc(68px * var(--ui-scale, 1));
+  gap: calc(16px * var(--ui-scale, 1));
 }
 .reader-header .tabs {
-  width: 300px;
+  width: calc(300px * var(--ui-scale, 1));
 }
 .reader-header .tabs button {
-  padding: 8px 12px;
-  font-size: 13px;
+  padding: calc(8px * var(--ui-scale, 1)) calc(12px * var(--ui-scale, 1));
+  font-size: calc(13px * var(--ui-scale, 1));
 }
 .reader-title h1 {
-  margin-bottom: 4px;
-  font-size: 16px;
+  margin-bottom: calc(4px * var(--ui-scale, 1));
+  font-size: calc(16px * var(--ui-scale, 1));
 }
 .reader-title small {
-  font-size: 11px;
+  font-size: calc(11px * var(--ui-scale, 1));
 }
 .reader-layout,
 .reader-layout.toc-collapsed {
-  max-width: 1280px;
-  grid-template-columns: 220px minmax(0, 1fr);
-  padding: 24px 32px 70px;
-  gap: 28px;
+  max-width: calc(1280px * var(--ui-scale, 1));
+  grid-template-columns: calc(220px * var(--ui-scale, 1)) minmax(0, 1fr);
+  padding: calc(24px * var(--ui-scale, 1)) calc(32px * var(--ui-scale, 1))
+    calc(70px * var(--ui-scale, 1));
+  gap: calc(28px * var(--ui-scale, 1));
 }
 .reader-layout.toc-collapsed {
-  max-width: 1060px;
+  max-width: calc(1060px * var(--ui-scale, 1));
   grid-template-columns: minmax(0, 1fr);
 }
 .reader-layout > main {
   min-width: 0;
 }
 .reader-layout .toc {
-  top: 120px;
-  max-height: calc(100dvh - 145px);
-  font-size: 13px;
+  top: calc(120px * var(--ui-scale, 1));
+  max-height: calc(100dvh - calc(145px * var(--ui-scale, 1)));
+  font-size: calc(13px * var(--ui-scale, 1));
 }
 .reader-tools {
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: calc(12px * var(--ui-scale, 1));
+  margin-bottom: calc(20px * var(--ui-scale, 1));
 }
 .flow-switch {
   display: flex;
   align-items: stretch;
-  padding: 4px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  padding: calc(4px * var(--ui-scale, 1));
+  border: calc(1px * var(--ui-scale, 1)) solid var(--border);
+  border-radius: calc(12px * var(--ui-scale, 1));
   margin-right: auto;
   min-width: 0;
 }
 .flow-switch button {
   background: transparent;
   border: 0;
-  border-radius: 8px;
-  font-size: 12px;
-  min-height: 36px;
-  padding: 8px 14px;
+  border-radius: calc(8px * var(--ui-scale, 1));
+  font-size: calc(12px * var(--ui-scale, 1));
+  min-height: calc(36px * var(--ui-scale, 1));
+  padding: calc(8px * var(--ui-scale, 1)) calc(14px * var(--ui-scale, 1));
 }
 .flow-switch button[aria-pressed="true"] {
   background: var(--soft);
   color: var(--teal);
 }
 .reader-tools .switch-label {
-  font-size: 12px;
+  font-size: calc(12px * var(--ui-scale, 1));
 }
 .book-page {
   background: var(--panel);
-  border: 1px solid var(--border);
-  padding: clamp(28px, 5vw, 64px);
+  border: calc(1px * var(--ui-scale, 1)) solid var(--border);
+  padding: clamp(
+    calc(28px * var(--ui-scale, 1)),
+    5vw,
+    calc(64px * var(--ui-scale, 1))
+  );
   min-height: 56dvh;
-  border-radius: 4px;
-  box-shadow: 0 8px 32px #00000005;
+  border-radius: calc(4px * var(--ui-scale, 1));
+  box-shadow: 0 calc(8px * var(--ui-scale, 1)) calc(32px * var(--ui-scale, 1))
+    #00000005;
 }
 .book-heading {
   text-align: center;
-  margin: 12px auto 48px;
-  max-width: 680px;
+  margin: calc(12px * var(--ui-scale, 1)) auto calc(48px * var(--ui-scale, 1));
+  max-width: calc(680px * var(--ui-scale, 1));
 }
 .book-heading h2 {
   font-family: "Literata", Georgia, serif;
-  font-size: clamp(26px, 3vw, 38px);
+  font-size: clamp(
+    calc(26px * var(--ui-scale, 1)),
+    3vw,
+    calc(38px * var(--ui-scale, 1))
+  );
   line-height: 1.35;
-  margin: 16px 0;
+  margin: calc(16px * var(--ui-scale, 1)) 0;
   overflow-wrap: anywhere;
 }
 .book-heading .eyebrow {
-  font-size: 11px;
+  font-size: calc(11px * var(--ui-scale, 1));
   font-weight: 400;
   letter-spacing: 0.12em;
 }
 .book-heading p {
-  font-size: 13px;
-  margin: 16px 0 0;
+  font-size: calc(13px * var(--ui-scale, 1));
+  margin: calc(16px * var(--ui-scale, 1)) 0 0;
 }
 .book-page .reading-panel {
   background: transparent;
@@ -1447,11 +1478,11 @@ td input {
   overflow-wrap: anywhere;
 }
 .book-page .reading-panel .eyebrow {
-  font-size: 10px;
-  margin-bottom: 16px;
+  font-size: calc(10px * var(--ui-scale, 1));
+  margin-bottom: calc(16px * var(--ui-scale, 1));
 }
 .book-page .reading-columns {
-  gap: 32px;
+  gap: calc(32px * var(--ui-scale, 1));
 }
 .book-page .parallel-row {
   border: 0;
@@ -1475,10 +1506,10 @@ td input {
 .book-position {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: calc(14px * var(--ui-scale, 1));
   color: var(--muted);
-  font-size: 11px;
-  margin-top: 24px;
+  font-size: calc(11px * var(--ui-scale, 1));
+  margin-top: calc(24px * var(--ui-scale, 1));
 }
 .book-position label,
 .book-position span {
@@ -1491,10 +1522,10 @@ td input {
 }
 .reader-actions {
   align-items: center;
-  gap: 12px;
+  gap: calc(12px * var(--ui-scale, 1));
 }
 .reader-actions button {
-  font-size: 12px;
+  font-size: calc(12px * var(--ui-scale, 1));
 }
 .reader-actions .primary {
   background: var(--soft);
@@ -1504,33 +1535,34 @@ td input {
 .reader-info {
   justify-content: center;
   flex-wrap: wrap;
-  font-size: 11px;
+  font-size: calc(11px * var(--ui-scale, 1));
 }
 .reader-layout .word-panel {
   position: fixed;
   z-index: 50;
-  right: 24px;
-  bottom: 24px;
+  right: calc(24px * var(--ui-scale, 1));
+  bottom: calc(24px * var(--ui-scale, 1));
   top: auto;
-  width: 320px;
-  max-width: calc(100vw - 32px);
-  max-height: min(70dvh, 620px);
+  width: calc(320px * var(--ui-scale, 1));
+  max-width: calc(100vw - calc(32px * var(--ui-scale, 1)));
+  max-height: min(70dvh, calc(620px * var(--ui-scale, 1)));
   overflow: auto;
-  box-shadow: 0 12px 60px #0003;
-  padding: 24px;
+  box-shadow: 0 calc(12px * var(--ui-scale, 1)) calc(60px * var(--ui-scale, 1))
+    #0003;
+  padding: calc(24px * var(--ui-scale, 1));
 }
 .focus-reader .continuous .book-fragment p {
   margin-bottom: 1.6em;
 }
 @media (max-width: 1100px) {
   .reader-header .header-inner {
-    gap: 10px;
+    gap: calc(10px * var(--ui-scale, 1));
   }
   .reader-header .tabs {
-    width: 270px;
+    width: calc(270px * var(--ui-scale, 1));
   }
   .reader-header .focus-entry {
-    padding: 10px;
+    padding: calc(10px * var(--ui-scale, 1));
   }
   .reader-header .focus-entry span {
     display: none;
@@ -1543,33 +1575,35 @@ td input {
   .reader-layout,
   .reader-layout.toc-collapsed {
     grid-template-columns: minmax(0, 1fr);
-    padding: 20px 24px 48px;
-    gap: 20px;
+    padding: calc(20px * var(--ui-scale, 1)) calc(24px * var(--ui-scale, 1))
+      calc(48px * var(--ui-scale, 1));
+    gap: calc(20px * var(--ui-scale, 1));
   }
   .reader-layout .toc {
     position: static;
-    max-height: 240px;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 16px;
+    max-height: calc(240px * var(--ui-scale, 1));
+    border-bottom: calc(1px * var(--ui-scale, 1)) solid var(--border);
+    padding-bottom: calc(16px * var(--ui-scale, 1));
   }
 }
 @media (max-width: 600px) {
   .reader-header .header-inner {
-    padding: 10px 16px;
+    padding: calc(10px * var(--ui-scale, 1)) calc(16px * var(--ui-scale, 1));
   }
   .reader-title h1 {
-    font-size: 14px;
+    font-size: calc(14px * var(--ui-scale, 1));
   }
   .reader-header .tabs button {
-    font-size: 12px;
+    font-size: calc(12px * var(--ui-scale, 1));
   }
   .reader-layout,
   .reader-layout.toc-collapsed {
-    padding: 16px 16px 36px;
+    padding: calc(16px * var(--ui-scale, 1)) calc(16px * var(--ui-scale, 1))
+      calc(36px * var(--ui-scale, 1));
   }
   .reader-tools {
-    gap: 8px;
-    margin-bottom: 16px;
+    gap: calc(8px * var(--ui-scale, 1));
+    margin-bottom: calc(16px * var(--ui-scale, 1));
   }
   .flow-switch {
     flex: 1;
@@ -1577,27 +1611,27 @@ td input {
   }
   .flow-switch button {
     flex: 1;
-    padding: 6px 8px;
-    font-size: 11px;
+    padding: calc(6px * var(--ui-scale, 1)) calc(8px * var(--ui-scale, 1));
+    font-size: calc(11px * var(--ui-scale, 1));
   }
   .reader-tools .switch-label {
     width: 100%;
     justify-content: flex-end;
   }
   .book-page {
-    padding: 32px 22px;
+    padding: calc(32px * var(--ui-scale, 1)) calc(22px * var(--ui-scale, 1));
   }
   .book-heading {
-    margin-bottom: 36px;
+    margin-bottom: calc(36px * var(--ui-scale, 1));
   }
   .book-page .reading-columns,
   .book-page .parallel-row {
     grid-template-columns: minmax(0, 1fr);
-    gap: 12px;
+    gap: calc(12px * var(--ui-scale, 1));
   }
   .book-position {
     flex-wrap: wrap;
-    gap: 8px;
+    gap: calc(8px * var(--ui-scale, 1));
   }
   .book-position input {
     order: 3;
@@ -1611,23 +1645,23 @@ td input {
   .reader-actions button {
     width: 100%;
     min-width: 0;
-    font-size: 12px;
+    font-size: calc(12px * var(--ui-scale, 1));
   }
   .reader-layout .word-panel {
-    right: 16px;
-    bottom: max(16px, env(safe-area-inset-bottom));
-    width: calc(100vw - 32px);
+    right: calc(16px * var(--ui-scale, 1));
+    bottom: max(calc(16px * var(--ui-scale, 1)), env(safe-area-inset-bottom));
+    width: calc(100vw - calc(32px * var(--ui-scale, 1)));
   }
 }
 .reader-header .reader-tools {
-  max-width: 1280px;
+  max-width: calc(1280px * var(--ui-scale, 1));
   margin: 0 auto;
-  padding: 8px 32px;
-  border-top: 1px solid var(--border);
+  padding: calc(8px * var(--ui-scale, 1)) calc(32px * var(--ui-scale, 1));
+  border-top: calc(1px * var(--ui-scale, 1)) solid var(--border);
 }
 @media (max-width: 600px) {
   .reader-header .reader-tools {
-    padding: 8px 16px;
+    padding: calc(8px * var(--ui-scale, 1)) calc(16px * var(--ui-scale, 1));
   }
 }
 
