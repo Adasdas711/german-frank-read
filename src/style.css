@@ -520,7 +520,6 @@ textarea {
   color: inherit;
   cursor: pointer;
 }
-.word:hover,
 .word.chosen {
   background: #fbebdd !important;
   color: #6e3c16;

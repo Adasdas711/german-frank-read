@@ -92,7 +92,7 @@ try {
   );
   await p.waitForTimeout(200);
   await p.screenshot({ path: ".test-results/reader-fixes/quotes.png" });
-  // Hover must invert the theme's paper/ink pair in dark AND light themes.
+  // Only a held word inverts the paper/ink pair; hovering stays neutral.
   for (const theme of ["night", "paper"]) {
     await p.evaluate(async (theme) => {
       const d = await new Promise((r) => {
@@ -135,6 +135,11 @@ try {
         return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
       });
     await p.mouse.move(point.x, point.y);
+    assert.equal(await p.locator(".word.chosen").count(), 0);
+    assert.equal(await p.getByLabel("Word details").count(), 0);
+    await p.mouse.down();
+    await p.waitForTimeout(650);
+    await p.mouse.up();
     const colors = await p.locator("[data-hover-test=yes]").evaluate((n) => {
       const s = getComputedStyle(n),
         root = getComputedStyle(document.querySelector(".books-reader"));
@@ -185,7 +190,7 @@ try {
   await p.screenshot({ path: ".test-results/reader-fixes/select.png" });
   assert.deepEqual(errors, []);
   console.log(
-    "PASS Immensee quotes, inverted hover in night/paper, Select at 4 sizes, and stable DOM across all reading modes:",
+    "PASS Immensee quotes, held-word highlight in night/paper, Select at 4 sizes, and stable DOM across all reading modes:",
     JSON.stringify(timing),
   );
 } finally {

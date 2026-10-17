@@ -4,6 +4,7 @@ import { memo } from "preact/compat";
 import { useMemo } from "preact/hooks";
 import { readingSentences } from "./reading-text";
 export type WordSelection = {
+  element?: HTMLElement;
   form: string;
   at: string;
   context: string;
@@ -147,6 +148,7 @@ export const BookText = memo(function BookText({
               const offset =
                 Number(word.dataset.bookChar) % (source.length + 1);
               onWord({
+                element: word,
                 form: word.textContent || "",
                 at: address,
                 hint: sourceHint(offset),

@@ -1421,7 +1421,6 @@ html.reading-pages body {
 .books-reader:not([data-mode="parallel"]) .sentence-row > .translation {
   display: none;
 }
-.folio-columns .word:hover,
 .folio-columns .word.chosen {
   background: var(--folio-ink) !important;
   color: var(--folio-paper) !important;
@@ -1779,27 +1778,6 @@ html.reading-pages body {
 }
 .reading-menu-icons button[aria-pressed="true"] {
   color: var(--folio-hint);
-}
-.folio-word-overlay .word-panel {
-  position: absolute;
-  top: auto;
-  height: auto;
-  min-height: 0;
-  gap: calc(10px * var(--ui-scale));
-  right: calc(24px * var(--ui-scale));
-  bottom: calc(85px * var(--ui-scale));
-  z-index: 35;
-  width: calc(340px * var(--ui-scale));
-  max-width: calc(100vw - calc(28px * var(--ui-scale)));
-  max-height: 70dvh;
-  overflow: auto;
-  padding: calc(19px * var(--ui-scale));
-  background: color-mix(in srgb, var(--folio-paper), #888 22%);
-  color: var(--folio-ink);
-  border: calc(1px * var(--ui-scale)) solid #8882;
-  border-radius: calc(19px * var(--ui-scale));
-  box-shadow: 0 calc(18px * var(--ui-scale)) calc(70px * var(--ui-scale)) #0006;
-  backdrop-filter: blur(calc(25px * var(--ui-scale)));
 }
 .word-panel h2 {
   font-size: calc(24px * var(--ui-scale));
@@ -2564,13 +2542,6 @@ html.reading-pages body {
     margin: 0.5em 0 1em;
     font-size: 0.86em;
   }
-  .folio-word-overlay .word-panel {
-    right: calc(14px * var(--ui-scale));
-    bottom: calc(75px * var(--ui-scale));
-    width: calc(100vw - calc(28px * var(--ui-scale)));
-    max-width: none;
-    max-height: 65dvh;
-  }
   .themes-panel .setting-row,
   .themes-panel .switch-label {
     font-size: calc(12px * var(--ui-scale));
@@ -2888,28 +2859,6 @@ html.reading-pages body {
   }
   .collection-book-list {
     max-height: 34dvh;
-  }
-}
-
-/* Touch devices use an intrinsic-height bottom sheet, including landscape iPads. */
-@media (max-width: 1100px), (hover: none) and (pointer: coarse) {
-  .folio-word-overlay .word-panel {
-    top: auto;
-    left: 50%;
-    right: auto;
-    bottom: max(calc(12px * var(--ui-scale)), env(safe-area-inset-bottom));
-    transform: translateX(-50%);
-    width: min(
-      calc(560px * var(--ui-scale)),
-      calc(100% - calc(24px * var(--ui-scale)))
-    );
-    max-width: none;
-    height: auto;
-    min-height: 0;
-    max-height: calc(80dvh - env(safe-area-inset-bottom));
-    padding: calc(18px * var(--ui-scale));
-    border-radius: calc(22px * var(--ui-scale));
-    overscroll-behavior: contain;
   }
 }
 
@@ -3616,4 +3565,89 @@ body,
   text-align: left;
   color: var(--teal);
   white-space: normal;
+}
+
+/* A word note sits beside its source on every device, with no empty sheet. */
+.word-popover {
+  position: fixed;
+  width: min(calc(300px * var(--ui-scale)), calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  z-index: 40;
+  visibility: hidden;
+}
+.word-popover .word-panel {
+  display: block;
+  gap: 0;
+  position: relative;
+  inset: auto;
+  transform: none;
+  width: 100%;
+  max-width: none;
+  height: auto;
+  min-height: 0;
+  max-height: inherit;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: calc(12px * var(--ui-scale));
+  border: 1px solid #8883;
+  border-radius: calc(14px * var(--ui-scale));
+  background: color-mix(in srgb, var(--folio-paper), #888 22%);
+  color: var(--folio-ink);
+  box-shadow: 0 8px 28px #0005;
+}
+.word-panel-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: calc(8px * var(--ui-scale));
+}
+.word-panel-heading > div:first-child {
+  flex: 1;
+  min-width: 0;
+}
+.word-popover h2 {
+  font-size: calc(20px * var(--ui-scale));
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.word-popover .muted {
+  display: block;
+  margin-top: calc(4px * var(--ui-scale));
+  font-size: calc(10px * var(--ui-scale));
+  line-height: 1.4;
+}
+.word-panel-actions {
+  display: flex;
+  gap: calc(4px * var(--ui-scale));
+}
+.word-panel-actions .round {
+  width: calc(32px * var(--ui-scale));
+  min-width: calc(32px * var(--ui-scale));
+  height: calc(32px * var(--ui-scale));
+  min-height: calc(32px * var(--ui-scale));
+  padding: calc(6px * var(--ui-scale));
+}
+.word-popover .word-panel > p {
+  margin: calc(10px * var(--ui-scale)) 0;
+  font-size: calc(13px * var(--ui-scale));
+  line-height: 1.45;
+}
+.word-popover .word-context {
+  padding: calc(8px * var(--ui-scale));
+  margin-bottom: calc(10px * var(--ui-scale));
+}
+.word-context summary {
+  cursor: pointer;
+  font-size: calc(11px * var(--ui-scale));
+  color: var(--folio-muted);
+}
+.word-context[open] summary {
+  margin-bottom: calc(8px * var(--ui-scale));
+}
+.word-popover .primary {
+  min-height: calc(36px * var(--ui-scale));
+  padding: calc(8px * var(--ui-scale));
+  font-size: calc(12px * var(--ui-scale));
+}
+.folio-columns .word {
+  filter: none;
 }

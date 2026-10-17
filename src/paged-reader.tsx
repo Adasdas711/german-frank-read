@@ -13,6 +13,7 @@ import { Icon } from "./ui";
 import { ThemesPanel } from "./themes-panel";
 import { appearanceStyle } from "./appearance";
 import { useTouchActions } from "./touch-actions";
+import { WordPopover } from "./word-popover";
 export type PageEntry = { at: string; offset: number; preview: string };
 
 type Props = {
@@ -38,6 +39,7 @@ type Props = {
   progressPercent?: number;
   renderFragment(chunks: Chunk[], at: string): ComponentChildren;
   wordPanel: ComponentChildren;
+  wordAnchor?: HTMLElement;
   onDismissWord(): void;
 };
 type Layout = {
@@ -118,6 +120,7 @@ export function PagedReader(props: Props) {
     allowLookup.current = false;
     setControls(false);
     setPanel(null);
+    setMenu(false);
   };
   const hide = useCallback(() => {
     setControls(false);
@@ -139,10 +142,19 @@ export function PagedReader(props: Props) {
     if (props.measureOnly) return;
     document.documentElement.classList.add("reading-pages");
     root.current?.focus({ preventScroll: true });
+    const cancelHold = () => {
+      clearTimeout(lookupTimer.current);
+      gesture.current = null;
+      suppressClick.current = true;
+    };
+    window.addEventListener("blur", cancelHold);
+    document.addEventListener("visibilitychange", cancelHold);
     return () => {
       document.documentElement.classList.remove("reading-pages");
       clearTimeout(timer.current);
       clearTimeout(lookupTimer.current);
+      window.removeEventListener("blur", cancelHold);
+      document.removeEventListener("visibilitychange", cancelHold);
     };
   }, []);
   const pages = useMemo(
@@ -560,6 +572,8 @@ export function PagedReader(props: Props) {
     suppressClick.current = false;
   }, [mode, settings.pageTurn]);
   const turn = (delta: number) => {
+    props.onDismissWord();
+    clearTimeout(lookupTimer.current);
     if (!state.current.layout.ready) return;
     const next = Math.max(
       0,
@@ -710,6 +724,8 @@ export function PagedReader(props: Props) {
       text.current.style.transform = `translateX(${-next * (state.current.layout.width + state.current.layout.gap)}px)`;
   };
   const jumpPage = (next: number) => {
+    props.onDismissWord();
+    clearTimeout(lookupTimer.current);
     clearTurnAnimations();
     report(next);
     setPage(next);
@@ -901,7 +917,7 @@ export function PagedReader(props: Props) {
           type: event.pointerType,
         };
         const word = target.closest<HTMLElement>("[data-book-char]");
-        if (word && event.pointerType !== "mouse")
+        if (word)
           lookupTimer.current = setTimeout(() => {
             if (!gesture.current || gesture.current.moved) return;
             longPressed.current = true;
@@ -923,6 +939,7 @@ export function PagedReader(props: Props) {
         suppressClick.current = true;
         clearTimeout(lookupTimer.current);
       }}
+      onPointerLeave={() => clearTimeout(lookupTimer.current)}
       onPointerUp={(event) => {
         clearTimeout(lookupTimer.current);
         const start = gesture.current;
@@ -959,7 +976,7 @@ export function PagedReader(props: Props) {
           return;
         }
         const word = target.closest("[data-book-char]");
-        if (word && event.detail > 0 && mode !== "clean") {
+        if (word && event.detail > 0) {
           event.preventDefault();
           event.stopPropagation();
           if (event.detail === 1) tap(event.clientX);
@@ -1017,6 +1034,7 @@ export function PagedReader(props: Props) {
             aria-haspopup="dialog"
             aria-expanded={!!(menu || panel)}
             onClick={() => {
+              props.onDismissWord();
               if (menu || panel) hide();
               else {
                 setMenu(true);
@@ -1054,17 +1072,7 @@ export function PagedReader(props: Props) {
           class="folio-columns"
           ref={text}
           aria-label={t("Текст книги")}
-          onDblClick={(event) => {
-            if (suppressClick.current) return;
-            const word = (event.target as HTMLElement).closest<HTMLElement>(
-              "[data-book-char]",
-            );
-            if (word) {
-              event.preventDefault();
-              window.getSelection()?.removeAllRanges();
-              openWord(word);
-            }
-          }}
+          onDblClick={(event) => event.preventDefault()}
           style={{ visibility: layout.ready ? "visible" : "hidden" }}
           onFocusCapture={(event) => {
             const word = (event.target as HTMLElement).closest(
@@ -1328,7 +1336,11 @@ export function PagedReader(props: Props) {
           )}
         </>
       )}
-      {wordPanel && <div class="folio-word-overlay">{wordPanel}</div>}
+      {wordPanel && props.wordAnchor && (
+        <WordPopover anchor={props.wordAnchor} onDismiss={props.onDismissWord}>
+          {wordPanel}
+        </WordPopover>
+      )}
     </div>
   );
 }

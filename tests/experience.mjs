@@ -201,7 +201,10 @@ try {
       const r = n.getBoundingClientRect();
       return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
     });
-  await page.mouse.click(wordPos.x, wordPos.y);
+  await page.mouse.move(wordPos.x, wordPos.y);
+  await page.mouse.down();
+  await page.waitForTimeout(650);
+  await page.mouse.up();
   await page.getByLabel("Word details").waitFor();
   await page.getByRole("button", { name: "Save to My Words" }).click();
   assert.equal((await all(page, "words")).length, 1);
@@ -530,7 +533,10 @@ try {
           `.folio-columns [data-reading-at="${w.at}"] [data-book-char="${w.offset}"]`,
         )
         .first()
-        .click();
+        .hover();
+      await page.mouse.down();
+      await page.waitForTimeout(650);
+      await page.mouse.up();
       await page.getByLabel("Word details").waitFor();
     }
     await context.close();

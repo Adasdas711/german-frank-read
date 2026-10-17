@@ -123,7 +123,10 @@ try {
     await p.mouse.up();
     assert.equal(await p.evaluate(() => getSelection().toString()), "");
     assert.equal(await number(p), n);
-    await p.mouse.dblclick(w.x, w.y);
+    await p.mouse.move(w.x, w.y);
+    await p.mouse.down();
+    await p.waitForTimeout(650);
+    await p.mouse.up();
     await p.getByLabel("Word details").waitFor();
     await p.keyboard.press("Escape");
     // Real touch swipe, stationary hold, movement cancellation and native scrolling.

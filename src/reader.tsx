@@ -865,35 +865,46 @@ function App() {
   const wordPanel =
     word && active ? (
       <aside class="word-panel" aria-label={t("Word details")}>
-        <div class="row between">
-          <h2 lang="de">{lemma?.[0] || word.form}</h2>
-          <button
-            class="round"
-            aria-label={t("Close")}
-            onClick={() => setWord(null)}
-          >
-            <Icon name="close" />
-          </button>
-        </div>
-        <div class="row between">
-          <small class="muted">
-            {lemma?.[2] || ""} · {t("In text: {0}", { 0: word.form })} · [{ipa}]
-          </small>
-          <button
-            class="round"
-            aria-label={t("Pronounce word")}
-            onClick={() => void listen(word.form, ipa)}
-          >
-            <Icon name="sound" />
-          </button>
+        <div class="word-panel-heading">
+          <div>
+            <h2 lang="de">{lemma?.[0] || word.form}</h2>
+            <small class="muted">
+              {[
+                lemma?.[2],
+                lemma?.[0] && lemma[0] !== word.form
+                  ? t("In text: {0}", { 0: word.form })
+                  : "",
+                ipa ? `[${ipa}]` : "",
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </small>
+          </div>
+          <div class="word-panel-actions">
+            <button
+              class="round"
+              aria-label={t("Pronounce word")}
+              onClick={() => void listen(word.form, ipa)}
+            >
+              <Icon name="sound" />
+            </button>
+            <button
+              class="round"
+              aria-label={t("Close")}
+              onClick={() => setWord(null)}
+            >
+              <Icon name="close" />
+            </button>
+          </div>
         </div>
         <p>{lemma?.[1] || word.hint || t("No dictionary translation")}</p>
-        <div class="word-context">
+        <details class="word-context">
+          <summary>{t("Context")}</summary>
           <p lang="de">{word.context}</p>
           {word.translation && (
             <p lang={active.manifest.hintLang}>{word.translation}</p>
           )}
-        </div>
+        </details>
         <button
           class="primary wide"
           disabled={saved.some((w) => w.key === wordKey)}
@@ -1512,6 +1523,7 @@ function App() {
           progressPercent={currentProgress?.percent || 0}
           renderFragment={renderFragment}
           wordPanel={wordPanel}
+          wordAnchor={word?.element}
           onDismissWord={() => setWord(null)}
           onIndex={(entries) => recordIndex(bookId, signature(bookId), entries)}
           onBookmark={toggleBookmark}
