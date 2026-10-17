@@ -27,6 +27,7 @@
     "test:sidebar": "node tests/sidebar.mjs",
     "test:reading-menu": "node tests/reading-menu.mjs",
     "test:apple-home": "node tests/apple-home.mjs",
+    "test:continue-touch": "node --experimental-strip-types tests/continue-touch.mjs",
     "build:books": "node scripts/full-books.mjs"
   },
   "dependencies": {

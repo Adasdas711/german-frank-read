@@ -68,7 +68,9 @@ try {
   await page.locator(".continue-open").first().click();
   await page.locator(".books-reader[data-ready=true]").waitFor();
   await page.mouse.click(720, 60);
+  await page.locator(".reader-tools-button").click();
   await page.getByRole("tab", { name: "Clean", exact: true }).click();
+  await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Esel", exact: true }).first().click();
   await page
     .getByRole("button", { name: "Pronounce word", exact: true })
@@ -80,6 +82,7 @@ try {
   );
   await page.keyboard.press("Escape");
   await page.mouse.click(720, 60);
+  await page.locator(".reader-tools-button").click();
   await page
     .getByRole("button", { name: "Listen to page", exact: true })
     .click();

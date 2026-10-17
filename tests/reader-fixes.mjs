@@ -30,6 +30,7 @@ try {
   await p.locator(".books-reader[data-ready=true]").waitFor();
   await p.waitForTimeout(200);
   const timing = [];
+  await p.locator(".reader-tools-button").click();
   // Real full-story mode changes must reuse the same source-word DOM nodes.
   await p.evaluate(
     () =>

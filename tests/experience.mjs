@@ -84,15 +84,10 @@ const show = async (page) => {
 };
 const appearance = async (page) => {
   await show(page);
-  if (page.viewportSize().width <= 700) {
-    await page.locator(".mobile-reader-menu").click();
-    await page
-      .getByRole("button", { name: "Themes & Voice", exact: true })
-      .click();
-  } else
-    await page
-      .getByRole("button", { name: "Themes & Voice", exact: true })
-      .click();
+  await page.locator(".reader-tools-button").click();
+  await page
+    .getByRole("button", { name: "Themes & Voice", exact: true })
+    .click();
   await page.locator(".theme-grid").waitFor();
 };
 const openBook = async (page) => {
@@ -165,14 +160,17 @@ try {
     after.some((w) => w.form === before[0].form && w.at === before[0].at),
   );
   await show(page);
+  await page.locator(".reader-tools-button").click();
   await page.getByRole("button", { name: "Bookmark", exact: true }).click();
   assert.equal((await all(page, "progress"))[0].bookmarks.length, 1);
-  await page.getByRole("button", { name: "Contents", exact: true }).click();
+  await page.locator(".reading-menu").getByRole("button").first().click();
   await page.getByRole("button", { name: "Bookmarks", exact: true }).click();
   assert.equal(await page.locator(".page-entry").count(), 1);
   await page.keyboard.press("Escape");
   await show(page);
+  await page.locator(".reader-tools-button").click();
   await page.getByRole("tab", { name: "Clean", exact: true }).click();
+  await page.keyboard.press("Escape");
   await page.waitForTimeout(100);
   const wordPos = await page
     .locator(".folio-columns [data-book-char]")
@@ -258,7 +256,9 @@ try {
   await page.getByRole("menuitemradio", { name: "Slide", exact: true }).click();
   await page.keyboard.press("Escape");
   await show(page);
+  await page.locator(".reader-tools-button").click();
   await page.getByRole("tab", { name: "Parallel", exact: true }).click();
+  await page.keyboard.press("Escape");
   await page.waitForTimeout(150);
   assert.equal(
     await page.locator(".books-reader").getAttribute("data-columns"),
@@ -267,7 +267,7 @@ try {
   assert.equal(await page.locator(".folio-columns .eyebrow").count(), 0);
   await page.screenshot({ path: ".test-results/experience/parallel-mac.png" });
   await show(page);
-  await page.getByRole("link", { name: "Back", exact: true }).click();
+  await page.getByRole("link", { name: "Exit reading", exact: true }).click();
   await page
     .locator(".library-sidebar")
     .getByRole("button", { name: "All words", exact: true })
@@ -330,13 +330,14 @@ try {
   await page.locator(".books-reader[data-ready=true]").waitFor();
   assert.ok((await visibleWord(page)).some((w) => w.form === "Esel"));
   await show(page);
-  await page.getByRole("button", { name: "Contents", exact: true }).click();
+  await page.locator(".reader-tools-button").click();
+  await page.locator(".reading-menu").getByRole("button").first().click();
   await page.getByLabel("Search Book").fill("Esel");
   assert.ok(await page.locator(".page-entry").count());
   await page.screenshot({ path: ".test-results/experience/book-search.png" });
   await page.keyboard.press("Escape");
   await show(page);
-  await page.getByRole("link", { name: "Back", exact: true }).click();
+  await page.getByRole("link", { name: "Exit reading", exact: true }).click();
   await page
     .locator(".library-sidebar")
     .getByRole("button", { name: "Settings", exact: true })

@@ -31,7 +31,7 @@ try {
     assert.equal(await cards.count(), 2);
     for (let i = 0; i < 2; i++) {
       assert.ok((await cards.nth(i).boundingBox()).height < 160);
-      assert.equal(await cards.nth(i).locator("button").count(), 1);
+      assert.equal(await cards.nth(i).locator("button").count(), 2);
       assert.match(
         await cards.nth(i).locator(".continue-meta").innerText(),
         /Book · [AB][12] · \d+%/,

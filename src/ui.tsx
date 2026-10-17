@@ -2,6 +2,36 @@ import { useT } from "./i18n";
 import { useEffect, useLayoutEffect, useRef } from "preact/hooks";
 export function Icon({ name, size = 20 }: { name: string; size?: number }) {
   const paths: Record<string, any> = {
+    more: (
+      <>
+        <circle cx="5" cy="12" r="1" />
+        <circle cx="12" cy="12" r="1" />
+        <circle cx="19" cy="12" r="1" />
+      </>
+    ),
+    "plus-circle": (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 8v8M8 12h8" />
+      </>
+    ),
+    "minus-circle": (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M8 12h8" />
+      </>
+    ),
+    "check-circle": (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="m7 12 3 3 7-7" />
+      </>
+    ),
+    rename: (
+      <>
+        <path d="m3 18 4-12 4 12M4 15h6M17 4v16M14 4h6M14 20h6" />
+      </>
+    ),
     collection: (
       <>
         <rect x="3" y="5" width="18" height="16" rx="2" />

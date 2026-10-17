@@ -217,11 +217,13 @@ try {
       "right click opens compact menu, not details sheet",
     );
     for (const name of [
-      "Read",
-      "Export .fbook file",
-      "Book words to Anki",
-      "Move to Collection",
-      "Remove from Library",
+      "Share",
+      "Want to Read",
+      "Add to Collection",
+      "Mark as Finished",
+      "Rename…",
+      "Remove from Continue",
+      "Remove…",
     ])
       assert.equal(
         await menu.getByRole("menuitem", { name, exact: true }).count(),

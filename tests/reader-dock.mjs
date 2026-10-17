@@ -19,7 +19,7 @@ try {
     ["small", 320, 720, true, true],
     ["tablet", 834, 1194, true, true],
     ["tablet-landscape", 1366, 1024, true, true],
-    ["pc", 1366, 900, false, false],
+    ["pc", 1366, 900, false, true],
   ]) {
     const context = await browser.newContext({
         viewport: { width, height },
@@ -55,6 +55,30 @@ try {
     const toolbar = await p.locator(".folio-toolbar").boundingBox(),
       dock = await p.locator(".folio-bottom").boundingBox(),
       book = await p.locator(".folio-viewport").boundingBox();
+    const exit = await p
+      .getByRole("link", { name: "Exit reading", exact: true })
+      .boundingBox();
+    const tools = await p
+      .getByRole("button", { name: "Reading tools", exact: true })
+      .boundingBox();
+    assert(
+      exit.x > width / 2 &&
+        exit.y < 80 &&
+        exit.width >= 48 &&
+        exit.height >= 48,
+      name + " exit at top right",
+    );
+    assert(
+      tools.x > width / 2 &&
+        tools.y > height / 2 &&
+        tools.width >= 48 &&
+        tools.height >= 48,
+      name + " single tools button at bottom right",
+    );
+    assert.equal(await p.locator(".folio-toolbar button").count(), 0);
+    assert.ok(
+      Math.abs(tools.y + tools.height / 2 - dock.y - dock.height / 2) < 1,
+    );
     assert.equal(toolbar.y > height / 2, bottom, name + " toolbar location");
     assert.ok(toolbar.x >= 0 && toolbar.x + toolbar.width <= width);
     assert.ok(
@@ -90,6 +114,18 @@ try {
         .click();
     }
     const panel = await p.locator(".folio-popover.type").boundingBox();
+    const setting = p.locator(".folio-popover.type .setting-row").first();
+    assert.ok(
+      await setting.evaluate(
+        (n) => parseFloat(getComputedStyle(n).fontSize) >= 16,
+      ),
+    );
+    assert.ok(
+      await p
+        .locator(".theme-tile")
+        .first()
+        .evaluate((n) => n.getBoundingClientRect().height >= 100),
+    );
     assert.ok(
       panel.y >= 0 && panel.y + panel.height <= height,
       name + " settings bounds",
@@ -144,6 +180,7 @@ try {
           return original.apply(this, args);
         };
       });
+      await p.locator(".reader-tools-button").click();
       for (const [i, mode] of [
         "clean",
         "parallel",

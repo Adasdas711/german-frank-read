@@ -59,6 +59,7 @@ export type Settings = {
   recentlyViewed: string[];
   hiddenLibraryFolders: string[];
   levelOrder: string[];
+  hiddenContinueBooks: string[];
 };
 export const defaults: Settings = {
   font: "Literata",
@@ -94,6 +95,7 @@ export const defaults: Settings = {
   recentlyViewed: [],
   hiddenLibraryFolders: [],
   levelOrder: ["A2", "B1", "B2"],
+  hiddenContinueBooks: [],
 };
 let dbPromise: Promise<IDBDatabase> | undefined;
 export function db() {
@@ -340,6 +342,16 @@ export function checkedSettings(s: any): Settings {
         : [],
     recentSearches: Array.isArray(s?.recentSearches)
       ? s.recentSearches.filter((x) => typeof x === "string").slice(0, 8)
+      : [],
+    hiddenContinueBooks: Array.isArray(s?.hiddenContinueBooks)
+      ? ([
+          ...new Set(
+            s.hiddenContinueBooks.filter(
+              (id: unknown) =>
+                typeof id === "string" && id.length > 0 && id.length <= 160,
+            ),
+          ),
+        ].slice(0, 10000) as string[])
       : [],
     ...(typeof s?.current === "string" ? { current: s.current } : {}),
   };

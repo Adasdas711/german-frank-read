@@ -734,7 +734,7 @@ export function PagedReader(props: Props) {
       const target = event.target as HTMLElement;
       if (
         target.closest(
-          ".folio-popover,.word-panel,.folio-toolbar,.folio-bottom,.reading-menu",
+          ".reader-exit,.reader-tools-button,.folio-popover,.word-panel,.folio-toolbar,.folio-bottom,.reading-menu",
         ) ||
         ["INPUT", "SELECT", "TEXTAREA"].includes(target.tagName)
       )
@@ -768,7 +768,7 @@ export function PagedReader(props: Props) {
       if (
         event.ctrlKey ||
         (event.target as HTMLElement).closest(
-          ".folio-popover,.word-panel,.folio-toolbar,.folio-bottom,.reading-menu",
+          ".reader-exit,.reader-tools-button,.folio-popover,.word-panel,.folio-toolbar,.folio-bottom,.reading-menu",
         )
       )
         return;
@@ -883,7 +883,7 @@ export function PagedReader(props: Props) {
         const target = event.target as HTMLElement;
         if (
           target.closest(
-            ".folio-toolbar,.folio-popover,.folio-bottom,.word-panel,.reading-menu",
+            ".reader-exit,.reader-tools-button,.folio-toolbar,.folio-popover,.folio-bottom,.word-panel,.reading-menu",
           )
         )
           return;
@@ -945,7 +945,7 @@ export function PagedReader(props: Props) {
         const target = event.target as HTMLElement;
         if (
           target.closest(
-            ".folio-toolbar,.folio-popover,.folio-bottom,.word-panel,.reading-menu",
+            ".reader-exit,.reader-tools-button,.folio-toolbar,.folio-popover,.folio-bottom,.word-panel,.reading-menu",
           )
         )
           return;
@@ -964,7 +964,7 @@ export function PagedReader(props: Props) {
       onClick={(event) => {
         if (
           (event.target as HTMLElement).closest(
-            "button,a,input,select,label,.folio-toolbar,.folio-bottom,.folio-popover,.word-panel,.reading-menu",
+            "button,a,input,select,label,.reader-exit,.reader-tools-button,.folio-toolbar,.folio-bottom,.folio-popover,.word-panel,.reading-menu",
           )
         )
           return;
@@ -981,22 +981,6 @@ export function PagedReader(props: Props) {
           }
           onFocusCapture={() => setControls(true)}
         >
-          <div class="folio-toolbar-start">
-            <a class="folio-round" href="#/home" aria-label={t("Back")}>
-              <Icon name="back" />
-            </a>
-            <button
-              class="folio-round desktop-contents"
-              aria-label={t("Contents")}
-              aria-expanded={panel === "contents"}
-              onClick={() => {
-                setPanel(panel === "contents" ? null : "contents");
-                setControls(true);
-              }}
-            >
-              <Icon name="menu" />
-            </button>
-          </div>
           <div class="folio-bottom">
             <label class="folio-slider">
               <span>
@@ -1012,68 +996,33 @@ export function PagedReader(props: Props) {
               />
             </label>
           </div>
-          <div class="folio-toolbar-end">
-            <div
-              class="reader-mode-tabs tabs"
-              role="tablist"
-              aria-label={t("Default mode")}
-            >
-              {["frank", "clean", "parallel"].map((value) => (
-                <button
-                  role="tab"
-                  aria-selected={mode === value}
-                  disabled={value === "parallel" && !content.t}
-                  onClick={() => props.onMode(value)}
-                >
-                  {t(
-                    value === "frank"
-                      ? "Frank"
-                      : value === "clean"
-                        ? "Clean"
-                        : "Parallel",
-                  )}
-                </button>
-              ))}
-            </div>
-            <button
-              class="folio-round folio-aa"
-              aria-label={t("Themes & Voice")}
-              onClick={() => {
-                setPanel(panel === "type" ? null : "type");
-                setControls(true);
-              }}
-            >
-              Aa
-            </button>
-            <button
-              class="folio-round desktop-audio"
-              aria-label={t(props.busy ? "Stop audio" : "Listen to page")}
-              onClick={() => listenPage()}
-            >
-              <Icon name={props.busy ? "stop" : "sound"} />
-            </button>
-            <button
-              class={
-                "folio-round desktop-bookmark" +
-                (props.bookmarked ? " marked" : "")
-              }
-              aria-label={t(props.bookmarked ? "Remove bookmark" : "Bookmark")}
-              onClick={props.onBookmark}
-            >
-              <Icon name="bookmark" />
-            </button>
-            <button
-              class="folio-round mobile-reader-menu"
-              aria-label={t("Contents")}
-              onClick={() => {
-                setMenu(!menu);
-                setControls(true);
-              }}
-            >
-              <Icon name={menu ? "close" : "menu"} />
-            </button>
-          </div>
         </header>
+      )}
+      {!props.measureOnly && (
+        <>
+          <a
+            class="folio-round reader-exit"
+            href="#/home"
+            aria-label={t("Exit reading")}
+          >
+            <Icon name="close" size={25} />
+          </a>
+          <button
+            class="folio-round mobile-reader-menu reader-tools-button"
+            aria-label={t("Reading tools")}
+            aria-haspopup="dialog"
+            aria-expanded={!!(menu || panel)}
+            onClick={() => {
+              if (menu || panel) hide();
+              else {
+                setMenu(true);
+                setControls(true);
+              }
+            }}
+          >
+            <Icon name={menu || panel ? "close" : "menu"} size={24} />
+          </button>
+        </>
       )}
       <div
         class="folio-viewport"
@@ -1141,7 +1090,7 @@ export function PagedReader(props: Props) {
             <section
               class="reading-menu glass"
               role="dialog"
-              aria-label={t("Contents")}
+              aria-label={t("Reading tools")}
             >
               <button
                 onClick={() => {
@@ -1173,7 +1122,11 @@ export function PagedReader(props: Props) {
                 <span>{t("Search Book")}</span>
                 <Icon name="search" />
               </button>
-              <div class="tabs" role="tablist">
+              <div
+                class="reader-mode-tabs tabs"
+                role="tablist"
+                aria-label={t("Default mode")}
+              >
                 {["frank", "clean", "parallel"].map((value) => (
                   <button
                     role="tab"

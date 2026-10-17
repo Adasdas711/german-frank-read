@@ -290,22 +290,32 @@ export function MoveBookDialog({
   onSave,
   onClose,
   onCreate,
+  mode = "move",
 }: {
   book: Book;
   collections: BookCollection[];
   onSave: (id: string | null) => Promise<void>;
   onClose: () => void;
   onCreate: () => void;
+  mode?: "move" | "add";
 }) {
   const t = useT();
   const [id, setId] = useState(
-    collections.find((c) => c.bookIds.includes(book.manifest.id))?.id || "",
+    mode === "add"
+      ? ""
+      : collections.find((c) => c.bookIds.includes(book.manifest.id))?.id || "",
   );
   return (
-    <Modal title={t("Move to Collection")} onClose={onClose}>
+    <Modal
+      title={t(mode === "add" ? "Add to Collection" : "Move to Collection")}
+      onClose={onClose}
+    >
       <p class="muted">{book.manifest.title}</p>
       <div class="group move-collection-list">
-        {[{ id: "", name: t("All Books only") }, ...collections].map((c) => (
+        {[
+          ...(mode === "add" ? [] : [{ id: "", name: t("All Books only") }]),
+          ...collections,
+        ].map((c) => (
           <button aria-pressed={id === c.id} onClick={() => setId(c.id)}>
             <Icon name={c.id ? "collection" : "book"} size={18} />
             <span>{c.name}</span>
@@ -317,8 +327,12 @@ export function MoveBookDialog({
         <Icon name="plus" />
         {t("New Collection")}
       </button>
-      <button class="wide primary" onClick={() => void onSave(id || null)}>
-        {t("Move")}
+      <button
+        class="wide primary"
+        disabled={mode === "add" && !id}
+        onClick={() => void onSave(id || null)}
+      >
+        {t(mode === "add" ? "Add" : "Move")}
       </button>
     </Modal>
   );

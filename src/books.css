@@ -2979,6 +2979,72 @@ body,
 .continue-open:hover {
   background: #ffffff08;
 }
+.continue-card {
+  display: flex;
+  align-items: center;
+  -webkit-touch-callout: none;
+}
+.continue-card * {
+  -webkit-touch-callout: none;
+}
+.continue-card .continue-open {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  padding-right: 4px;
+}
+.continue-more {
+  flex: 0 0 40px;
+  min-width: 40px;
+  min-height: 44px;
+  margin-right: 6px;
+  padding: 8px;
+  color: inherit;
+}
+.book-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1599;
+  background: #0004;
+}
+.continue-context-menu {
+  width: 286px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100dvh - 16px);
+  overflow-y: auto;
+  padding: 8px;
+  border-radius: 24px;
+}
+.continue-context-menu > button {
+  min-height: 48px;
+  padding: 12px 14px;
+  text-align: left;
+  font-weight: 500;
+}
+.continue-context-menu svg {
+  flex-shrink: 0;
+}
+.continue-menu-shortcuts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.continue-menu-shortcuts button {
+  flex-direction: column;
+  min-height: 80px;
+  gap: 8px;
+  padding: 12px 8px;
+  font-size: 13px;
+  line-height: 1.3;
+}
+.continue-menu-shortcuts button:hover,
+.continue-menu-shortcuts button:focus-visible {
+  background: var(--soft);
+}
+.continue-context-menu [role="separator"] {
+  height: 1px;
+  margin: 6px 14px;
+  background: var(--border);
+}
 .continue-open .book-cover.small {
   width: 64px;
   min-width: 64px;
@@ -3152,5 +3218,175 @@ body,
   }
   .search-book-copy small {
     font-size: 12px;
+  }
+}
+
+/* One reading menu on every device; the exit stays at the opposite corner. */
+.books-reader .folio-toolbar {
+  top: auto;
+  bottom: max(16px, calc(env(safe-area-inset-bottom) + 12px));
+  left: max(18px, env(safe-area-inset-left));
+  right: max(18px, env(safe-area-inset-right));
+  min-height: 52px;
+  justify-content: center;
+}
+.books-reader .folio-toolbar .folio-bottom {
+  max-width: min(220px, calc(100% - 132px));
+  padding: 9px 14px;
+}
+.books-reader .folio-slider {
+  font-size: 12px;
+}
+.books-reader .reader-exit,
+.books-reader .reader-tools-button {
+  position: absolute;
+  right: max(18px, env(safe-area-inset-right));
+  z-index: 30;
+  width: 52px;
+  min-width: 52px;
+  height: 52px;
+  min-height: 52px;
+  padding: 12px;
+  display: inline-flex;
+  text-decoration: none;
+  touch-action: manipulation;
+}
+.books-reader .reader-exit {
+  top: max(16px, calc(env(safe-area-inset-top) + 12px));
+}
+.books-reader .reader-tools-button {
+  bottom: max(16px, calc(env(safe-area-inset-bottom) + 12px));
+}
+.books-reader .folio-viewport {
+  top: max(80px, calc(env(safe-area-inset-top) + 76px));
+  bottom: max(88px, calc(env(safe-area-inset-bottom) + 84px));
+}
+.books-reader .reading-menu,
+.books-reader .folio-popover {
+  top: auto;
+  bottom: max(84px, calc(env(safe-area-inset-bottom) + 80px));
+  right: max(18px, env(safe-area-inset-right));
+  max-height: calc(
+    100dvh - 172px - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+  );
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.books-reader .reading-menu {
+  width: min(420px, calc(100vw - 36px));
+  padding: 18px;
+  border-radius: 26px;
+}
+.books-reader .reading-menu > button {
+  min-height: 56px;
+  padding: 14px 16px;
+  font-size: 17px;
+}
+.books-reader .reading-menu .reader-mode-tabs {
+  display: flex;
+  gap: 2px;
+}
+.books-reader .reading-menu .reader-mode-tabs button {
+  flex: 1;
+  min-width: 0;
+  min-height: 48px;
+  padding: 8px 6px;
+  font-size: 15px;
+}
+.books-reader .reading-menu-icons button {
+  width: 52px;
+  min-width: 48px;
+  min-height: 52px;
+}
+.books-reader .reading-menu svg {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+.books-reader .folio-popover.type {
+  width: min(520px, calc(100vw - 36px));
+  padding: 24px;
+  border-radius: 28px;
+}
+.themes-panel .sheet-heading {
+  grid-template-columns: 44px 1fr 44px;
+  margin-bottom: 22px;
+}
+.themes-panel .sheet-heading > strong {
+  font-size: 18px;
+}
+.themes-panel .sheet-heading .round {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 10px;
+}
+.themes-panel .appearance-tools > button {
+  min-height: 50px;
+  font-size: 22px;
+}
+.themes-panel .theme-grid {
+  gap: 14px;
+  margin-bottom: 22px;
+}
+.themes-panel .theme-tile {
+  min-height: 100px;
+  padding: 12px 6px;
+}
+.themes-panel .theme-tile > span {
+  font-size: 30px;
+}
+.themes-panel .theme-tile small {
+  font-size: 13px;
+  line-height: 1.3;
+}
+.themes-panel > .wide {
+  min-height: 50px;
+  font-size: 16px;
+}
+.themes-panel .setting-row,
+.themes-panel .switch-label,
+.themes-panel .range-row,
+.themes-panel .font-list button,
+.themes-panel select {
+  min-height: 52px;
+  font-size: 16px;
+}
+.themes-panel .range-row {
+  padding: 18px 16px;
+}
+.themes-panel .range-row input {
+  height: 30px;
+}
+.themes-panel .swatches {
+  gap: 8px;
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+.themes-panel .setting-row {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.themes-panel .swatches button {
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
+}
+.themes-panel .turn-menu {
+  width: 220px;
+  top: 60px;
+}
+.themes-panel .turn-menu button {
+  min-height: 48px;
+  font-size: 16px;
+}
+@media (max-width: 520px) {
+  .themes-panel .theme-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .books-reader .folio-popover.type {
+    padding: 18px;
   }
 }

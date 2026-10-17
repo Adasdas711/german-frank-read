@@ -9,6 +9,7 @@ import {
 } from "preact/hooks";
 import {
   readBook,
+  packBook,
   plain,
   addresses,
   download,
@@ -22,7 +23,8 @@ import { LocaleContext, createTranslator, translateMessage } from "./i18n";
 import { Icon, Modal, Toggle, ProgressBar, ContextMenu } from "./ui";
 import { PagedReader, type PageEntry } from "./paged-reader";
 import { BookText, type WordSelection } from "./book-text";
-import { BookCover, bookColor } from "./book-cover";
+import { BookCover } from "./book-cover";
+import { ContinueCard, ContinueMenu } from "./continue-card";
 import {
   CollectionMenu,
   LevelMenu,
@@ -89,6 +91,7 @@ function App() {
     folder: string;
     x: number;
     y: number;
+    continued?: boolean;
   } | null>(null);
   useEffect(() => {
     if (route !== "search") searchReturn.current = route;
@@ -97,6 +100,10 @@ function App() {
   }, [route]);
   const [overlay, setOverlay] = useState(""),
     [details, setDetails] = useState<Book | null>(null);
+  const [renaming, setRenaming] = useState<Book | null>(null),
+    [renameTitle, setRenameTitle] = useState(""),
+    [renameBusy, setRenameBusy] = useState(false),
+    [collectionAction, setCollectionAction] = useState<"move" | "add">("move");
   const [message, setMessage] = useState<{
     text: string;
     error?: boolean;
@@ -478,6 +485,14 @@ function App() {
     setOverlay("");
   };
   function go(b: Book, address?: string, offset?: number) {
+    if (settingsRef.current.hiddenContinueBooks.includes(b.manifest.id))
+      void run(() =>
+        saveSettings({
+          hiddenContinueBooks: settingsRef.current.hiddenContinueBooks.filter(
+            (id) => id !== b.manifest.id,
+          ),
+        }),
+      );
     const p = progressRef.current.find((x) => x.book === b.manifest.id);
     const content = decoded.get(b.manifest.id)!.content;
     const keys = addresses(content);
@@ -968,12 +983,14 @@ function App() {
             c.id === id ? { ...c, name, bookIds, updatedAt: now } : c,
           )
         : [...collectionsRef.current, { id, name, bookIds, updatedAt: now }];
-      if (!old && collectionBook)
+      if (!old && collectionBook && collectionAction === "move")
         list = moveBookToCollection(list, collectionBook.manifest.id, id);
       await saveCollections(list);
       setCollectionFilter(id);
       setLibraryFilter("all");
-      setOverlay(collectionBook ? "details" : "");
+      setOverlay(
+        collectionBook && collectionAction === "move" ? "details" : "",
+      );
       if (!collectionBook) location.hash = "/library";
       notify(t(old ? "Collection updated" : "Collection created"));
     });
@@ -1079,6 +1096,83 @@ function App() {
       ),
     );
     notify(t("Book removed from folder"));
+  };
+  const addToCollection = async (book: Book, id: string) => {
+    await saveCollections(
+      collectionsRef.current.map((c) =>
+        c.id === id
+          ? {
+              ...c,
+              bookIds: [...new Set([...c.bookIds, book.manifest.id])],
+              updatedAt: new Date().toISOString(),
+            }
+          : c,
+      ),
+    );
+    notify(t("Book added to collection"));
+  };
+  const toggleWantToRead = async (book: Book) => {
+    const list = collectionsRef.current;
+    const wanted = list.find((c) => c.id === "want-to-read");
+    if (wanted) {
+      if (wanted.bookIds.includes(book.manifest.id))
+        await removeFromFolder(book, wanted.id);
+      else await addToCollection(book, wanted.id);
+    } else {
+      await saveCollections([
+        ...list,
+        {
+          id: "want-to-read",
+          name: t("Want to Read"),
+          bookIds: [book.manifest.id],
+          updatedAt: new Date().toISOString(),
+        },
+      ]);
+      notify(t("Book added to collection"));
+    }
+  };
+  const shareBook = async (book: Book) => {
+    const filename = slug(book.manifest.title) + ".fbook";
+    const file = new File([new Uint8Array(book.bytes)], filename, {
+      type: "application/vnd.fbook+zip",
+    });
+    if (navigator.share && navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: book.manifest.title });
+        return;
+      } catch (error) {
+        if ((error as Error).name === "AbortError") return;
+      }
+    }
+    download(book.bytes, filename);
+  };
+  const renameBook = async () => {
+    if (!renaming || !renameTitle.trim() || renameBusy) return;
+    setRenameBusy(true);
+    try {
+      const original = readBook(renaming.bytes);
+      const manifest = {
+        ...original.manifest,
+        title: renameTitle.trim(),
+        revision: original.manifest.revision + 1,
+      };
+      const updated = {
+        ...renaming,
+        manifest,
+        bytes: packBook(manifest, original.content),
+      };
+      await store.put("books", manifest.id, updated);
+      setBooks((previous) =>
+        previous.map((b) => (b.manifest.id === manifest.id ? updated : b)),
+      );
+      if (details?.manifest.id === manifest.id) setDetails(updated);
+      setRenaming(null);
+      notify(t("Book renamed"));
+    } catch (error) {
+      notify((error as Error).message, true);
+    } finally {
+      setRenameBusy(false);
+    }
   };
   const searchBookRow = (b: Book) => (
     <article
@@ -1240,7 +1334,9 @@ function App() {
       );
     })
     .filter(
-      (b) => progress.find((p) => p.book === b.manifest.id)?.percent !== 100,
+      (b) =>
+        progress.find((p) => p.book === b.manifest.id)?.percent !== 100 &&
+        !settings.hiddenContinueBooks.includes(b.manifest.id),
     );
   const startedBooks = orderedReadingBooks.filter((b) =>
     progress.some((p) => p.book === b.manifest.id && p.percent < 100),
@@ -1676,33 +1772,25 @@ function App() {
                     }}
                   >
                     {runningBooks.map((b) => (
-                      <article
-                        class="continue-card"
-                        data-book={b.manifest.id}
-                        onContextMenu={(event) => openBookMenu(b, event)}
+                      <ContinueCard
+                        book={b}
                         key={b.manifest.id}
-                        style={{ "--reading-cover": bookColor(b.manifest) }}
-                      >
-                        <button
-                          class="continue-open"
-                          aria-label={t("Continue reading {0}", {
-                            0: b.manifest.title,
-                          })}
-                          onClick={() => go(b)}
-                        >
-                          <BookCover manifest={b.manifest} small />
-                          <div class="continue-copy">
-                            <h3>{b.manifest.title}</h3>
-                            <p>{b.manifest.author}</p>
-                            <small class="continue-meta">
-                              {t("Book")} · {b.manifest.level} ·{" "}
-                              {progress.find((p) => p.book === b.manifest.id)
-                                ?.percent || 0}
-                              %
-                            </small>
-                          </div>
-                        </button>
-                      </article>
+                        percent={
+                          progress.find((p) => p.book === b.manifest.id)
+                            ?.percent || 0
+                        }
+                        onOpen={() => go(b)}
+                        onMenu={(x, y) => {
+                          setFolderMenu(null);
+                          setBookMenu({
+                            book: b,
+                            folder: "",
+                            x,
+                            y,
+                            continued: true,
+                          });
+                        }}
+                      />
                     ))}
                   </div>
                   {!books.length && (
@@ -2169,6 +2257,48 @@ function App() {
           }
         />
       )}
+      {renaming && (
+        <Modal
+          title={t("Rename book")}
+          onClose={() => {
+            if (!renameBusy) setRenaming(null);
+          }}
+        >
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void renameBook();
+            }}
+          >
+            <label class="collection-name-label">
+              {t("Book title")}
+              <input
+                autoFocus
+                maxLength={200}
+                value={renameTitle}
+                aria-label={t("Book title")}
+                onInput={(event) => setRenameTitle(event.currentTarget.value)}
+              />
+            </label>
+            <div class="row end">
+              <button
+                type="button"
+                disabled={renameBusy}
+                onClick={() => setRenaming(null)}
+              >
+                {t("Cancel")}
+              </button>
+              <button
+                type="submit"
+                class="primary"
+                disabled={renameBusy || !renameTitle.trim()}
+              >
+                {t("Save")}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
       {overlay === "collection-editor" && (
         <CollectionEditor
           collection={editingCollection}
@@ -2183,16 +2313,24 @@ function App() {
       )}
       {overlay === "move-collection" && collectionBook && (
         <MoveBookDialog
+          key={collectionAction}
+          mode={collectionAction}
           book={collectionBook}
           collections={collections}
-          onClose={() => setOverlay("details")}
+          onClose={() =>
+            setOverlay(collectionAction === "add" ? "" : "details")
+          }
           onCreate={() => {
             setEditingCollection(null);
             setOverlay("collection-editor");
           }}
           onSave={async (target) => {
-            await run(() => moveBook(collectionBook.manifest.id, target));
-            setOverlay("details");
+            await run(async () => {
+              if (collectionAction === "add" && target)
+                await addToCollection(collectionBook, target);
+              else await moveBook(collectionBook.manifest.id, target);
+              setOverlay(collectionAction === "add" ? "" : "details");
+            });
           }}
         />
       )}
@@ -2263,6 +2401,7 @@ function App() {
             <button
               onClick={() => {
                 setCollectionBook(details);
+                setCollectionAction("move");
                 setOverlay("move-collection");
               }}
             >
@@ -2672,7 +2811,77 @@ function App() {
           }}
         />
       )}
-      {bookMenu && (
+      {bookMenu?.continued && (
+        <ContinueMenu
+          x={bookMenu.x}
+          y={bookMenu.y}
+          folders={foldersForBook(bookMenu.book)}
+          onRemoveFolder={(id) => {
+            const book = bookMenu.book;
+            setBookMenu(null);
+            void run(() => removeFromFolder(book, id));
+          }}
+          wanted={
+            !!collections
+              .find((c) => c.id === "want-to-read")
+              ?.bookIds.includes(bookMenu.book.manifest.id)
+          }
+          onClose={() => setBookMenu(null)}
+          onShare={() => {
+            const book = bookMenu.book;
+            setBookMenu(null);
+            void run(() => shareBook(book));
+          }}
+          onWant={() => {
+            const book = bookMenu.book;
+            setBookMenu(null);
+            void run(() => toggleWantToRead(book));
+          }}
+          onCollection={() => {
+            setCollectionAction("add");
+            setCollectionBook(bookMenu.book);
+            setOverlay("move-collection");
+            setBookMenu(null);
+          }}
+          onFinish={() => {
+            const id = bookMenu.book.manifest.id;
+            setBookMenu(null);
+            void run(async () => {
+              await commit({
+                book: id,
+                at: "1.1",
+                offset: 0,
+                mode: settingsRef.current.defaultMode,
+                ...progressRef.current.find((p) => p.book === id),
+                percent: 100,
+                updatedAt: new Date().toISOString(),
+              });
+              notify(t("Book completed"));
+            });
+          }}
+          onRename={() => {
+            setRenaming(bookMenu.book);
+            setRenameTitle(bookMenu.book.manifest.title);
+            setBookMenu(null);
+          }}
+          onHide={() => {
+            const id = bookMenu.book.manifest.id;
+            setBookMenu(null);
+            void run(() =>
+              saveSettings({
+                hiddenContinueBooks: [
+                  ...new Set([...settingsRef.current.hiddenContinueBooks, id]),
+                ],
+              }),
+            );
+          }}
+          onRemove={() => {
+            removeBook(bookMenu.book);
+            setBookMenu(null);
+          }}
+        />
+      )}
+      {bookMenu && !bookMenu.continued && (
         <ContextMenu
           x={bookMenu.x}
           y={bookMenu.y}
@@ -2738,6 +2947,7 @@ function App() {
             onClick={() => {
               setDetails(bookMenu.book);
               setCollectionBook(bookMenu.book);
+              setCollectionAction("move");
               setOverlay("move-collection");
               setBookMenu(null);
             }}
