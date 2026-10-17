@@ -3569,6 +3569,7 @@ body,
 
 /* A word note sits beside its source on every device, with no empty sheet. */
 .word-popover {
+  --ui-scale: calc(var(--reading-ui-scale, 1.08) * 1.1);
   position: fixed;
   width: min(calc(300px * var(--ui-scale)), calc(100vw - 24px));
   max-height: calc(100dvh - 24px);

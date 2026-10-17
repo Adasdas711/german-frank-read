@@ -93,6 +93,7 @@ export function appearanceStyle(s: Settings) {
     : theme;
   return {
     "--ui-scale": (s.readingUiScale / 100) * 1.08,
+    "--reading-ui-scale": (s.readingUiScale / 100) * 1.08,
     "--folio-paper": selected.paper,
     "--folio-ink": selected.ink,
     "--folio-muted": selected.ink + "a8",

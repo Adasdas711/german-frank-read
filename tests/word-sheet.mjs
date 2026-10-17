@@ -103,7 +103,7 @@ try {
           : source.y - r.y - r.height;
       assert(gap >= 6 && gap <= 10, `note must be beside the word, gap=${gap}`);
       assert(
-        r.width <= 350 && r.height <= Math.min(380, height * 0.65),
+        r.width <= 385 && r.height <= Math.min(418, height * 0.65),
         `compact note: ${JSON.stringify(r)}`,
       );
     };
