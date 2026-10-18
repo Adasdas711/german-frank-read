@@ -96,6 +96,7 @@ export function PagedReader(props: Props) {
       "type" | "contents" | "search" | "words" | null
     >(null);
   const [page, setPage] = useState(0);
+  const [scrollPosition, setScrollPosition] = useState(0);
   const [layout, setLayout] = useState<Layout>({
     width: 0,
     gap: 0,
@@ -671,6 +672,18 @@ export function PagedReader(props: Props) {
     if (text.current && !scrolling)
       text.current.style.transform = `translateX(${-next * (state.current.layout.width + state.current.layout.gap)}px)`;
   };
+  const seekScroll = (position: number) => {
+    const view = viewport.current;
+    if (!view) return;
+    props.onDismissWord();
+    clearTimeout(lookupTimer.current);
+    clearTurnAnimations();
+    setScrollPosition(position);
+    // Scroll progress follows the actual scrollable distance, not page-height
+    // multiples. This also permits fine adjustments within the current page.
+    view.scrollTop =
+      (Math.max(0, view.scrollHeight - view.clientHeight) * position) / 1000;
+  };
   useLayoutEffect(() => {
     if (props.measureOnly) return;
     const key = (event: KeyboardEvent) => {
@@ -1009,11 +1022,19 @@ export function PagedReader(props: Props) {
         ref={viewport}
         onScroll={() => {
           if (!scrolling || props.measureOnly) return;
+          const view = viewport.current!;
+          const end = Math.max(0, view.scrollHeight - view.clientHeight);
+          // Safari reports negative or beyond-end offsets during elastic scroll.
+          const position = Math.max(0, Math.min(end, view.scrollTop));
+          setScrollPosition(end > 0 ? Math.round((position / end) * 1000) : 0);
+          // The final viewport often overlaps the previous physical page.
+          // Browsers clamp scrollTop to this end, so floor(scrollTop / height)
+          // alone would send the slider back to the penultimate page forever.
           const next = Math.min(
             layout.count - 1,
-            Math.floor(
-              viewport.current!.scrollTop / viewport.current!.clientHeight,
-            ),
+            end > 0 && position >= end - 1
+              ? layout.count - 1
+              : Math.floor(position / view.clientHeight),
           );
           lastScrollPage.current = next;
           if (next !== page) {
@@ -1064,13 +1085,15 @@ export function PagedReader(props: Props) {
                 aria-label={t("Reading tools")}
               >
                 <FilledSlider
-                  value={page}
+                  value={scrolling ? scrollPosition : page}
                   min={0}
-                  max={layout.count - 1}
+                  max={
+                    scrolling ? (layout.count > 1 ? 1000 : 0) : layout.count - 1
+                  }
                   label={t("Reading position")}
                   activationLabel={t("Contents")}
                   valueText={`${pageNumber} of ${layout.leaves || 1}`}
-                  onInput={jumpPage}
+                  onInput={scrolling ? seekScroll : jumpPage}
                   onActivate={() => {
                     setPanel("contents");
                     setMenu(false);
@@ -1078,9 +1101,11 @@ export function PagedReader(props: Props) {
                 >
                   <span>
                     {t("Contents")} ·{" "}
-                    {layout.count > 1
-                      ? Math.round((page / (layout.count - 1)) * 100)
-                      : 0}
+                    {scrolling
+                      ? Math.round(scrollPosition / 10)
+                      : layout.count > 1
+                        ? Math.round((page / (layout.count - 1)) * 100)
+                        : 0}
                     %
                   </span>
                   <Icon name="menu" />

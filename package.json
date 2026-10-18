@@ -36,7 +36,8 @@
     "build:books": "node scripts/full-books.mjs",
     "test:sentence-pages": "node tests/sentence-pages.mjs",
     "test:reader-drag": "node tests/reader-drag.mjs",
-    "test:reader-settings": "node tests/reader-settings.mjs"
+    "test:reader-settings": "node tests/reader-settings.mjs",
+    "test:contents-seek": "node tests/contents-seek.mjs"
   },
   "dependencies": {
     "espeak-ng": "1.0.2",

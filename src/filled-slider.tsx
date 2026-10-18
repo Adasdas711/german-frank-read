@@ -51,12 +51,17 @@ export function FilledSlider({
       "--fill",
       `${max > min ? ((pending.current - min) / (max - min)) * 100 : 0}%`,
     );
-    cancelAnimationFrame(frame.current);
-    if (flush) callback.current(pending.current);
-    else
-      frame.current = requestAnimationFrame(() =>
-        callback.current(pending.current),
-      );
+    if (flush) {
+      cancelAnimationFrame(frame.current);
+      frame.current = 0;
+      callback.current(pending.current);
+    } else if (!frame.current) {
+      // Coalesce moves without postponing the already scheduled frame.
+      frame.current = requestAnimationFrame(() => {
+        frame.current = 0;
+        callback.current(pending.current);
+      });
+    }
   };
   useEffect(() => () => cancelAnimationFrame(frame.current), []);
   return (
@@ -114,6 +119,7 @@ export function FilledSlider({
         press.current = undefined;
         suppress.current = true;
         cancelAnimationFrame(frame.current);
+        frame.current = 0;
         delete root.current!.dataset.dragging;
         root.current!.style.setProperty(
           "--fill",

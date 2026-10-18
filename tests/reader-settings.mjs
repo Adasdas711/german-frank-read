@@ -69,10 +69,9 @@ try {
     const menuWidth = await menu.evaluate(panelWidth);
     const alpha = (n) =>
       Number(getComputedStyle(n).backgroundColor.match(/[\d.]+/g)?.[3] ?? 1);
-    assert.equal(
-      await menu.evaluate(alpha),
-      0,
-      "the menu has no opaque backing rectangle",
+    assert(
+      Math.abs((await menu.evaluate(alpha)) - 0.42) < 0.01,
+      "the menu has a light translucent backing",
     );
     const row = p.locator(".contents-progress");
     assert((await row.evaluate(alpha)) < 1, "Contents is translucent");
@@ -143,7 +142,7 @@ try {
     );
     const contents = p.locator(".folio-popover.contents");
     assert(Math.abs((await contents.evaluate(panelWidth)) - menuWidth) < 1);
-    assert.equal(await contents.evaluate(alpha), 0);
+    assert(Math.abs((await contents.evaluate(alpha)) - 0.42) < 0.01);
     await p.keyboard.press("Escape");
     await revealReader(p, true);
     await tools.tap();
@@ -169,10 +168,9 @@ try {
     await themes.evaluate((n) =>
       Promise.all(n.getAnimations().map((a) => a.finished.catch(() => {}))),
     );
-    assert.equal(
-      await themes.evaluate(alpha),
-      0,
-      "Themes has no backing rectangle",
+    assert(
+      Math.abs((await themes.evaluate(alpha)) - 0.42) < 0.01,
+      "Themes shares the translucent backing",
     );
     assert(Math.abs((await themes.evaluate(panelWidth)) - menuWidth) < 1);
     assert.equal(
@@ -373,14 +371,14 @@ try {
     const search = p.locator(".folio-popover.search");
     await search.waitFor();
     assert(Math.abs((await search.evaluate(panelWidth)) - menuWidth) < 1);
-    assert.equal(await search.evaluate(alpha), 0);
+    assert(Math.abs((await search.evaluate(alpha)) - 0.42) < 0.01);
     await search.getByRole("button", { name: "Close", exact: true }).tap();
     await menu.waitFor();
     await menu.getByRole("button", { name: "Book words", exact: true }).tap();
     const words = p.locator(".folio-popover.words");
     await words.waitFor();
     assert(Math.abs((await words.evaluate(panelWidth)) - menuWidth) < 1);
-    assert.equal(await words.evaluate(alpha), 0);
+    assert(Math.abs((await words.evaluate(alpha)) - 0.42) < 0.01);
     await words.getByRole("button", { name: "Close", exact: true }).tap();
     await menu.waitFor();
     await recordTransition();
