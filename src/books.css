@@ -3984,6 +3984,15 @@ body,
   -webkit-backdrop-filter: blur(24px) saturate(140%);
   border-color: color-mix(in srgb, var(--folio-ink) 12%, transparent);
 }
+.books-reader .folio-popover.type.glass {
+  background: color-mix(in srgb, var(--folio-paper) 40%, transparent);
+  backdrop-filter: blur(8px) saturate(120%);
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
+  box-shadow: 0 12px 32px #0002;
+}
+.books-reader .folio-popover.type .themes-panel {
+  background: transparent;
+}
 .books-reader .themes-panel :is(.group, .glass-group) {
   background: color-mix(in srgb, var(--folio-ink) 7%, transparent);
 }

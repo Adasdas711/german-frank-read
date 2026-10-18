@@ -140,7 +140,13 @@ try {
     await themes.evaluate((n) =>
       Promise.all(n.getAnimations().map((a) => a.finished.catch(() => {}))),
     );
-    assert((await themes.evaluate(alpha)) < 1, "Themes is translucent");
+    assert(
+      (await themes.evaluate(alpha)) <= 0.45,
+      "Themes lets the book show through its background",
+    );
+    await p.screenshot({
+      path: `.test-results/reader-settings/themes-overlay-${width}.png`,
+    });
     assert(
       await themes.evaluate((n) =>
         getComputedStyle(n).backdropFilter.includes("blur"),
