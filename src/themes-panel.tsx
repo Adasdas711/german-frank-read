@@ -22,7 +22,7 @@ export function ThemesPanel({
 }) {
   const t = useT();
   const [view, setView] = useState<"themes" | "custom" | "font">("themes");
-  const [draft, setDraft] = useState(settings);
+  const draft = settings;
   const [turnOpen, setTurnOpen] = useState(false);
   const panel = useRef<HTMLDivElement>(null);
   const firstView = useRef(true);
@@ -50,7 +50,7 @@ export function ThemesPanel({
       document.removeEventListener("pointerdown", dismiss, true);
     };
   }, [turnOpen]);
-  const update = (p: Partial<Settings>) => setDraft((s) => ({ ...s, ...p }));
+  const update = onChange;
   const range = (
     label: string,
     key: keyof Settings,
@@ -77,9 +77,7 @@ export function ThemesPanel({
       <div class="sheet-heading">
         <button
           class="round"
-          aria-label={t(
-            view === "font" ? "Back" : view === "themes" ? "Close" : "Cancel",
-          )}
+          aria-label={t(view === "themes" ? "Close" : "Back")}
           onClick={() =>
             view === "font"
               ? setView("custom")
@@ -88,7 +86,7 @@ export function ThemesPanel({
                 : onClose()
           }
         >
-          <Icon name={view === "font" ? "back" : "close"} />
+          <Icon name={view === "themes" ? "close" : "back"} />
         </button>
         <strong>
           {t(
@@ -104,7 +102,6 @@ export function ThemesPanel({
             class="round done"
             aria-label={t("Done")}
             onClick={() => {
-              onChange(draft);
               setView("themes");
             }}
           >
@@ -199,7 +196,6 @@ export function ThemesPanel({
               <Icon name="moon" />
             </button>
           </div>
-          <InterfaceSize settings={settings} onChange={onChange} readingOnly />
           <div class="theme-grid">
             {themes.map((theme) => (
               <button
@@ -231,7 +227,6 @@ export function ThemesPanel({
           <button
             class="wide glass-group"
             onClick={() => {
-              setDraft(settings);
               setView("custom");
             }}
           >
@@ -361,6 +356,7 @@ export function ThemesPanel({
           )}
         </>
       )}
+      <InterfaceSize settings={settings} onChange={onChange} readingOnly />
     </div>
   );
 }

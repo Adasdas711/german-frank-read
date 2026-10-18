@@ -73,7 +73,7 @@ try {
     };
     const total = async () =>
       Number(
-        (await p.locator(".folio-slider span").textContent()).match(/\d+/g)[1],
+        (await p.locator(".reader-page-count").textContent()).match(/\d+/g)[1],
       );
     for (const turn of ["slide", "curl", "fade", "scroll"]) {
       await openThemes();

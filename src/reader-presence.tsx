@@ -26,20 +26,30 @@ export function ReaderPresence({ children }: { children: ComponentChildren }) {
     }
     const from = {
       opacity: 0,
-      transform: reduced() ? "none" : "translateY(12px) scale(.96)",
+      transform: reduced() ? "none" : "translateY(20px) scale(.94)",
     };
     const to = { opacity: 1, transform: "none" };
     node.style.transformOrigin = "bottom right";
     const animation = node.animate(shown ? [from, to] : [to, from], {
-      duration: reduced() ? 100 : shown ? 240 : 160,
+      duration: reduced() ? 120 : shown ? 280 : 200,
       easing: shown ? "cubic-bezier(.16,1,.3,1)" : "ease-in",
       fill: "both",
+    });
+    // Start after the initial frame, so work elsewhere in the reader cannot
+    // consume the entrance animation before the panel has ever been painted.
+    animation.pause();
+    animation.currentTime = 0;
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => animation.play());
     });
     animation.onfinish = () => {
       if (!shown) setRetained(false);
       else animation.cancel();
     };
-    return () => animation.cancel();
+    return () => {
+      cancelAnimationFrame(frame);
+      animation.cancel();
+    };
   }, [shown]);
   return shown || retained ? (
     <div ref={container} style={{ display: "contents" }}>

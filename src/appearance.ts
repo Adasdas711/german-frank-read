@@ -113,3 +113,26 @@ export function appearanceStyle(s: Settings) {
     "--justify": s.justify ? "justify" : "start",
   };
 }
+
+// Shared by the live reader and library page-index cache. Visual preferences
+// such as colors, control size and Slide/Curl do not change text geometry.
+export function typesettingKey(settings: Settings, mode: string) {
+  const appearance = appearanceStyle(settings);
+  return JSON.stringify([
+    mode,
+    settings.columns,
+    settings.pageTurn === "scroll",
+    ...[
+      "--reading",
+      "--size",
+      "--line",
+      "--letters",
+      "--words",
+      "--margins",
+      "--hint-size",
+      "--hint-style",
+      "--weight",
+      "--justify",
+    ].map((key) => appearance[key]),
+  ]);
+}

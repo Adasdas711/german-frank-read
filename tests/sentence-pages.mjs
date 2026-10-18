@@ -141,7 +141,7 @@ try {
     await p.keyboard.press("Escape");
     await revealReader(p);
     assert.match(
-      (await p.locator(".folio-slider span").textContent()).trim(),
+      (await p.locator(".reader-page-count").textContent()).trim(),
       /^\d+ of \d+$/,
     );
     await p.locator(".reader-tools-button").click();

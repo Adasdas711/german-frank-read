@@ -102,6 +102,7 @@ export function useControlActivation(
       if (press.current && !press.current.released) press.current.moved = true;
     };
     document.addEventListener("pointerdown", clear, true);
+    document.addEventListener("keydown", clear, true);
     node.addEventListener("pointerdown", down, true);
     node.addEventListener("pointermove", move, true);
     node.addEventListener("pointerup", up, true);
@@ -112,6 +113,7 @@ export function useControlActivation(
     return () => {
       clear();
       document.removeEventListener("pointerdown", clear, true);
+      document.removeEventListener("keydown", clear, true);
       node.removeEventListener("pointerdown", down, true);
       node.removeEventListener("pointermove", move, true);
       node.removeEventListener("pointerup", up, true);

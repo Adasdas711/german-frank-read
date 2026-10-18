@@ -43,6 +43,7 @@ import {
   type BookCollection,
 } from "./collections";
 import { ThemesPanel } from "./themes-panel";
+import { typesettingKey } from "./appearance";
 import { InterfaceSize } from "./interface-size";
 import {
   exportBackup,
@@ -310,6 +311,12 @@ function App() {
     }
   };
   const saveSettings = useCallback(async (p: Partial<Settings>) => {
+    if (
+      Object.entries(p).every(
+        ([key, value]) => settingsRef.current[key] === value,
+      )
+    )
+      return;
     const next = { ...settingsRef.current, ...p };
     settingsRef.current = next;
     setSettings(next);
@@ -626,23 +633,12 @@ function App() {
       return JSON.stringify([
         viewportSize,
         b?.manifest.revision,
-        page === "read" && id === bookId
-          ? mode
-          : p?.mode || settings.defaultMode,
-        settings.font,
-        settings.fontSize,
-        settings.readingUiScale,
-        settings.pageTurn,
-        settings.bold,
-        settings.hintSize,
-        settings.hintItalic,
-        settings.customLayout,
-        settings.lineSpacing,
-        settings.letterSpacing,
-        settings.wordSpacing,
-        settings.margins,
-        settings.columns,
-        settings.justify,
+        typesettingKey(
+          settings,
+          page === "read" && id === bookId
+            ? mode
+            : p?.mode || settings.defaultMode,
+        ),
       ]);
     },
     [books, progress, viewportSize, mode, settings, page, bookId],

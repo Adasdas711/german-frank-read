@@ -47,14 +47,14 @@ try {
     };
     assert.equal(
       await p
-        .locator(".folio-bottom")
+        .locator(".reader-page-count")
         .evaluate((n) => getComputedStyle(n).pointerEvents),
       "none",
       "hidden controls cannot intercept text taps",
     );
     await show();
     const toolbar = await p.locator(".folio-toolbar").boundingBox(),
-      dock = await p.locator(".folio-bottom").boundingBox(),
+      dock = await p.locator(".reader-page-count").boundingBox(),
       book = await p.locator(".folio-viewport").boundingBox();
     const exit = await p
       .getByRole("link", { name: "Exit reading", exact: true })
@@ -77,43 +77,50 @@ try {
       name + " single tools button at bottom right",
     );
     assert.equal(await p.locator(".folio-toolbar button").count(), 0);
-    assert.ok(
-      Math.abs(tools.y + tools.height / 2 - dock.y - dock.height / 2) < 1,
-    );
     assert.equal(toolbar.y > height / 2, bottom, name + " toolbar location");
     assert.ok(toolbar.x >= 0 && toolbar.x + toolbar.width <= width);
     assert.ok(
       dock.width < 250 && dock.y + dock.height <= height && dock.x >= 0,
     );
-    assert.equal(await p.locator(".folio-bottom button").count(), 0);
+    assert.equal(await p.locator(".reader-page-count button").count(), 0);
     assert.ok(
       Math.abs(dock.y + dock.height / 2 - toolbar.y - toolbar.height / 2) < 1,
       name + " navigation and tools share one row",
     );
     assert.match(
-      (await p.locator(".folio-slider span").textContent()).trim(),
+      (await p.locator(".reader-page-count").textContent()).trim(),
       /^\d+ of \d+$/,
     );
     assert.ok(
       book.y >= 16 && book.y <= 30 && book.y + book.height <= height - 40,
       name + " paginated text leaves small margins and a footer",
     );
-    await p.getByLabel("Reading position", { exact: true }).click();
+    assert.equal(await p.locator(".folio-toolbar input").count(), 0);
+    await p.locator(".reader-tools-button").click();
+    const progress = await p.locator(".contents-progress").boundingBox();
+    await p.mouse.move(progress.x + 8, progress.y + progress.height / 2);
+    await p.mouse.down();
+    await p.mouse.move(
+      progress.x + progress.width * 0.6,
+      progress.y + progress.height / 2,
+      { steps: 8 },
+    );
+    await p.mouse.up();
     await p.waitForTimeout(80);
     assert.ok(
-      +(await p.locator(".folio-slider span").textContent()).match(/\d+/)[0] >
+      +(await p.locator(".reader-page-count").textContent()).match(/\d+/)[0] >
         1,
-      name + " slider navigates in the shared row",
+      name + " Contents fill slider navigates without closing the menu",
     );
     await p.screenshot({ path: `.test-results/reader-dock/${name}.png` });
-    if (await p.locator(".folio-toolbar .folio-aa").isVisible())
-      await p.locator(".folio-toolbar .folio-aa").click();
-    else {
-      await p.locator(".mobile-reader-menu").click();
-      await p.getByRole("button", { name: "Themes", exact: true }).click();
-    }
+    await p
+      .locator(".reading-menu")
+      .getByRole("button", { name: "Themes", exact: true })
+      .click();
     const panel = await p.locator(".folio-popover.type").boundingBox();
-    const setting = p.locator(".folio-popover.type .range-row").first();
+    const setting = p
+      .locator(".folio-popover.type .filled-control-label")
+      .first();
     assert.ok(
       await setting.evaluate(
         (n) => parseFloat(getComputedStyle(n).fontSize) >= 12,

@@ -51,24 +51,23 @@ try {
     const open = async () => {
       await p.keyboard.press("Escape");
       await revealReader(p, true);
-      await tools.tap();
+      await tools.evaluate((n) => n.click());
       await menu.waitFor();
     };
     await open();
-    assert(
-      await menu.evaluate((n) =>
-        n.getAnimations().some((a) => a.playState === "running"),
-      ),
-      "menu animates on entry",
+    await p.waitForFunction(() =>
+      document
+        .querySelector(".reading-menu")
+        ?.getAnimations()
+        .some((a) => a.playState === "running"),
     );
     await p.keyboard.press("Escape");
-    assert(
-      await menu.evaluate(
-        (n) =>
-          n.inert && n.getAnimations().some((a) => a.playState === "running"),
-      ),
-      "closing menu animates and immediately stops accepting input",
-    );
+    await p.waitForFunction(() => {
+      const n = document.querySelector(".reading-menu");
+      return (
+        n?.inert && n.getAnimations().some((a) => a.playState === "running")
+      );
+    });
     await menu.waitFor({ state: "detached" });
     const cdp = await context.newCDPSession(p);
     const touch = (type, x) =>

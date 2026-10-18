@@ -11,7 +11,7 @@ import type { Settings, SavedWord } from "./storage";
 import { useT } from "./i18n";
 import { Icon } from "./ui";
 import { ThemesPanel } from "./themes-panel";
-import { appearanceStyle } from "./appearance";
+import { appearanceStyle, typesettingKey } from "./appearance";
 import { WordPopover } from "./word-popover";
 import { useControlActivation } from "./control-activation";
 import { ReaderWords } from "./reader-words";
@@ -20,6 +20,7 @@ import {
   pageSnapshot,
   type PageMotion,
 } from "./reader-motion";
+import { FilledSlider } from "./filled-slider";
 import { ReaderPresence, useReaderControls } from "./reader-presence";
 import { sentencePages } from "./sentence-pages";
 export type PageEntry = { at: string; offset: number; preview: string };
@@ -80,6 +81,11 @@ export function PagedReader(props: Props) {
   } = props;
   const t = useT();
   const scrolling = settings.pageTurn === "scroll";
+  const appearance = appearanceStyle(settings);
+  // Only text metrics invalidate pagination. Color and interface-size changes
+  // must paint immediately without measuring every sentence in the novel.
+  const typesetting = typesettingKey(settings, mode);
+
   const [bookQuery, setBookQuery] = useState(""),
     [menu, setMenu] = useState(false);
   const [pageIndex, setPageIndex] = useState<PageEntry[]>([]);
@@ -265,232 +271,214 @@ export function PagedReader(props: Props) {
     let frame = 0,
       settle = 0,
       closed = false;
-    const measure = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        if (closed || !viewport.current || !text.current) return;
-        stopTurn.current();
-        dragTurn.current = null;
-        const viewportBox = viewport.current.getBoundingClientRect();
-        const viewportHeight = viewport.current.clientHeight;
-        if (viewportBox.width <= 0 || viewportHeight <= 0) return;
-        // Safari may treat a percentage height inside an inset-positioned box
-        // as auto, flowing the entire book into one long column. Use a definite
-        // physical height before asking the browser to fragment its columns.
-        text.current.style.height = scrolling ? "auto" : viewportHeight + "px";
-        text.current.style.width = viewportBox.width + "px";
-        // Apply the destination column geometry before any layout read. A mode
-        // switch must not lay out the whole novel once with the old columns first.
-        const width = viewportBox.width;
-        const columns =
-          scrolling || mode === "parallel"
+    const calculate = () => {
+      if (closed || !viewport.current || !text.current) return;
+      stopTurn.current();
+      dragTurn.current = null;
+      const viewportBox = viewport.current.getBoundingClientRect();
+      const viewportHeight = viewport.current.clientHeight;
+      if (viewportBox.width <= 0 || viewportHeight <= 0) return;
+      // Safari may treat a percentage height inside an inset-positioned box
+      // as auto, flowing the entire book into one long column. Use a definite
+      // physical height before asking the browser to fragment its columns.
+      text.current.style.height = scrolling ? "auto" : viewportHeight + "px";
+      text.current.style.width = viewportBox.width + "px";
+      // Apply the destination column geometry before any layout read. A mode
+      // switch must not lay out the whole novel once with the old columns first.
+      const width = viewportBox.width;
+      const columns =
+        scrolling || mode === "parallel"
+          ? 1
+          : settings.columns === "1"
             ? 1
-            : settings.columns === "1"
-              ? 1
-              : settings.columns === "2" && width >= 600
+            : settings.columns === "2" && width >= 600
+              ? 2
+              : width >= 940
                 ? 2
-                : width >= 940
-                  ? 2
-                  : 1;
-        const gap =
-          columns === 2 ? Math.min(100, Math.max(52, width * 0.075)) : 48;
-        const columnWidth = (width - gap * (columns - 1)) / columns;
-        text.current.style.columnWidth = scrolling
-          ? "auto"
-          : columnWidth + "px";
-        text.current.style.columnCount = scrolling ? "auto" : String(columns);
-        text.current.style.columnGap = gap + "px";
-        const cacheKey = JSON.stringify([
-          width,
-          viewport.current.clientHeight,
-          mode,
-          settings.font,
-          settings.fontSize,
-          settings.readingUiScale,
-          settings.columns,
-          settings.lineSpacing,
-          settings.letterSpacing,
-          settings.wordSpacing,
-          settings.margins,
-          settings.bold,
-          settings.hintSize,
-          settings.customLayout,
-          settings.justify,
-          settings.hintItalic,
-          settings.readingTheme,
-          settings.followSystem,
-          scrolling,
-        ]);
-        let cache = measuredLayouts.get(content);
-        if (!cache) {
-          cache = new Map();
-          measuredLayouts.set(content, cache);
-        }
-        const cached =
-          document.fonts.status === "loaded" ? cache.get(cacheKey) : undefined;
-        const breaks = sentencePages(
-          text.current,
-          (width + gap) / columns,
-          scrolling ? 0 : viewportHeight,
-          scrolling ? [] : cached?.breaks,
-        );
-        if (cached) {
-          setPageIndex(cached.entries);
-          setPageSources(cached.sources);
-          const restored = positionFor(cached.layout);
-          text.current.style.transition = "none";
-          setLayout(cached.layout);
-          setPage(restored);
-          state.current.props.onIndex?.(cached.entries);
-          cancelAnimationFrame(settle);
-          settle = requestAnimationFrame(() => {
-            if (text.current) text.current.style.transition = "";
-          });
-          return;
-        }
-        const count = scrolling
-          ? Math.max(
-              1,
-              Math.ceil(
-                text.current.scrollHeight / viewport.current.clientHeight,
-              ),
-            )
-          : Math.max(
-              1,
-              Math.ceil(
-                (text.current.scrollWidth + gap - 0.5) /
-                  (columnWidth + gap) /
-                  columns,
-              ),
-            );
-        const next = {
-          width,
-          gap,
-          columns,
-          count,
-          ready: true,
-          leaves: count * columns,
-        };
-        const nodes = [
-          ...text.current.querySelectorAll<HTMLElement>("[data-book-char]"),
-        ];
-        const origin = text.current.getBoundingClientRect();
-        const stride = (width + gap) / columns;
-        const leafOf = (element: Element) => {
-          const rect = textRect(element);
-          return Math.max(
-            0,
-            Math.floor(
-              scrolling
-                ? (rect.top - origin.top + 1) / viewportHeight
-                : (rect.left - origin.left + 1) / stride,
-            ),
-          );
-        };
-        const entries: PageEntry[] = [];
-        const sourceGroups: {
-          key: string;
-          source: string;
-          start: number;
-          end: number;
-        }[][] = [];
-        // Source words are ordered by physical leaf. Locate page boundaries with
-        // binary search, rather than requesting a layout rectangle for every word.
-        let cursor = 0;
-        while (cursor < nodes.length) {
-          const leaf = leafOf(nodes[cursor]);
-          let low = cursor + 1,
-            high = nodes.length;
-          while (low < high) {
-            const mid = (low + high) >>> 1;
-            if (leafOf(nodes[mid]) <= leaf) low = mid + 1;
-            else high = mid;
-          }
-          for (let i = cursor; i < low; i++) {
-            const node = nodes[i];
-            const address =
-              node.closest<HTMLElement>("[data-reading-at]")!.dataset
-                .readingAt!;
-            const sourceText = sourceTexts.get(address)!;
-            const char = Number(node.dataset.bookChar) || 0;
-            const copy = Math.floor(char / (sourceText.length + 1));
-            const start = char % (sourceText.length + 1),
-              end = start + (node.textContent?.length || 0);
-            const groups = (sourceGroups[leaf] ||= []),
-              key = address + ":" + copy;
-            if (groups.at(-1)?.key === key) groups.at(-1)!.end = end;
-            else groups.push({ key, source: sourceText, start, end });
-            if (!entries[leaf])
-              entries[leaf] = {
-                at: address,
-                offset: char,
-                preview: sourceText.slice(start, start + 95),
-              };
-          }
-          cursor = low;
-        }
-        let lastLeaf = 0;
-        // Paragraph fragments include hints, punctuation and translations. Measuring
-        // their boxes avoids a Range/layout read for every text node in the novel.
-        for (const element of text.current.querySelectorAll(
-          ".reading-panel p,.folio-chapter-title",
-        )) {
-          for (const rect of element.getClientRects()) {
-            const leaf = scrolling
-              ? Math.floor((rect.bottom - origin.top - 0.5) / viewportHeight)
-              : Math.floor((rect.left - origin.left + 1) / (columnWidth + gap));
-            lastLeaf = Math.max(lastLeaf, leaf);
-          }
-        }
-        // The overflow extent is independent of element rectangles. Never
-        // collapse a multi-column book to one page because a fragment box was
-        // reported in the first column by the browser.
-        const extentLeaves = scrolling
-          ? Math.ceil(text.current.scrollHeight / viewportHeight)
-          : Math.ceil((text.current.scrollWidth + gap - 0.5) / stride);
-        const leaves = Math.max(1, extentLeaves, entries.length, lastLeaf + 1);
-        for (let i = 0; i < leaves; i++)
-          if (!entries[i])
-            entries[i] = entries[i - 1] ||
-              entries.find(Boolean) || { at: "1.1", offset: 0, preview: "" };
-        next.leaves = leaves;
-        next.count = Math.ceil(leaves / columns);
-        const measuredSources = Array.from({ length: leaves }, (_, i) =>
-          (sourceGroups[i] || [])
-            .map(
-              (g) =>
-                g.source.slice(g.start, g.end) +
-                (g.source.slice(g.end).match(/^[^\p{L}\p{M}]*/u)?.[0] || ""),
-            )
-            .join("\n"),
-        );
-        if (document.fonts.status === "loaded") {
-          cache.set(cacheKey, {
-            layout: next,
-            entries,
-            sources: measuredSources,
-            breaks,
-          });
-          if (cache.size > 6) cache.delete(cache.keys().next().value!);
-        }
-        const json = JSON.stringify([entries, measuredSources]);
-        if (
-          document.fonts.status === "loaded" &&
-          json !== emittedIndex.current
-        ) {
-          emittedIndex.current = json;
-          setPageIndex(entries);
-          setPageSources(measuredSources);
-          state.current.props.onIndex?.(entries);
-        }
-        const restored = positionFor(next);
+                : 1;
+      const gap =
+        columns === 2 ? Math.min(100, Math.max(52, width * 0.075)) : 48;
+      const columnWidth = (width - gap * (columns - 1)) / columns;
+      text.current.style.columnWidth = scrolling ? "auto" : columnWidth + "px";
+      text.current.style.columnCount = scrolling ? "auto" : String(columns);
+      text.current.style.columnGap = gap + "px";
+      const cacheKey = JSON.stringify([width, viewportHeight, typesetting]);
+      let cache = measuredLayouts.get(content);
+      if (!cache) {
+        cache = new Map();
+        measuredLayouts.set(content, cache);
+      }
+      const cached =
+        document.fonts.status === "loaded" ? cache.get(cacheKey) : undefined;
+      const breaks = sentencePages(
+        text.current,
+        (width + gap) / columns,
+        scrolling ? 0 : viewportHeight,
+        scrolling ? [] : cached?.breaks,
+      );
+      if (cached) {
+        setPageIndex(cached.entries);
+        setPageSources(cached.sources);
+        const restored = positionFor(cached.layout);
         text.current.style.transition = "none";
-        setLayout(next);
+        setLayout(cached.layout);
         setPage(restored);
+        state.current.props.onIndex?.(cached.entries);
         cancelAnimationFrame(settle);
         settle = requestAnimationFrame(() => {
           if (text.current) text.current.style.transition = "";
         });
+        return;
+      }
+      const count = scrolling
+        ? Math.max(
+            1,
+            Math.ceil(
+              text.current.scrollHeight / viewport.current.clientHeight,
+            ),
+          )
+        : Math.max(
+            1,
+            Math.ceil(
+              (text.current.scrollWidth + gap - 0.5) /
+                (columnWidth + gap) /
+                columns,
+            ),
+          );
+      const next = {
+        width,
+        gap,
+        columns,
+        count,
+        ready: true,
+        leaves: count * columns,
+      };
+      const nodes = [
+        ...text.current.querySelectorAll<HTMLElement>("[data-book-char]"),
+      ];
+      const origin = text.current.getBoundingClientRect();
+      const stride = (width + gap) / columns;
+      const leafOf = (element: Element) => {
+        const rect = textRect(element);
+        return Math.max(
+          0,
+          Math.floor(
+            scrolling
+              ? (rect.top - origin.top + 1) / viewportHeight
+              : (rect.left - origin.left + 1) / stride,
+          ),
+        );
+      };
+      const entries: PageEntry[] = [];
+      const sourceGroups: {
+        key: string;
+        source: string;
+        start: number;
+        end: number;
+      }[][] = [];
+      // Source words are ordered by physical leaf. Locate page boundaries with
+      // binary search, rather than requesting a layout rectangle for every word.
+      let cursor = 0;
+      while (cursor < nodes.length) {
+        const leaf = leafOf(nodes[cursor]);
+        let low = cursor + 1,
+          high = nodes.length;
+        while (low < high) {
+          const mid = (low + high) >>> 1;
+          if (leafOf(nodes[mid]) <= leaf) low = mid + 1;
+          else high = mid;
+        }
+        for (let i = cursor; i < low; i++) {
+          const node = nodes[i];
+          const address =
+            node.closest<HTMLElement>("[data-reading-at]")!.dataset.readingAt!;
+          const sourceText = sourceTexts.get(address)!;
+          const char = Number(node.dataset.bookChar) || 0;
+          const copy = Math.floor(char / (sourceText.length + 1));
+          const start = char % (sourceText.length + 1),
+            end = start + (node.textContent?.length || 0);
+          const groups = (sourceGroups[leaf] ||= []),
+            key = address + ":" + copy;
+          if (groups.at(-1)?.key === key) groups.at(-1)!.end = end;
+          else groups.push({ key, source: sourceText, start, end });
+          if (!entries[leaf])
+            entries[leaf] = {
+              at: address,
+              offset: char,
+              preview: sourceText.slice(start, start + 95),
+            };
+        }
+        cursor = low;
+      }
+      let lastLeaf = 0;
+      // Paragraph fragments include hints, punctuation and translations. Measuring
+      // their boxes avoids a Range/layout read for every text node in the novel.
+      for (const element of text.current.querySelectorAll(
+        ".reading-panel p,.folio-chapter-title",
+      )) {
+        for (const rect of element.getClientRects()) {
+          const leaf = scrolling
+            ? Math.floor((rect.bottom - origin.top - 0.5) / viewportHeight)
+            : Math.floor((rect.left - origin.left + 1) / (columnWidth + gap));
+          lastLeaf = Math.max(lastLeaf, leaf);
+        }
+      }
+      // The overflow extent is independent of element rectangles. Never
+      // collapse a multi-column book to one page because a fragment box was
+      // reported in the first column by the browser.
+      const extentLeaves = scrolling
+        ? Math.ceil(text.current.scrollHeight / viewportHeight)
+        : Math.ceil((text.current.scrollWidth + gap - 0.5) / stride);
+      const leaves = Math.max(1, extentLeaves, entries.length, lastLeaf + 1);
+      for (let i = 0; i < leaves; i++)
+        if (!entries[i])
+          entries[i] = entries[i - 1] ||
+            entries.find(Boolean) || { at: "1.1", offset: 0, preview: "" };
+      next.leaves = leaves;
+      next.count = Math.ceil(leaves / columns);
+      const measuredSources = Array.from({ length: leaves }, (_, i) =>
+        (sourceGroups[i] || [])
+          .map(
+            (g) =>
+              g.source.slice(g.start, g.end) +
+              (g.source.slice(g.end).match(/^[^\p{L}\p{M}]*/u)?.[0] || ""),
+          )
+          .join("\n"),
+      );
+      if (document.fonts.status === "loaded") {
+        cache.set(cacheKey, {
+          layout: next,
+          entries,
+          sources: measuredSources,
+          breaks,
+        });
+        if (cache.size > 6) cache.delete(cache.keys().next().value!);
+      }
+      const json = JSON.stringify([entries, measuredSources]);
+      if (document.fonts.status === "loaded" && json !== emittedIndex.current) {
+        emittedIndex.current = json;
+        setPageIndex(entries);
+        setPageSources(measuredSources);
+      }
+      if (document.fonts.status === "loaded")
+        state.current.props.onIndex?.(entries);
+      const restored = positionFor(next);
+      text.current.style.transition = "none";
+      setLayout(next);
+      setPage(restored);
+      cancelAnimationFrame(settle);
+      settle = requestAnimationFrame(() => {
+        if (text.current) text.current.style.transition = "";
+      });
+    };
+    const measure = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        // Let the new settings and pressed state paint before the expensive
+        // index calculation; opening a book still measures on its first frame.
+        if (state.current.layout.ready)
+          frame = requestAnimationFrame(calculate);
+        else calculate();
       });
     };
     measure();
@@ -507,27 +495,7 @@ export function PagedReader(props: Props) {
       observer.disconnect();
       document.fonts.removeEventListener("loadingdone", measure);
     };
-  }, [
-    content,
-    mode,
-    settings.font,
-    settings.fontSize,
-    settings.readingUiScale,
-    settings.columns,
-    settings.lineSpacing,
-    settings.letterSpacing,
-    settings.wordSpacing,
-    settings.margins,
-    settings.bold,
-    settings.hintSize,
-    settings.customLayout,
-    settings.justify,
-    settings.hintItalic,
-    settings.readingTheme,
-    settings.followSystem,
-    scrolling,
-    pages,
-  ]);
+  }, [content, pages, typesetting]);
   useLayoutEffect(() => {
     const key = at + ":" + offset;
     if (key === lastReported.current) return;
@@ -782,7 +750,7 @@ export function PagedReader(props: Props) {
         (scrolling ? " scroll-reader" : "") +
         (controls || panel || menu ? " controls-visible" : "")
       }
-      style={appearanceStyle(settings)}
+      style={appearance}
       aria-hidden={props.measureOnly || undefined}
       inert={props.measureOnly || undefined}
       data-mode={mode}
@@ -953,21 +921,9 @@ export function PagedReader(props: Props) {
           }
           onFocusCapture={() => setControls(true)}
         >
-          <div class="folio-bottom">
-            <label class="folio-slider">
-              <span>
-                {pageNumber} of {layout.leaves || 1}
-              </span>
-              <input
-                type="range"
-                min="0"
-                max={layout.count - 1}
-                value={page}
-                aria-label={t("Reading position")}
-                onInput={(e) => jumpPage(+e.currentTarget.value)}
-              />
-            </label>
-          </div>
+          <span class="reader-page-count">
+            {pageNumber} of {layout.leaves || 1}
+          </span>
         </header>
       )}
       {!props.measureOnly && (
@@ -1056,15 +1012,28 @@ export function PagedReader(props: Props) {
                 role="dialog"
                 aria-label={t("Reading tools")}
               >
-                <button
-                  onClick={() => {
+                <FilledSlider
+                  value={page}
+                  min={0}
+                  max={layout.count - 1}
+                  label={t("Reading position")}
+                  activationLabel={t("Contents")}
+                  valueText={`${pageNumber} of ${layout.leaves || 1}`}
+                  onInput={jumpPage}
+                  onActivate={() => {
                     setPanel("contents");
                     setMenu(false);
                   }}
                 >
-                  <span>{t("Contents")}</span>
+                  <span>
+                    {t("Contents")} ·{" "}
+                    {layout.count > 1
+                      ? Math.round((page / (layout.count - 1)) * 100)
+                      : 0}
+                    %
+                  </span>
                   <Icon name="menu" />
-                </button>
+                </FilledSlider>
                 <button
                   onClick={() => {
                     setPanel("search");
