@@ -50,8 +50,8 @@ try {
       "exit hidden on opening",
     );
     assert(
-      await p.locator(".folio-page-number").isHidden(),
-      "page number hidden on opening",
+      await p.locator(".folio-page-number").isVisible(),
+      "page number visible on opening",
     );
     assert.equal(await p.locator(".folio-running-title").count(), 0);
     await p.screenshot({
@@ -73,7 +73,7 @@ try {
     };
     const total = async () =>
       Number(
-        (await p.locator(".folio-page-number").textContent()).match(/\d+/g)[1],
+        (await p.locator(".folio-slider span").textContent()).match(/\d+/g)[1],
       );
     for (const turn of ["slide", "curl", "fade", "scroll"]) {
       await openThemes();

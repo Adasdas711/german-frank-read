@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import type { Settings } from "./storage";
 import {
   themes,
@@ -9,6 +9,7 @@ import {
 } from "./appearance";
 import { useT } from "./i18n";
 import { Icon, Toggle } from "./ui";
+import { ReaderPresence } from "./reader-presence";
 import { InterfaceSize } from "./interface-size";
 export function ThemesPanel({
   settings,
@@ -23,6 +24,20 @@ export function ThemesPanel({
   const [view, setView] = useState<"themes" | "custom" | "font">("themes");
   const [draft, setDraft] = useState(settings);
   const [turnOpen, setTurnOpen] = useState(false);
+  const panel = useRef<HTMLDivElement>(null);
+  const firstView = useRef(true);
+  useLayoutEffect(() => {
+    if (firstView.current) {
+      firstView.current = false;
+      return;
+    }
+    if (!panel.current?.closest(".books-reader")) return;
+    const animation = panel.current?.animate(
+      [{ opacity: 0.35 }, { opacity: 1 }],
+      { duration: 180, easing: "ease-out" },
+    );
+    return () => animation?.cancel();
+  }, [view]);
   const turnControl = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!turnOpen) return;
@@ -58,7 +73,7 @@ export function ThemesPanel({
     </label>
   );
   return (
-    <div class="themes-panel">
+    <div class="themes-panel" ref={panel}>
       <div class="sheet-heading">
         <button
           class="round"
@@ -143,36 +158,38 @@ export function ThemesPanel({
                   name={settings.pageTurn === "scroll" ? "scroll" : "pages"}
                 />
               </button>
-              {turnOpen && (
-                <div
-                  class="turn-menu glass"
-                  role="menu"
-                  aria-label={t("Page turning")}
-                >
-                  {[
-                    ["slide", "Slide", "slide"],
-                    ["curl", "Curl", "pages"],
-                    ["fade", "Fast Fade", "fade"],
-                    ["scroll", "Scroll", "scroll"],
-                  ].map(([id, label, icon]) => (
-                    <button
-                      role="menuitemradio"
-                      aria-checked={settings.pageTurn === id}
-                      onClick={() => {
-                        setTurnOpen(false);
-                        onChange({ pageTurn: id as Settings["pageTurn"] });
-                        turnControl.current
-                          ?.querySelector<HTMLButtonElement>("button")
-                          ?.focus({ preventScroll: true });
-                      }}
-                    >
-                      <Icon name={icon} />
-                      <span>{t(label)}</span>
-                      {settings.pageTurn === id && <Icon name="check" />}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <ReaderPresence>
+                {turnOpen && (
+                  <div
+                    class="turn-menu glass"
+                    role="menu"
+                    aria-label={t("Page turning")}
+                  >
+                    {[
+                      ["slide", "Slide", "slide"],
+                      ["curl", "Curl", "pages"],
+                      ["fade", "Fast Fade", "fade"],
+                      ["scroll", "Scroll", "scroll"],
+                    ].map(([id, label, icon]) => (
+                      <button
+                        role="menuitemradio"
+                        aria-checked={settings.pageTurn === id}
+                        onClick={() => {
+                          setTurnOpen(false);
+                          onChange({ pageTurn: id as Settings["pageTurn"] });
+                          turnControl.current
+                            ?.querySelector<HTMLButtonElement>("button")
+                            ?.focus({ preventScroll: true });
+                        }}
+                      >
+                        <Icon name={icon} />
+                        <span>{t(label)}</span>
+                        {settings.pageTurn === id && <Icon name="check" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </ReaderPresence>
             </div>
             <button
               aria-label={t("Follow system appearance")}

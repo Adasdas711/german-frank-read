@@ -33,7 +33,9 @@
     "test:continue-touch": "node --experimental-strip-types tests/continue-touch.mjs",
     "test:touch-library": "node tests/touch-library.mjs",
     "test:interface-size": "node tests/interface-size.mjs",
-    "build:books": "node scripts/full-books.mjs"
+    "build:books": "node scripts/full-books.mjs",
+    "test:sentence-pages": "node tests/sentence-pages.mjs",
+    "test:reader-drag": "node tests/reader-drag.mjs"
   },
   "dependencies": {
     "espeak-ng": "1.0.2",

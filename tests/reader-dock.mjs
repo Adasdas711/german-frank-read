@@ -95,8 +95,8 @@ try {
       /^\d+ of \d+$/,
     );
     assert.ok(
-      Math.abs(book.y) < 1 && Math.abs(book.y + book.height - height) < 1,
-      name + " text covers the full height behind the toolbar",
+      book.y >= 16 && book.y <= 30 && book.y + book.height <= height - 40,
+      name + " paginated text leaves small margins and a footer",
     );
     await p.getByLabel("Reading position", { exact: true }).click();
     await p.waitForTimeout(80);

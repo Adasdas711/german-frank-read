@@ -59,7 +59,7 @@ try {
   await p.evaluate((id) => (location.hash = `/read/${id}/1.1/clean`), id);
   await p.locator(".books-reader[data-ready=true]").waitFor();
   const total = Number(
-    (await p.locator(".folio-page-number").textContent()).match(/\d+/g)[1],
+    (await p.locator(".folio-slider span").textContent()).match(/\d+/g)[1],
   );
   assert(
     total > 10,

@@ -135,7 +135,7 @@ try {
   await openBook(page);
   const initialPage = await page.locator(".folio-page-number").textContent();
   assert.match(homeStatus, /Book · [AB][12] · \d+%/);
-  assert.match(initialPage, /\d+ of \d+/);
+  assert.match(initialPage.trim(), /^\d+$/);
   assert.equal(
     await page.locator(".books-reader").getAttribute("data-columns"),
     "2",

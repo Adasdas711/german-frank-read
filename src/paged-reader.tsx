@@ -15,7 +15,13 @@ import { appearanceStyle } from "./appearance";
 import { WordPopover } from "./word-popover";
 import { useControlActivation } from "./control-activation";
 import { ReaderWords } from "./reader-words";
-import { animatePageTurn, pageSnapshot } from "./reader-motion";
+import {
+  animatePageTurn,
+  pageSnapshot,
+  type PageMotion,
+} from "./reader-motion";
+import { ReaderPresence, useReaderControls } from "./reader-presence";
+import { sentencePages } from "./sentence-pages";
 export type PageEntry = { at: string; offset: number; preview: string };
 
 type Props = {
@@ -52,6 +58,7 @@ type MeasuredLayout = {
   layout: Layout;
   entries: PageEntry[];
   sources: string[];
+  breaks: number[];
 };
 // Reuse exact layout indexes when reopening a book with the same settings.
 const measuredLayouts = new WeakMap<Content, Map<string, MeasuredLayout>>();
@@ -94,8 +101,20 @@ export function PagedReader(props: Props) {
     text = useRef<HTMLDivElement>(null),
     root = useRef<HTMLDivElement>(null);
   const stopTurn = useRef<() => void>(() => {});
+  const dragTurn = useRef<{
+    motion: PageMotion;
+    direction: number;
+    origin: number;
+  } | null>(null);
   const state = useRef({ props, page, layout });
   useControlActivation(root, props.measureOnly);
+  useReaderControls(root, !!(controls || panel || menu));
+  useLayoutEffect(() => {
+    if (!wordPanel)
+      root.current
+        ?.querySelectorAll(".word.chosen")
+        .forEach((n) => n.classList.remove("chosen"));
+  }, [wordPanel]);
   state.current = { props, page, layout };
   const anchor = useRef({ at, offset });
   const lastReported = useRef<string | null>(null);
@@ -133,6 +152,7 @@ export function PagedReader(props: Props) {
     root.current?.focus({ preventScroll: true });
     const cancelHold = () => {
       clearTimeout(lookupTimer.current);
+      dragTurn.current?.motion.finish(false);
       gesture.current = null;
       suppressClick.current = true;
     };
@@ -250,6 +270,7 @@ export function PagedReader(props: Props) {
       frame = requestAnimationFrame(() => {
         if (closed || !viewport.current || !text.current) return;
         stopTurn.current();
+        dragTurn.current = null;
         const viewportBox = viewport.current.getBoundingClientRect();
         const viewportHeight = viewport.current.clientHeight;
         if (viewportBox.width <= 0 || viewportHeight <= 0) return;
@@ -307,6 +328,12 @@ export function PagedReader(props: Props) {
         }
         const cached =
           document.fonts.status === "loaded" ? cache.get(cacheKey) : undefined;
+        const breaks = sentencePages(
+          text.current,
+          (width + gap) / columns,
+          scrolling ? 0 : viewportHeight,
+          scrolling ? [] : cached?.breaks,
+        );
         if (cached) {
           setPageIndex(cached.entries);
           setPageSources(cached.sources);
@@ -442,6 +469,7 @@ export function PagedReader(props: Props) {
             layout: next,
             entries,
             sources: measuredSources,
+            breaks,
           });
           if (cache.size > 6) cache.delete(cache.keys().next().value!);
         }
@@ -551,6 +579,7 @@ export function PagedReader(props: Props) {
   }
   const clearTurnAnimations = () => {
     stopTurn.current();
+    dragTurn.current = null;
     stopTurn.current = () => {};
     text.current?.getAnimations().forEach((animation) => animation.cancel());
   };
@@ -560,71 +589,68 @@ export function PagedReader(props: Props) {
     gesture.current = null;
     suppressClick.current = false;
   }, [mode, settings.pageTurn]);
-  const turn = (delta: number) => {
+  const turn = (delta: number, interactive = false, originY = 0.75) => {
     props.onDismissWord();
     clearTimeout(lookupTimer.current);
     const geometry = state.current.layout;
     if (!geometry.ready) return;
-    const next = Math.max(
-      0,
-      Math.min(geometry.count - 1, state.current.page + delta),
-    );
-    if (next === state.current.page) return;
+    const origin = state.current.page;
+    const next = Math.max(0, Math.min(geometry.count - 1, origin + delta));
+    if (next === origin) return;
     const canvas = text.current!;
-    const from = getComputedStyle(canvas).transform;
     clearTurnAnimations();
-    const box = viewport.current!.getBoundingClientRect();
-    const width =
-      settings.pageTurn === "curl" && geometry.columns === 2
-        ? (geometry.width - geometry.gap) / 2
-        : geometry.width;
-    const motionBox = {
-      left:
-        settings.pageTurn === "curl" && delta > 0
-          ? box.right - width
-          : box.left,
-      top: box.top,
-      width,
-      height: box.height,
-    };
-    let outgoing: HTMLElement | undefined;
-    if (!scrolling && settings.pageTurn !== "slide") {
-      const nodes = [
-        ...canvas.querySelectorAll<HTMLElement>("[data-book-char]"),
-      ];
-      const leaf =
-        state.current.page * geometry.columns +
-        (settings.pageTurn === "curl" && delta > 0 ? geometry.columns - 1 : 0);
+    // Capture the complete sheet, including its margins, rather than sliding
+    // just the text rectangle through a stationary frame.
+    const box = root.current!.getBoundingClientRect();
+    const nodes = [...canvas.querySelectorAll<HTMLElement>("[data-book-char]")];
+    const snapshot = (target: number) => {
       let low = 0,
         high = nodes.length;
       while (low < high) {
         const middle = (low + high) >>> 1;
-        if (columnOf(nodes[middle], geometry) < leaf) low = middle + 1;
+        if (columnOf(nodes[middle], geometry) < target * geometry.columns)
+          low = middle + 1;
         else high = middle;
       }
-      outgoing = pageSnapshot(canvas, motionBox, nodes[low]);
-    }
+      const copy = pageSnapshot(canvas, box, nodes[low]);
+      const footer = document.createElement("span");
+      footer.className = "snapshot-page-number";
+      footer.textContent = String(target * geometry.columns + 1);
+      copy.append(footer);
+      return copy;
+    };
+    const outgoing = scrolling ? undefined : snapshot(origin);
     report(next);
     setPage(next);
     hide();
     state.current.page = next;
     if (scrolling && viewport.current) {
       viewport.current.scrollTop = next * viewport.current.clientHeight;
-    } else {
-      const to = `translateX(${-next * (geometry.width + geometry.gap)}px)`;
-      canvas.style.transform = to;
-      if (root.current)
-        stopTurn.current = animatePageTurn({
-          kind: settings.pageTurn as "slide" | "curl" | "fade",
-          canvas,
-          host: root.current,
-          box: motionBox,
-          outgoing,
-          from,
-          to,
-          direction: delta,
-        });
+      return;
     }
+    const to = `translateX(${-next * (geometry.width + geometry.gap)}px)`;
+    canvas.style.transform = to;
+    const incoming =
+      settings.pageTurn === "curl" && delta < 0 ? snapshot(next) : undefined;
+    const motion = animatePageTurn({
+      kind: settings.pageTurn as "slide" | "curl" | "fade",
+      canvas,
+      host: root.current!,
+      box,
+      outgoing: outgoing!,
+      incoming,
+      to,
+      direction: delta,
+      interactive,
+      originY,
+      onFinish(commit) {
+        dragTurn.current = null;
+        stopTurn.current = () => {};
+        if (!commit) jumpPage(origin);
+      },
+    });
+    stopTurn.current = motion.stop;
+    return { motion, direction: delta, origin };
   };
   const jumpPage = (next: number) => {
     props.onDismissWord();
@@ -823,8 +849,30 @@ export function PagedReader(props: Props) {
           clearTimeout(lookupTimer.current);
           hide();
         }
+        const dx = event.clientX - start.x,
+          dy = event.clientY - start.y;
+        if (
+          !scrolling &&
+          start.type !== "mouse" &&
+          !longPressed.current &&
+          Math.abs(dx) > 10 &&
+          Math.abs(dx) > Math.abs(dy) * 1.5
+        ) {
+          if (!dragTurn.current) {
+            const pending = turn(dx < 0 ? 1 : -1, true, start.y / innerHeight);
+            if (pending) {
+              dragTurn.current = pending;
+              root.current?.setPointerCapture(event.pointerId);
+            }
+          }
+          if (dragTurn.current)
+            dragTurn.current.motion.seek(
+              (-dx * dragTurn.current.direction) / root.current!.clientWidth,
+            );
+        }
       }}
       onPointerCancel={() => {
+        dragTurn.current?.motion.finish(false);
         gesture.current = null;
         suppressClick.current = true;
         clearTimeout(lookupTimer.current);
@@ -838,6 +886,15 @@ export function PagedReader(props: Props) {
         const dx = event.clientX - start.x,
           dy = event.clientY - start.y;
         const moved = start.moved || Math.hypot(dx, dy) > 10;
+        if (dragTurn.current) {
+          const pending = dragTurn.current;
+          suppressClick.current = true;
+          pending.motion.finish(
+            -dx * pending.direction >
+              Math.min(100, root.current!.clientWidth * 0.18),
+          );
+          return;
+        }
         suppressClick.current =
           moved ||
           longPressed.current ||
@@ -899,7 +956,7 @@ export function PagedReader(props: Props) {
           <div class="folio-bottom">
             <label class="folio-slider">
               <span>
-                {t("{0} of {1}", { 0: pageNumber, 1: layout.leaves || 1 })}
+                {pageNumber} of {layout.leaves || 1}
               </span>
               <input
                 type="range"
@@ -990,209 +1047,224 @@ export function PagedReader(props: Props) {
       {!props.measureOnly && (
         <>
           <div class="folio-page-number" aria-live="polite">
-            {t("{0} of {1}", { 0: pageNumber, 1: layout.leaves || 1 })}
+            {pageNumber}
           </div>
-          {menu && (
-            <section
-              class="reading-menu glass"
-              role="dialog"
-              aria-label={t("Reading tools")}
-            >
-              <button
-                onClick={() => {
-                  setPanel("contents");
-                  setMenu(false);
-                }}
+          <ReaderPresence>
+            {menu && (
+              <section
+                class="reading-menu glass"
+                role="dialog"
+                aria-label={t("Reading tools")}
               >
-                <span>{t("Contents")}</span>
-                <Icon name="menu" />
-              </button>
-              <button
-                onClick={() => {
-                  setPanel("search");
-                  setMenu(false);
-                  setTimeout(
-                    () =>
-                      root.current
-                        ?.querySelector<HTMLInputElement>(".book-search")
-                        ?.focus(),
-                    30,
-                  );
-                }}
-              >
-                <span>{t("Search Book")}</span>
-                <Icon name="search" />
-              </button>
-              <div
-                class="reader-mode-tabs tabs"
-                role="tablist"
-                aria-label={t("Default mode")}
-              >
-                {["frank", "clean", "parallel"].map((value) => (
-                  <button
-                    role="tab"
-                    aria-selected={mode === value}
-                    disabled={value === "parallel" && !content.t}
-                    onClick={() => props.onMode(value)}
-                  >
-                    {t(
-                      value === "frank"
-                        ? "Frank"
-                        : value === "clean"
-                          ? "Clean"
-                          : "Parallel",
-                    )}
-                  </button>
-                ))}
-              </div>
-              <button
-                aria-label={t("Themes")}
-                onClick={() => {
-                  setPanel("type");
-                  setMenu(false);
-                }}
-              >
-                <span>{t("Themes")}</span>
-                <span>Aa</span>
-              </button>
-              <div class="reading-menu-icons">
                 <button
-                  aria-label={t("Without hints")}
-                  aria-pressed={mode === "clean"}
-                  onClick={() =>
-                    props.onMode(mode === "clean" ? "frank" : "clean")
-                  }
-                >
-                  <Icon name="hints" />
-                </button>
-                <button
-                  aria-label={t(
-                    props.bookmarked ? "Remove bookmark" : "Bookmark",
-                  )}
-                  aria-pressed={props.bookmarked}
-                  onClick={props.onBookmark}
-                >
-                  <Icon name="bookmark" />
-                </button>
-                <button
-                  aria-label={t("Book words")}
                   onClick={() => {
-                    setPanel("words");
+                    setPanel("contents");
                     setMenu(false);
                   }}
                 >
-                  <Icon name="words" />
+                  <span>{t("Contents")}</span>
+                  <Icon name="menu" />
                 </button>
-              </div>
-            </section>
-          )}
-          {panel === "type" && (
-            <section
-              class="folio-popover type glass"
-              role="dialog"
-              aria-label={t("Themes")}
-            >
-              <ThemesPanel
-                settings={settings}
-                onChange={props.onSettings}
-                onClose={hide}
-              />
-            </section>
-          )}
-          {panel === "words" && (
-            <section
-              class="folio-popover words glass"
-              role="dialog"
-              aria-label={t("Book words")}
-            >
-              <ReaderWords
-                words={props.savedWords}
-                onRemove={props.onRemoveWord}
-                onClose={hide}
-              />
-            </section>
-          )}
-          {panel === "contents" && (
-            <section
-              class="folio-popover contents glass"
-              role="dialog"
-              aria-label={t("Contents")}
-            >
-              <nav aria-label={t("Chapters")}>
-                {manifest.chapters.map((chapter, ci) => (
+                <button
+                  onClick={() => {
+                    setPanel("search");
+                    setMenu(false);
+                    setTimeout(
+                      () =>
+                        root.current
+                          ?.querySelector<HTMLInputElement>(".book-search")
+                          ?.focus(),
+                      30,
+                    );
+                  }}
+                >
+                  <span>{t("Search Book")}</span>
+                  <Icon name="search" />
+                </button>
+                <div
+                  class="reader-mode-tabs tabs"
+                  role="tablist"
+                  aria-label={t("Default mode")}
+                >
+                  {["frank", "clean", "parallel"].map((value) => (
+                    <button
+                      role="tab"
+                      aria-selected={mode === value}
+                      disabled={value === "parallel" && !content.t}
+                      onClick={() => props.onMode(value)}
+                    >
+                      {t(
+                        value === "frank"
+                          ? "Frank"
+                          : value === "clean"
+                            ? "Clean"
+                            : "Parallel",
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  aria-label={t("Themes")}
+                  onClick={() => {
+                    setPanel("type");
+                    setMenu(false);
+                  }}
+                >
+                  <span>{t("Themes")}</span>
+                  <span>Aa</span>
+                </button>
+                <div class="reading-menu-icons">
                   <button
-                    class="page-entry chapter-entry"
-                    data-chapter={ci + 1}
-                    aria-current={
-                      Number(at.split(".")[0]) === ci + 1
-                        ? "location"
-                        : undefined
+                    aria-label={t("Without hints")}
+                    aria-pressed={mode === "clean"}
+                    onClick={() =>
+                      props.onMode(mode === "clean" ? "frank" : "clean")
                     }
+                  >
+                    <Icon name="hints" />
+                  </button>
+                  <button
+                    aria-label={t(
+                      props.bookmarked ? "Remove bookmark" : "Bookmark",
+                    )}
+                    aria-pressed={props.bookmarked}
+                    onClick={props.onBookmark}
+                  >
+                    <Icon name="bookmark" />
+                  </button>
+                  <button
+                    aria-label={t("Book words")}
                     onClick={() => {
-                      props.onJump(`${ci + 1}.1`);
-                      hide();
+                      setPanel("words");
+                      setMenu(false);
                     }}
                   >
-                    <strong>
-                      {chapter[0] || t("Chapter {0}", { 0: ci + 1 })}
-                    </strong>
+                    <Icon name="words" />
                   </button>
-                ))}
-              </nav>
-            </section>
-          )}
-          {panel === "search" && (
-            <section
-              class="folio-popover search glass"
-              role="dialog"
-              aria-label={t("Search Book")}
-            >
-              <div class="row between">
-                <h2>{t("Search Book")}</h2>
-                <button class="round" aria-label={t("Close")} onClick={hide}>
-                  <Icon name="close" />
-                </button>
-              </div>
-              <input
-                class="book-search"
+                </div>
+              </section>
+            )}
+          </ReaderPresence>
+          <ReaderPresence>
+            {panel === "type" && (
+              <section
+                class="folio-popover type glass"
+                role="dialog"
+                aria-label={t("Themes")}
+              >
+                <ThemesPanel
+                  settings={settings}
+                  onChange={props.onSettings}
+                  onClose={hide}
+                />
+              </section>
+            )}
+          </ReaderPresence>
+          <ReaderPresence>
+            {panel === "words" && (
+              <section
+                class="folio-popover words glass"
+                role="dialog"
+                aria-label={t("Book words")}
+              >
+                <ReaderWords
+                  words={props.savedWords}
+                  onRemove={props.onRemoveWord}
+                  onClose={hide}
+                />
+              </section>
+            )}
+          </ReaderPresence>
+          <ReaderPresence>
+            {panel === "contents" && (
+              <section
+                class="folio-popover contents glass"
+                role="dialog"
+                aria-label={t("Contents")}
+              >
+                <nav aria-label={t("Chapters")}>
+                  {manifest.chapters.map((chapter, ci) => (
+                    <button
+                      class="page-entry chapter-entry"
+                      data-chapter={ci + 1}
+                      aria-current={
+                        Number(at.split(".")[0]) === ci + 1
+                          ? "location"
+                          : undefined
+                      }
+                      onClick={() => {
+                        props.onJump(`${ci + 1}.1`);
+                        hide();
+                      }}
+                    >
+                      <strong>
+                        {chapter[0] || t("Chapter {0}", { 0: ci + 1 })}
+                      </strong>
+                    </button>
+                  ))}
+                </nav>
+              </section>
+            )}
+          </ReaderPresence>
+          <ReaderPresence>
+            {panel === "search" && (
+              <section
+                class="folio-popover search glass"
+                role="dialog"
                 aria-label={t("Search Book")}
-                placeholder={t("Search Book")}
-                value={bookQuery}
-                onInput={(e) => setBookQuery(e.currentTarget.value)}
-              />
-              <nav aria-label={t("Search results")}>
-                {bookQuery.trim() &&
-                  pageIndex.map((_, i) => {
-                    const needle = bookQuery.trim().toLocaleLowerCase();
-                    if (!pageSources[i]?.toLocaleLowerCase().includes(needle))
-                      return null;
-                    return (
-                      <button
-                        class="page-entry"
-                        onClick={() => {
-                          jumpPage(Math.floor(i / layout.columns));
-                          hide();
-                        }}
-                      >
-                        <span>
-                          <strong>{t("Page {0}", { 0: i + 1 })}</strong>
-                          <small>
-                            {searchSnippet(pageSources[i], bookQuery.trim())}
-                          </small>
-                        </span>
-                      </button>
-                    );
-                  })}
-              </nav>
-            </section>
-          )}
+              >
+                <div class="row between">
+                  <h2>{t("Search Book")}</h2>
+                  <button class="round" aria-label={t("Close")} onClick={hide}>
+                    <Icon name="close" />
+                  </button>
+                </div>
+                <input
+                  class="book-search"
+                  aria-label={t("Search Book")}
+                  placeholder={t("Search Book")}
+                  value={bookQuery}
+                  onInput={(e) => setBookQuery(e.currentTarget.value)}
+                />
+                <nav aria-label={t("Search results")}>
+                  {bookQuery.trim() &&
+                    pageIndex.map((_, i) => {
+                      const needle = bookQuery.trim().toLocaleLowerCase();
+                      if (!pageSources[i]?.toLocaleLowerCase().includes(needle))
+                        return null;
+                      return (
+                        <button
+                          class="page-entry"
+                          onClick={() => {
+                            jumpPage(Math.floor(i / layout.columns));
+                            hide();
+                          }}
+                        >
+                          <span>
+                            <strong>{t("Page {0}", { 0: i + 1 })}</strong>
+                            <small>
+                              {searchSnippet(pageSources[i], bookQuery.trim())}
+                            </small>
+                          </span>
+                        </button>
+                      );
+                    })}
+                </nav>
+              </section>
+            )}
+          </ReaderPresence>
         </>
       )}
-      {wordPanel && props.wordAnchor && (
-        <WordPopover anchor={props.wordAnchor} onDismiss={props.onDismissWord}>
-          {wordPanel}
-        </WordPopover>
-      )}
+      <ReaderPresence>
+        {wordPanel && props.wordAnchor && (
+          <WordPopover
+            anchor={props.wordAnchor}
+            onDismiss={props.onDismissWord}
+          >
+            {wordPanel}
+          </WordPopover>
+        )}
+      </ReaderPresence>
     </div>
   );
 }

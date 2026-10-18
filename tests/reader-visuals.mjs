@@ -60,8 +60,8 @@ try {
     await p.evaluate(() => document.fonts.ready);
     const area = await p.locator(".folio-viewport").boundingBox();
     assert(
-      Math.abs(area.y) < 1 && Math.abs(area.height - height) < 1,
-      "text uses every vertical pixel of the reader",
+      area.y >= 16 && area.y <= 30 && area.y + area.height <= height - 40,
+      "paginated text leaves margins and space for its page number",
     );
     const openMenu = async () => {
       await p.keyboard.press("Escape");
@@ -191,7 +191,14 @@ try {
           kind: root.dataset.turning,
           running: animations.filter((a) => a.playState === "running").length,
           canvas: canvas.getAnimations().map((a) => a.effect.getKeyframes()),
-          strips: root.querySelectorAll(".curl-strip").length,
+          front: root
+            .querySelector(".curl-front")
+            ?.getAnimations()
+            .map((a) => a.effect.getKeyframes()),
+          back: root
+            .querySelector(".curl-back")
+            ?.getAnimations()
+            .map((a) => a.effect.getKeyframes()),
           copied: root.querySelectorAll(
             ".reader-page-layer .curl-snapshot span",
           ).length,
@@ -216,25 +223,19 @@ try {
           "Slide moves the page horizontally",
         );
       if (kind === "curl") {
+        assert(
+          frames.front.length && frames.back.length,
+          "Curl has a continuous front and reflected back",
+        );
+        assert(frames.copied > 0, "Curl contains actual outgoing text");
+        assert(
+          frames.front[0][0].clipPath !== frames.front[0].at(-1).clipPath,
+          "the fold moves across the page",
+        );
         assert.equal(
-          await p
-            .locator(".curl-leaf")
-            .evaluate((n) => getComputedStyle(n).backgroundColor),
-          "rgba(0, 0, 0, 0)",
-          "curl only covers the incoming page with its moving strips",
-        );
-        assert(frames.strips > 1, "Curl bends a connected page surface");
-        assert(
-          frames.copied > 0,
-          "Curl contains the outgoing page's actual text",
-        );
-        const matrices = await p
-          .locator(".curl-strip")
-          .evaluateAll((ns) => ns.map((n) => getComputedStyle(n).transform));
-        assert(
-          new Set(matrices).size > 1 &&
-            matrices.every((m) => m.startsWith("matrix3d")),
-          "Curl strips have different 3D positions",
+          await p.locator(".curl-strip").count(),
+          0,
+          "no segmented sheet",
         );
       }
       if (kind === "fade")
@@ -296,7 +297,7 @@ try {
     );
     assert.deepEqual(errors, []);
     console.log(
-      `${width}px ${motion}: full-height text, overlaid controls, inverted buttons, large search, distinct forward/back/rapid Slide/Curl/Fade and cleanup passed`,
+      `${width}px ${motion}: page margins, overlaid controls, inverted buttons, large search, distinct forward/back/rapid Slide/Curl/Fade and cleanup passed`,
     );
     await context.close();
   }

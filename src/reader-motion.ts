@@ -119,128 +119,225 @@ export function pageSnapshot(
   return snapshot;
 }
 
+export type PageMotion = {
+  stop(): void;
+  seek(progress: number): void;
+  finish(commit: boolean): void;
+};
+
+// Clip a rectangular sheet against its fold line. Both faces use the same
+// boundary; the reflected back is one continuous surface, without strip seams.
+function halfSheet(
+  w: number,
+  h: number,
+  nx: number,
+  ny: number,
+  c: number,
+  front: boolean,
+) {
+  const points = [
+      [0, 0],
+      [w, 0],
+      [w, h],
+      [0, h],
+    ],
+    result: number[][] = [];
+  const distance = ([x, y]: number[]) =>
+    (nx * x + ny * y - c) * (front ? 1 : -1);
+  for (let i = 0; i < points.length; i++) {
+    const a = points[i],
+      b = points[(i + 1) % points.length];
+    const da = distance(a),
+      db = distance(b);
+    if (da <= 0) result.push(a);
+    if (da <= 0 !== db <= 0) {
+      const t = da / (da - db);
+      result.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
+    }
+  }
+  if (result.length < 3) return "polygon(0px 0px,0px 0px,0px 0px)";
+  return `polygon(${result.map(([x, y]) => `${x}px ${y}px`).join(",")})`;
+}
+
 export function animatePageTurn({
   kind,
   canvas,
   host,
   box,
   outgoing,
-  from,
+  incoming,
   to,
   direction,
+  interactive = false,
+  originY = 0.75,
+  onFinish,
 }: {
   kind: "slide" | "curl" | "fade";
   canvas: HTMLElement;
   host: HTMLElement;
   box: Bounds;
-  outgoing?: HTMLElement;
-  from: string;
+  outgoing: HTMLElement;
+  incoming?: HTMLElement;
   to: string;
   direction: number;
-}) {
+  interactive?: boolean;
+  originY?: number;
+  onFinish(commit: boolean): void;
+}): PageMotion {
   const animations: Animation[] = [];
-  let layer: HTMLDivElement | undefined,
-    stopped = false;
-  const durationScale = matchMedia("(prefers-reduced-motion: reduce)").matches
-    ? 0.6
-    : 1;
+  const tracks: { node: Element; frames: Keyframe[]; animation: Animation }[] =
+    [];
+  const duration = kind === "curl" ? 520 : kind === "slide" ? 360 : 160;
+  let stopped = false,
+    progress = 0;
+  const layer = document.createElement("div");
+  layer.className = `reader-page-layer ${kind}-leaf`;
+  layer.setAttribute("aria-hidden", "true");
+  const root = host.getBoundingClientRect();
+  Object.assign(layer.style, {
+    left: box.left - root.left + "px",
+    top: box.top - root.top + "px",
+    width: box.width + "px",
+    height: box.height + "px",
+  });
+  host.append(layer);
   host.dataset.turning = kind;
   const stop = () => {
     if (stopped) return;
     stopped = true;
-    for (const animation of animations) animation.cancel();
-    layer?.remove();
+    animations.forEach((a) => a.cancel());
+    layer.remove();
     delete host.dataset.turning;
   };
-  const animate = (
-    node: Element,
-    frames: Keyframe[],
-    duration: number,
-    easing = "ease-out",
-  ) => {
-    const animation = node.animate(frames, {
-      duration: duration * durationScale,
-      easing,
+  const animate = (node: Element, frames: Keyframe[]) => {
+    const a = node.animate(frames, {
+      duration,
       fill: "both",
+      easing: "linear",
     });
-    animations.push(animation);
-    return animation;
+    a.pause();
+    a.currentTime = 0;
+    animations.push(a);
+    tracks.push({ node, frames, animation: a });
+    return a;
   };
   if (kind === "slide") {
-    animate(
-      canvas,
-      [{ transform: from }, { transform: to }],
-      320,
-      "cubic-bezier(.2,.7,.2,1)",
-    ).onfinish = stop;
+    layer.append(outgoing);
+    animate(layer, [
+      { transform: "translateX(0)" },
+      { transform: `translateX(${-direction * box.width}px)` },
+    ]);
+    const destination = new DOMMatrix(to).m41;
+    animate(canvas, [
+      {
+        transform: `translateX(${destination + direction * box.width * 0.22}px)`,
+      },
+      { transform: to },
+    ]);
+  } else if (kind === "fade") {
+    layer.append(outgoing);
+    animate(layer, [{ opacity: 1 }, { opacity: 0 }]);
+    animate(canvas, [{ opacity: 0 }, { opacity: 1 }]);
   } else {
-    layer = document.createElement("div");
-    layer.className =
-      "reader-page-layer " + (kind === "curl" ? "curl-leaf" : "fade-leaf");
-    layer.setAttribute("aria-hidden", "true");
-    const root = host.getBoundingClientRect();
-    Object.assign(layer.style, {
-      left: box.left - root.left + "px",
-      top: box.top - root.top + "px",
-      width: box.width + "px",
-      height: box.height + "px",
-    });
-    host.append(layer);
-    if (kind === "fade") {
-      if (outgoing) layer.append(outgoing);
-      animate(canvas, [{ opacity: 0 }, { opacity: 1 }], 150);
-      animate(layer, [{ opacity: 1 }, { opacity: 0 }], 150).onfinish = stop;
-    } else {
-      // Six connected strips follow a curved surface. Their shared boundary
-      // positions keep the sheet connected while it bends around its spine.
-      const strips = 6,
-        width = box.width / strips,
-        forward = direction > 0;
-      const frames: Keyframe[][] = Array.from({ length: strips }, () => []);
-      for (let frame = 0; frame <= 16; frame++) {
-        const progress = frame / 16,
-          curve = (Math.sin(progress * Math.PI) * Math.PI) / 2.4;
-        let x = forward ? 0 : box.width,
-          z = 0;
-        for (let i = 0; i < strips; i++) {
-          const angle =
-            (forward ? -1 : 1) *
-            (Math.PI * progress + curve * ((i + 0.5) / strips - 0.5));
-          frames[i].push({
-            offset: progress,
-            transform: `translate3d(${forward ? x : x - width}px,0,${z}px) rotateY(${angle}rad)`,
-          });
-          x += (forward ? 1 : -1) * width * Math.cos(angle);
-          z += (forward ? -1 : 1) * width * Math.sin(angle);
-        }
-      }
-      for (let i = 0; i < strips; i++) {
-        const strip = document.createElement("div");
-        strip.className = "curl-strip";
-        strip.style.width = width + 0.3 + "px";
-        strip.style.transformOrigin = forward ? "left center" : "right center";
-        const front = document.createElement("div");
-        front.className = "curl-face front";
-        const back = document.createElement("div");
-        back.className = "curl-face back";
-        if (outgoing) {
-          const copy = outgoing.cloneNode(true) as HTMLElement;
-          copy.style.position = "absolute";
-          copy.style.left = -(forward ? i : strips - 1 - i) * width + "px";
-          front.append(copy);
-        }
-        strip.append(front, back);
-        layer.append(strip);
-        animate(strip, frames[i], 560, "cubic-bezier(.4,0,.6,1)");
-      }
-      // Keep the 3D surface unflattened while it bends; only fade its last edge.
-      animate(
-        layer,
-        [{ opacity: 1 }, { opacity: 1, offset: 0.85 }, { opacity: 0 }],
-        560,
-        "linear",
-      ).onfinish = stop;
+    if (direction < 0) {
+      const under = document.createElement("div");
+      under.className = "curl-under";
+      under.append(outgoing);
+      layer.append(under);
     }
+    const sheet = direction > 0 ? outgoing : incoming!;
+    const front = document.createElement("div"),
+      back = document.createElement("div"),
+      shadow = document.createElement("div");
+    front.className = "curl-front";
+    back.className = "curl-back";
+    shadow.className = "curl-shadow";
+    front.append(sheet);
+    back.append(sheet.cloneNode(true));
+    layer.append(shadow, front, back);
+    const frontFrames: Keyframe[] = [],
+      backFrames: Keyframe[] = [],
+      shadows: Keyframe[] = [];
+    for (let i = 0; i <= 60; i++) {
+      const time = i / 60,
+        p = direction > 0 ? time : 1 - time;
+      const angle = (originY >= 0.5 ? -0.13 : 0.13) * Math.sin(Math.PI * p);
+      const nx = Math.cos(angle),
+        ny = Math.sin(angle);
+      const foldX = box.width * (1 - p),
+        c = nx * foldX + (ny * box.height) / 2;
+      frontFrames.push({
+        offset: time,
+        clipPath: halfSheet(box.width, box.height, nx, ny, c, true),
+      });
+      backFrames.push({
+        offset: time,
+        clipPath: halfSheet(box.width, box.height, nx, ny, c, false),
+        transform: `matrix(${1 - 2 * nx * nx},${-2 * nx * ny},${-2 * nx * ny},${1 - 2 * ny * ny},${2 * c * nx},${2 * c * ny})`,
+      });
+      shadows.push({
+        offset: time,
+        opacity: Math.sin(Math.PI * p) * 0.65,
+        transform: `translateX(${foldX}px) rotate(${-angle}rad)`,
+      });
+    }
+    animate(front, frontFrames);
+    animate(back, backFrames);
+    animate(shadow, shadows);
   }
-  return stop;
+  const seek = (value: number) => {
+    progress = Math.max(0, Math.min(1, value));
+    for (const a of animations) {
+      a.pause();
+      a.currentTime = progress * duration;
+    }
+  };
+  const finish = (commit: boolean) => {
+    if (stopped) return;
+    const target = commit ? 1 : 0;
+    if (target === progress) {
+      stop();
+      onFinish(commit);
+      return;
+    }
+    // Continue from the exact finger position. A cancelled swipe plays back
+    // towards the original page, rather than jumping to it.
+    for (const { node, frames, animation } of tracks) {
+      const style = getComputedStyle(node);
+      const first: Keyframe = { offset: 0 };
+      for (const key of Object.keys(frames[0]))
+        if (!["offset", "easing", "composite"].includes(key))
+          first[key] = style[key];
+      const tail = frames
+        .map((frame, i) => ({
+          ...frame,
+          offset: frame.offset ?? i / (frames.length - 1),
+        }))
+        .filter((frame) =>
+          commit ? frame.offset > progress : frame.offset < progress,
+        );
+      if (!commit) tail.reverse();
+      const settled = [
+        first,
+        ...tail.map((frame) => ({
+          ...frame,
+          offset: (frame.offset - progress) / (target - progress),
+        })),
+      ];
+      const effect = animation.effect as KeyframeEffect;
+      effect.setKeyframes(settled);
+      effect.updateTiming({
+        duration: Math.max(80, duration * Math.abs(target - progress)),
+        easing: "cubic-bezier(.2,.65,.3,1)",
+      });
+      animation.currentTime = 0;
+      animation.play();
+    }
+    animations[0].onfinish = () => {
+      stop();
+      onFinish(commit);
+    };
+  };
+  if (!interactive) finish(true);
+  return { stop, seek, finish };
 }
