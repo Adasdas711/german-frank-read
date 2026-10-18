@@ -70,6 +70,59 @@ export const hintColors = [
   "#bcadf7",
   "#aeb9c5",
 ];
+const lightHintColors = ["#17695e", "#795800", "#984327", "#6d459c", "#405f7b"];
+const rgb = (hex: string) =>
+  [1, 3, 5].map((start) => parseInt(hex.slice(start, start + 2), 16));
+const luminance = (hex: string) => {
+  const channels = rgb(hex).map((value) => {
+    const s = value / 255;
+    return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  });
+  return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+};
+export function contrastRatio(a: string, b: string) {
+  const x = luminance(a),
+    y = luminance(b);
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+}
+export function readingTheme(s: Settings) {
+  const selected = s.followSystem
+    ? matchMedia("(prefers-color-scheme: light)").matches
+      ? themes[6]
+      : themes[0]
+    : themes.find((theme) => theme.id === s.readingTheme) || themes[0];
+  return { ...selected, light: luminance(selected.paper) > 0.5 };
+}
+// Preserve the chosen hue while making old/custom colors readable too.
+function readableHint(color: string, paper: string) {
+  if (contrastRatio(color, paper) >= 4.5) return color;
+  const from = rgb(color),
+    target = luminance(paper) > 0.5 ? 0 : 255;
+  const mix = (amount: number) =>
+    "#" +
+    from
+      .map((value) =>
+        Math.round(value + (target - value) * amount)
+          .toString(16)
+          .padStart(2, "0"),
+      )
+      .join("");
+  let low = 0,
+    high = 1;
+  for (let i = 0; i < 16; i++) {
+    const middle = (low + high) / 2;
+    if (contrastRatio(mix(middle), paper) >= 4.5) high = middle;
+    else low = middle;
+  }
+  return mix(high);
+}
+export function hintPalette(s: Settings) {
+  const theme = readingTheme(s);
+  return hintColors.map((value, i) => ({
+    value,
+    color: readableHint(theme.light ? lightHintColors[i] : value, theme.paper),
+  }));
+}
 export const themeDefaults = {
   font: "Literata",
   bold: false,
@@ -85,19 +138,23 @@ export const themeDefaults = {
   justify: true,
 } as const;
 export function appearanceStyle(s: Settings) {
-  const theme = themes.find((t) => t.id === s.readingTheme) || themes[0];
-  const selected = s.followSystem
-    ? matchMedia("(prefers-color-scheme: light)").matches
-      ? themes[6]
-      : themes[0]
-    : theme;
+  const selected = readingTheme(s);
+  const chosen = hintColors.indexOf(s.hintColor.toLowerCase());
+  const hint =
+    chosen >= 0 && selected.light
+      ? lightHintColors[chosen]
+      : s.hintColor || selected.hint;
   return {
+    "color-scheme": selected.light ? "light" : "dark",
     "--ui-scale": (s.readingUiScale / 100) * 1.08,
     "--reading-ui-scale": (s.readingUiScale / 100) * 1.08,
     "--folio-paper": selected.paper,
     "--folio-ink": selected.ink,
     "--folio-muted": selected.ink + "a8",
-    "--folio-hint": s.hintColor || selected.hint,
+    "--folio-hint": readableHint(hint, selected.paper),
+    "--reader-accent": selected.light
+      ? readableHint("#17695e", selected.paper)
+      : selected.hint,
     "--reading":
       s.font === "System"
         ? "system-ui, sans-serif"

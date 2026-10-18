@@ -1,9 +1,17 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
+import type { ComponentChildren } from "preact";
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "preact/hooks";
 import type { Settings } from "./storage";
 import {
   themes,
   fonts,
-  hintColors,
+  hintPalette,
+  contrastRatio,
   appearanceStyle,
   themeDefaults,
 } from "./appearance";
@@ -11,6 +19,24 @@ import { useT } from "./i18n";
 import { Icon, Toggle } from "./ui";
 import { ReaderPresence } from "./reader-presence";
 import { InterfaceSize } from "./interface-size";
+function SettingsGroup({
+  title,
+  children,
+}: {
+  title: string;
+  children: ComponentChildren;
+}) {
+  const id = useId();
+  return (
+    <section class="theme-setting-group" role="group" aria-labelledby={id}>
+      <h3 id={id} class="group-label">
+        {title}
+      </h3>
+      <div class="group">{children}</div>
+    </section>
+  );
+}
+
 export function ThemesPanel({
   settings,
   onChange,
@@ -68,6 +94,9 @@ export function ThemesPanel({
         max={max}
         step={step}
         value={draft[key] as number}
+        style={{
+          "--range-fill": `${((Number(draft[key]) - min) / (max - min)) * 100}%`,
+        }}
         onInput={(e) => update({ [key]: +e.currentTarget.value })}
       />
     </label>
@@ -269,8 +298,7 @@ export function ThemesPanel({
             </div>
           ) : (
             <>
-              <h3 class="group-label">{t("Text")}</h3>
-              <div class="group">
+              <SettingsGroup title={t("Text")}>
                 <button class="setting-row" onClick={() => setView("font")}>
                   <span>{t("Font")}</span>
                   <span class="muted">
@@ -283,19 +311,28 @@ export function ThemesPanel({
                 >
                   {t("Bold Text")}
                 </Toggle>
-              </div>
-              <h3 class="group-label">{t("Hints")}</h3>
-              <div class="group">
+              </SettingsGroup>
+              <SettingsGroup title={t("Hints")}>
                 <div class="setting-row">
                   <span>{t("Hint colour")}</span>
                   <div class="swatches">
-                    {hintColors.map((color, i) => (
+                    {hintPalette(draft).map(({ value, color }, i) => (
                       <button
                         aria-label={t("Hint colour {0}", { 0: i + 1 })}
-                        aria-pressed={draft.hintColor === color}
-                        style={{ background: color }}
-                        onClick={() => update({ hintColor: color })}
-                      />
+                        aria-pressed={draft.hintColor.toLowerCase() === value}
+                        style={{
+                          "--swatch": color,
+                          "--swatch-ink":
+                            contrastRatio("#ffffff", color) >= 4.5
+                              ? "#ffffff"
+                              : "#080909",
+                        }}
+                        onClick={() => update({ hintColor: value })}
+                      >
+                        {draft.hintColor.toLowerCase() === value && (
+                          <Icon name="check" size={14} />
+                        )}
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -306,16 +343,16 @@ export function ThemesPanel({
                 >
                   {t("Hints in italics")}
                 </Toggle>
-              </div>
-              <h3 class="group-label">{t("Accessibility & Layout")}</h3>
-              <div class="group">
+              </SettingsGroup>
+              <SettingsGroup title={t("Accessibility & Layout")}>
                 <Toggle
                   checked={draft.customLayout}
                   onChange={(customLayout) => update({ customLayout })}
                 >
                   {t("Customize")}
                 </Toggle>
-                <div
+                <fieldset
+                  disabled={!draft.customLayout}
                   class={
                     !draft.customLayout
                       ? "layout-controls disabled-layout"
@@ -326,7 +363,7 @@ export function ThemesPanel({
                   {range("Character spacing", "letterSpacing", 0, 0.12, 0.01)}
                   {range("Word spacing", "wordSpacing", 0, 0.6, 0.02)}
                   {range("Margins", "margins", 3, 14, 1)}
-                </div>
+                </fieldset>
                 <label class="setting-row">
                   {t("Columns")}
                   <select
@@ -345,7 +382,7 @@ export function ThemesPanel({
                 >
                   {t("Justify Text")}
                 </Toggle>
-              </div>
+              </SettingsGroup>
               <button
                 class="wide quiet"
                 onClick={() => update({ ...themeDefaults })}

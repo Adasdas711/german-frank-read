@@ -33,7 +33,7 @@ export function InterfaceSize({
     <section
       class={"interface-size" + (readingOnly ? " filled-interface-size" : "")}
     >
-      <h3 class="group-label">{t("Interface size")}</h3>
+      {!readingOnly && <h3 class="group-label">{t("Interface size")}</h3>}
       <div class="group">
         {readingOnly ? (
           <FilledSlider

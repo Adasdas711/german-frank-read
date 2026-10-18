@@ -1287,7 +1287,7 @@ html.reading-pages body {
   --muted: var(--folio-muted);
   --panel: color-mix(in srgb, var(--folio-paper), #888 22%);
   --border: #88888822;
-  --teal: var(--folio-hint);
+  --teal: var(--reader-accent, var(--folio-hint));
   --soft: #88888822;
   --button: var(--folio-ink);
   --onbutton: var(--folio-paper);
@@ -4074,6 +4074,11 @@ body,
 /* A light backing separates settings from the book while retaining the same
    width and theme colors throughout the menu and its nested panels. */
 .books-reader :is(.reading-menu, .folio-popover) {
+  --reader-card-surface: color-mix(
+    in srgb,
+    var(--folio-ink) 26%,
+    var(--folio-paper)
+  );
   --reader-control-surface: color-mix(
     in srgb,
     color-mix(in srgb, var(--folio-ink) 26%, var(--folio-paper)) 65%,
@@ -4108,10 +4113,9 @@ body,
     .book-search,
     .page-entry,
     .reader-saved-word,
-    .interface-size-reset,
-    .group-label,
-    .reader-word-list > .muted
-  ) {
+    .interface-size-reset
+  ),
+.books-reader .reader-word-list > .muted {
   background: var(--reader-control-surface);
   backdrop-filter: blur(18px) saturate(140%);
   -webkit-backdrop-filter: blur(18px) saturate(140%);
@@ -4151,13 +4155,8 @@ body,
 .books-reader .themes-panel > .wide {
   border-radius: 999px;
 }
-.books-reader .themes-panel .group-label,
 .books-reader .reader-word-list > .muted {
   padding: calc(10px * var(--ui-scale)) calc(16px * var(--ui-scale));
-}
-.books-reader .themes-panel .group-label {
-  width: fit-content;
-  border-radius: 999px;
 }
 .books-reader .theme-tile[aria-pressed="true"] {
   outline-offset: calc(-2px * var(--ui-scale));
@@ -4171,4 +4170,171 @@ body,
 .books-reader .contents-progress[data-dragging="true"] > button {
   background: transparent !important;
   color: var(--folio-ink) !important;
+}
+
+/* Section captions and fields share one surface, including the curved shoulder. */
+.themes-panel .theme-setting-group {
+  --section-surface: var(--reader-card-surface, var(--panel));
+  --section-radius: calc(20px * var(--ui-scale));
+  margin: calc(22px * var(--ui-scale)) 0;
+}
+.themes-panel .theme-setting-group > .group-label {
+  position: relative;
+  width: fit-content;
+  max-width: calc(100% - var(--section-radius));
+  margin: 0;
+  padding: calc(12px * var(--ui-scale)) calc(16px * var(--ui-scale));
+  border-radius: var(--section-radius) var(--section-radius) 0 0;
+  background: var(--section-surface);
+  color: var(--text);
+  font-weight: 600;
+  line-height: 1.4;
+}
+.themes-panel .theme-setting-group > .group-label::after {
+  content: "";
+  position: absolute;
+  left: 100%;
+  bottom: 0;
+  width: var(--section-radius);
+  height: var(--section-radius);
+  background: radial-gradient(
+    circle at top right,
+    transparent calc(var(--section-radius) - 0.5px),
+    var(--section-surface) var(--section-radius)
+  );
+}
+.themes-panel .theme-setting-group > .group {
+  margin: 0;
+  background: var(--section-surface);
+  border-radius: 0 var(--section-radius) var(--section-radius)
+    var(--section-radius);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.themes-panel .layout-controls {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.themes-panel .disabled-layout {
+  opacity: 1;
+  color: var(--muted);
+}
+.books-reader .themes-panel .switch-label input:checked {
+  background: var(--teal);
+}
+.themes-panel .swatches button,
+.books-reader .themes-panel .swatches button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(28px * var(--ui-scale));
+  min-width: calc(28px * var(--ui-scale));
+  height: calc(28px * var(--ui-scale));
+  min-height: calc(28px * var(--ui-scale));
+  background: var(--swatch) !important;
+  color: var(--swatch-ink) !important;
+  box-shadow: inset 0 0 0 1px #0002;
+  transition: none;
+}
+.themes-panel .swatches button[aria-pressed="true"] {
+  outline: calc(2px * var(--ui-scale)) solid var(--text);
+}
+.themes-panel .range-row input[type="range"] {
+  --range-track: color-mix(in srgb, var(--text) 30%, transparent);
+  --range-color: var(--teal);
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  height: calc(26px * var(--ui-scale));
+  margin: 0;
+  cursor: pointer;
+}
+.themes-panel .range-row input[type="range"]:disabled {
+  --range-color: var(--muted);
+  cursor: default;
+}
+.themes-panel .range-row input::-webkit-slider-runnable-track {
+  height: calc(6px * var(--ui-scale));
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--range-color) 0 var(--range-fill),
+    var(--range-track) var(--range-fill) 100%
+  );
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 20%, transparent);
+}
+.themes-panel .range-row input::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: calc(22px * var(--ui-scale));
+  height: calc(22px * var(--ui-scale));
+  margin-top: calc(-8px * var(--ui-scale));
+  border: 1px solid #0005;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px #0003;
+}
+.themes-panel .range-row input::-moz-range-track {
+  height: calc(6px * var(--ui-scale));
+  border-radius: 999px;
+  background: var(--range-track);
+}
+.themes-panel .range-row input::-moz-range-progress {
+  height: calc(6px * var(--ui-scale));
+  border-radius: 999px;
+  background: var(--range-color);
+}
+.themes-panel .range-row input::-moz-range-thumb {
+  width: calc(22px * var(--ui-scale));
+  height: calc(22px * var(--ui-scale));
+  border: 1px solid #0005;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px #0003;
+}
+.themes-panel .range-row input:disabled::-webkit-slider-thumb {
+  background: color-mix(in srgb, var(--section-surface) 70%, #fff);
+}
+.themes-panel .range-row input:disabled::-moz-range-thumb {
+  background: color-mix(in srgb, var(--section-surface) 70%, #fff);
+}
+
+/* Light controls use a tinted panel and solid light cards. Book text cannot
+   compete with labels, dividers or the chosen hint colors inside a card. */
+.books-reader[data-reading-tone="light"] :is(.reading-menu, .folio-popover) {
+  --panel: color-mix(in srgb, var(--folio-paper) 94%, var(--folio-ink));
+  --reader-control-surface: color-mix(in srgb, #fff 88%, var(--folio-paper));
+  --reader-card-surface: var(--reader-control-surface);
+  --muted: color-mix(in srgb, var(--folio-ink) 78%, var(--folio-paper));
+  --border: color-mix(in srgb, var(--folio-ink) 20%, transparent);
+}
+.books-reader[data-reading-tone="light"]
+  :is(.reading-menu, .folio-popover).glass {
+  background: color-mix(
+    in srgb,
+    color-mix(in srgb, var(--folio-paper) 94%, var(--folio-ink)) 97%,
+    transparent
+  );
+  border-color: color-mix(in srgb, var(--folio-ink) 24%, transparent);
+  box-shadow: 0 8px 28px #0003;
+}
+.books-reader[data-reading-tone="light"] .filled-control,
+.books-reader[data-reading-tone="light"] .reading-menu > button,
+.books-reader[data-reading-tone="light"] .reading-menu .reader-mode-tabs,
+.books-reader[data-reading-tone="light"] .reading-menu-icons button {
+  background: var(--reader-control-surface);
+}
+.books-reader[data-reading-tone="light"] .filled-control::before {
+  background: color-mix(in srgb, var(--teal) 22%, transparent);
+}
+.books-reader[data-reading-tone="light"] .theme-preview {
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.books-reader[data-reading-tone="light"]
+  .themes-panel
+  .range-row
+  input[type="range"] {
+  --range-track: color-mix(in srgb, var(--folio-ink) 48%, var(--folio-paper));
 }

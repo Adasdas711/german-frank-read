@@ -11,7 +11,7 @@ import type { Settings, SavedWord } from "./storage";
 import { useT } from "./i18n";
 import { Icon } from "./ui";
 import { ThemesPanel } from "./themes-panel";
-import { appearanceStyle, typesettingKey } from "./appearance";
+import { appearanceStyle, typesettingKey, readingTheme } from "./appearance";
 import { WordPopover } from "./word-popover";
 import { useControlActivation } from "./control-activation";
 import { ReaderWords } from "./reader-words";
@@ -807,6 +807,7 @@ export function PagedReader(props: Props) {
       aria-hidden={props.measureOnly || undefined}
       inert={props.measureOnly || undefined}
       data-mode={mode}
+      data-reading-tone={readingTheme(settings).light ? "light" : "dark"}
       ref={root}
       tabIndex={props.measureOnly ? undefined : -1}
       aria-label={t("Read book")}
