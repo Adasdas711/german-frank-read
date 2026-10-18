@@ -21,8 +21,7 @@ export function ThemesPanel({
 }) {
   const t = useT();
   const [view, setView] = useState<"themes" | "custom" | "font">("themes");
-  const [draft, setDraft] = useState(settings),
-    [turnOpen, setTurnOpen] = useState(false);
+  const [draft, setDraft] = useState(settings);
   const update = (p: Partial<Settings>) => setDraft((s) => ({ ...s, ...p }));
   const range = (
     label: string,
@@ -66,7 +65,7 @@ export function ThemesPanel({
         <strong>
           {t(
             view === "themes"
-              ? "Themes & Voice"
+              ? "Themes"
               : view === "font"
                 ? "Font"
                 : "Customize Theme",
@@ -109,44 +108,12 @@ export function ThemesPanel({
               A
             </button>
             <button
-              aria-label={t("Page turning")}
-              aria-expanded={turnOpen}
-              onClick={() => setTurnOpen(!turnOpen)}
-            >
-              <Icon
-                name={settings.pageTurn === "scroll" ? "scroll" : "pages"}
-              />
-            </button>
-            <button
               aria-label={t("Follow system appearance")}
               aria-pressed={settings.followSystem}
               onClick={() => onChange({ followSystem: !settings.followSystem })}
             >
               <Icon name="moon" />
             </button>
-            {turnOpen && (
-              <div class="turn-menu glass" role="menu">
-                {[
-                  ["slide", "Slide", "slide"],
-                  ["curl", "Curl", "pages"],
-                  ["fade", "Fast Fade", "fade"],
-                  ["scroll", "Scroll", "scroll"],
-                ].map(([id, label, icon]) => (
-                  <button
-                    role="menuitemradio"
-                    aria-checked={settings.pageTurn === id}
-                    onClick={() => {
-                      onChange({ pageTurn: id as Settings["pageTurn"] });
-                      setTurnOpen(false);
-                    }}
-                  >
-                    <Icon name={icon} />
-                    <span>{t(label)}</span>
-                    {settings.pageTurn === id && <Icon name="check" />}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
           <InterfaceSize settings={settings} onChange={onChange} readingOnly />
           <div class="theme-grid">
@@ -183,18 +150,24 @@ export function ThemesPanel({
             {t("Customize")}
           </button>
           <div class="group">
-            <div class="setting-row">
-              <span>{t("Voice")}</span>
-              <span class="muted">eSpeak NG</span>
-            </div>
             <label class="setting-row">
-              {t("Speech rate")}
+              {t("Page turning")}
               <select
-                value={settings.rate}
-                onChange={(e) => onChange({ rate: +e.currentTarget.value })}
+                aria-label={t("Page turning")}
+                value={settings.pageTurn}
+                onChange={(e) =>
+                  onChange({
+                    pageTurn: e.currentTarget.value as Settings["pageTurn"],
+                  })
+                }
               >
-                {[0.5, 0.75, 1, 1.25, 1.5].map((n) => (
-                  <option value={n}>{n}×</option>
+                {[
+                  ["slide", "Slide"],
+                  ["curl", "Curl"],
+                  ["fade", "Fast Fade"],
+                  ["scroll", "Scroll"],
+                ].map(([value, label]) => (
+                  <option value={value}>{t(label)}</option>
                 ))}
               </select>
             </label>

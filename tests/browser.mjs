@@ -32,20 +32,6 @@ const context = await browser.newContext({
   viewport: { width: 1440, height: 960 },
   acceptDownloads: true,
 });
-await context.addInitScript(() => {
-  const start = AudioBufferSourceNode.prototype.start;
-  AudioBufferSourceNode.prototype.start = function (...args) {
-    if (this.buffer) {
-      const samples = this.buffer.getChannelData(0);
-      let peak = 0;
-      for (let i = 0; i < samples.length; i++)
-        peak = Math.max(peak, Math.abs(samples[i]));
-      window.__audioPeak = peak;
-      window.__audioDuration = this.buffer.duration;
-    }
-    return start.apply(this, args);
-  };
-});
 const page = await context.newPage(),
   errors = [],
   requests = [];
@@ -71,30 +57,13 @@ try {
   await page.locator(".reader-tools-button").click();
   await page.getByRole("tab", { name: "Clean", exact: true }).click();
   await page.keyboard.press("Escape");
-  await page.getByRole("button", { name: "Esel", exact: true }).first().click();
-  await page
-    .getByRole("button", { name: "Pronounce word", exact: true })
-    .click();
-  await page.waitForFunction(
-    () => window.__audioPeak > 0.01 && window.__audioDuration > 0.05,
-    {},
-    { timeout: 60000 },
+  assert.equal(
+    await page
+      .getByRole("button", { name: /Pronounce word|Listen to page|Stop audio/ })
+      .count(),
+    0,
   );
-  await page.keyboard.press("Escape");
-  await page.mouse.click(720, 60);
-  await page.locator(".reader-tools-button").click();
-  await page
-    .getByRole("button", { name: "Listen to page", exact: true })
-    .click();
-  await page.waitForFunction(
-    () => window.__audioDuration > 1,
-    {},
-    { timeout: 60000 },
-  );
-  await page.getByRole("button", { name: "Stop audio", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Listen to page", exact: true })
-    .waitFor();
+  assert.equal(await page.locator("#espeak-wasm,#ipa-wasm").count(), 0);
   await page.goto(base.replace("index.html", "fbook-builder.html"));
   await page.getByRole("button", { name: "Пример", exact: true }).click();
   await page
@@ -145,7 +114,7 @@ try {
   assert.deepEqual(errors, []);
   assert.deepEqual(requests, [], "App must make no HTTP requests");
   console.log(
-    "PASS: real eSpeak word and page audio, PDF text extraction and comparison, builder IPA, fbook build, staged import, invalid archive rejection; no network requests or page errors.",
+    "PASS: no reader audio controls or engine payload, PDF text extraction and comparison, builder IPA, fbook build, staged import, invalid archive rejection; no network requests or page errors.",
   );
 } finally {
   await browser.close();

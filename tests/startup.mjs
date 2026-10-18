@@ -3,10 +3,10 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import assert from "node:assert/strict";
 const html = await readFile("index.html", "utf8");
-const marker = html.indexOf('<script id="espeak-wasm"');
+const marker = html.indexOf("<!--\nНемецкий");
 assert.ok(
   marker > 0 && marker < 4000000,
-  "startup code must precede the large speech payload",
+  "startup code must precede the legal notices",
 );
 assert.ok(html.startsWith("<!doctype html>"), "doctype must be first");
 const prefix = html.slice(0, marker),
@@ -15,7 +15,7 @@ const held = new Set();
 const server = createServer((req, res) => {
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   if (req.url === "/german-frank-read/slow/") {
-    // Keep the entire synthesizer tail undelivered until the UI has opened.
+    // Keep the legal notices undelivered until the UI has opened.
     res.write(prefix);
     held.add(res);
     res.on("close", () => held.delete(res));
@@ -42,7 +42,7 @@ try {
   await page.waitForLoadState("load");
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: library usable before speech payload downloads, at a GitHub Pages subpath",
+    "PASS: library usable during streaming startup at a GitHub Pages subpath; no speech payload",
   );
   const denied = await browser.newPage();
   await denied.addInitScript(() => {

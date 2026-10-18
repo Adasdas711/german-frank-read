@@ -7,13 +7,14 @@ import {
   useState,
 } from "preact/hooks";
 import { plain, type Chunk, type Content, type Manifest } from "./core";
-import type { Settings } from "./storage";
+import type { Settings, SavedWord } from "./storage";
 import { useT } from "./i18n";
 import { Icon } from "./ui";
 import { ThemesPanel } from "./themes-panel";
 import { appearanceStyle } from "./appearance";
-import { useTouchActions } from "./touch-actions";
 import { WordPopover } from "./word-popover";
+import { useControlActivation } from "./control-activation";
+import { ReaderWords } from "./reader-words";
 export type PageEntry = { at: string; offset: number; preview: string };
 
 type Props = {
@@ -28,14 +29,13 @@ type Props = {
   onMode(mode: string): void;
   onJump(at: string): void;
   onComplete(): void;
-  onListen(text?: string, ipa?: string): void;
   onIndex?(pages: PageEntry[]): void;
   onBookmark?(): void;
   bookmarked?: boolean;
   bookmarks?: { at: string; offset: number }[];
-  onWords?(): void;
+  savedWords: SavedWord[];
+  onRemoveWord(key: string): void;
   measureOnly?: boolean;
-  busy: boolean;
   progressPercent?: number;
   renderFragment(chunks: Chunk[], at: string): ComponentChildren;
   wordPanel: ComponentChildren;
@@ -84,7 +84,7 @@ export function PagedReader(props: Props) {
   const [pageSources, setPageSources] = useState<string[]>([]);
   const emittedIndex = useRef("");
   const [controls, setControls] = useState(false),
-    [panel, setPanel] = useState<"type" | "contents" | null>(null);
+    [panel, setPanel] = useState<"type" | "contents" | "words" | null>(null);
   const [page, setPage] = useState(0);
   const [layout, setLayout] = useState<Layout>({
     width: 0,
@@ -97,7 +97,7 @@ export function PagedReader(props: Props) {
     text = useRef<HTMLDivElement>(null),
     root = useRef<HTMLDivElement>(null);
   const state = useRef({ props, page, layout });
-  useTouchActions(root, props.measureOnly);
+  useControlActivation(root, props.measureOnly);
   state.current = { props, page, layout };
   const anchor = useRef({ at, offset });
   const lastReported = useRef<string | null>(null);
@@ -249,6 +249,14 @@ export function PagedReader(props: Props) {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         if (closed || !viewport.current || !text.current) return;
+        const viewportBox = viewport.current.getBoundingClientRect();
+        const viewportHeight = viewport.current.clientHeight;
+        if (viewportBox.width <= 0 || viewportHeight <= 0) return;
+        // Safari may treat a percentage height inside an inset-positioned box
+        // as auto, flowing the entire book into one long column. Use a definite
+        // physical height before asking the browser to fragment its columns.
+        text.current.style.height = scrolling ? "auto" : viewportHeight + "px";
+        text.current.style.width = viewportBox.width + "px";
         // Apply the destination column geometry before any layout read. A mode
         // switch must not lay out the whole novel once with the old columns first.
         const widthHint = state.current.layout.width || innerWidth;
@@ -270,7 +278,7 @@ export function PagedReader(props: Props) {
           (hintColumns === 2
             ? Math.min(100, Math.max(52, widthHint * 0.075))
             : 48) + "px";
-        const width = viewport.current.getBoundingClientRect().width;
+        const width = viewportBox.width;
         const columns =
           scrolling || mode === "parallel"
             ? 1
@@ -357,7 +365,6 @@ export function PagedReader(props: Props) {
           ...text.current.querySelectorAll<HTMLElement>("[data-book-char]"),
         ];
         const origin = text.current.getBoundingClientRect();
-        const viewportHeight = viewport.current.clientHeight;
         const stride = (width + gap) / columns;
         const leafOf = (element: Element) => {
           const rect =
@@ -478,6 +485,7 @@ export function PagedReader(props: Props) {
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(viewport.current!);
+    document.fonts.addEventListener("loadingdone", measure);
     document.fonts.ready.then(() => {
       if (!closed) measure();
     });
@@ -486,6 +494,7 @@ export function PagedReader(props: Props) {
       cancelAnimationFrame(frame);
       cancelAnimationFrame(settle);
       observer.disconnect();
+      document.fonts.removeEventListener("loadingdone", measure);
     };
   }, [
     content,
@@ -752,6 +761,14 @@ export function PagedReader(props: Props) {
       if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey)
         return;
       const target = event.target as HTMLElement;
+      if (event.key === "Enter") {
+        const word = target.closest<HTMLElement>("[data-book-char]");
+        if (word) {
+          event.preventDefault();
+          openWord(word);
+          return;
+        }
+      }
       if (
         target.closest(
           ".reader-exit,.reader-tools-button,.folio-popover,.word-panel,.folio-toolbar,.folio-bottom,.reading-menu",
@@ -836,34 +853,6 @@ export function PagedReader(props: Props) {
     } else if (controls) hide();
     else show();
   };
-  const listenPage = () => {
-    const visible = [
-      ...text.current!.querySelectorAll<HTMLElement>("[data-book-char]"),
-    ].filter((node) => {
-      const leaf = columnOf(node, layout);
-      return (
-        leaf >= page * layout.columns && leaf < (page + 1) * layout.columns
-      );
-    });
-    const ipa = visible
-      .map((node) => {
-        const address =
-          node.closest<HTMLElement>("[data-reading-at]")!.dataset.readingAt!;
-        const form = node.textContent || "";
-        return content.x?.[address]?.[form] || content.f[form]?.[0] || "";
-      })
-      .join(" ");
-    const source = pageSources
-      .slice(page * layout.columns, (page + 1) * layout.columns)
-      .join(" ")
-      .trim();
-    const entry = pageIndex[page * layout.columns];
-    const [ci, fi] = (entry?.at || at).split(".").map((n) => +n - 1);
-    props.onListen(
-      source || plain(content.c[ci][fi]),
-      source && ipa ? ipa : undefined,
-    );
-  };
   const searchSnippet = (text: string, q: string) => {
     const i = text.toLocaleLowerCase().indexOf(q.toLocaleLowerCase());
     return "…" + text.slice(Math.max(0, i - 35), i + q.length + 85) + "…";
@@ -905,8 +894,12 @@ export function PagedReader(props: Props) {
           target.closest(
             ".reader-exit,.reader-tools-button,.folio-toolbar,.folio-popover,.folio-bottom,.word-panel,.reading-menu",
           )
-        )
+        ) {
+          // Native controls handle their own clicks. A drag which starts on a
+          // control must not turn a page if it ends on the canvas underneath.
+          suppressClick.current = true;
           return;
+        }
         suppressClick.current = false;
         gesture.current = {
           id: event.pointerId,
@@ -976,7 +969,7 @@ export function PagedReader(props: Props) {
           return;
         }
         const word = target.closest("[data-book-char]");
-        if (word && event.detail > 0) {
+        if (word && (event.detail > 0 || event.isTrusted)) {
           event.preventDefault();
           event.stopPropagation();
           if (event.detail === 1) tap(event.clientX);
@@ -1157,22 +1150,16 @@ export function PagedReader(props: Props) {
                 ))}
               </div>
               <button
-                aria-label={t("Themes & Voice")}
+                aria-label={t("Themes")}
                 onClick={() => {
                   setPanel("type");
                   setMenu(false);
                 }}
               >
-                <span>{t("Themes & Voice")}</span>
+                <span>{t("Themes")}</span>
                 <span>Aa</span>
               </button>
               <div class="reading-menu-icons">
-                <button
-                  aria-label={t(props.busy ? "Stop audio" : "Listen to page")}
-                  onClick={listenPage}
-                >
-                  <Icon name={props.busy ? "stop" : "sound"} />
-                </button>
                 <button
                   aria-label={t("Without hints")}
                   aria-pressed={mode === "clean"}
@@ -1191,7 +1178,13 @@ export function PagedReader(props: Props) {
                 >
                   <Icon name="bookmark" />
                 </button>
-                <button aria-label={t("Book words")} onClick={props.onWords}>
+                <button
+                  aria-label={t("Book words")}
+                  onClick={() => {
+                    setPanel("words");
+                    setMenu(false);
+                  }}
+                >
                   <Icon name="words" />
                 </button>
               </div>
@@ -1201,11 +1194,24 @@ export function PagedReader(props: Props) {
             <section
               class="folio-popover type glass"
               role="dialog"
-              aria-label={t("Themes & Voice")}
+              aria-label={t("Themes")}
             >
               <ThemesPanel
                 settings={settings}
                 onChange={props.onSettings}
+                onClose={hide}
+              />
+            </section>
+          )}
+          {panel === "words" && (
+            <section
+              class="folio-popover words glass"
+              role="dialog"
+              aria-label={t("Book words")}
+            >
+              <ReaderWords
+                words={props.savedWords}
+                onRemove={props.onRemoveWord}
                 onClose={hide}
               />
             </section>

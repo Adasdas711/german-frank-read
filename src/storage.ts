@@ -35,8 +35,6 @@ export type Settings = {
   bookStyleVersion: 1;
   language: Language;
   readingDefaultsVersion: 1;
-  voice: string;
-  rate: number;
   current?: string;
   designVersion: 2;
   readingTheme: string;
@@ -74,8 +72,6 @@ export const defaults: Settings = {
   bookStyleVersion: 1,
   language: "en",
   readingDefaultsVersion: 1,
-  voice: "espeak",
-  rate: 1,
   designVersion: 2,
   readingTheme: "night",
   followSystem: false,
@@ -277,8 +273,6 @@ export function checkedSettings(s: any): Settings {
     bookStyleVersion: 1,
     readingDefaultsVersion: 1,
     designVersion: 2,
-    voice: ["espeak", "system"].includes(s?.voice) ? s.voice : "espeak",
-    rate: num("rate", 0.5, 1.5),
     readingTheme: [
       "night",
       "dusk",

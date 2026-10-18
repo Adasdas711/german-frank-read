@@ -46,7 +46,7 @@ for (const [entry, name] of [
     ...(entry === "builder" ? ["licenses/PDFjs-Apache-2.0.txt"] : []),
   ];
   const notice =
-    "Немецкий по Франку · GPL-3.0-or-later. Source: accompanying src/, scripts/, package-lock.json. eSpeak source: https://github.com/ianmarmour/espeak-ng.js\n" +
+    "Немецкий по Франку · GPL-3.0-or-later. Source: accompanying src/, scripts/, package-lock.json. eSpeak IPA source: https://github.com/ianmarmour/espeak-ng.js\n" +
     (await Promise.all(licenses.map((p) => readFile(p, "utf8")))).join("\n\n");
   let html = await readFile(`.build-${entry}/${entry}-dev.html`, "utf8");
   const script = html.match(/<script type="module"[^>]*>([\s\S]*?)<\/script>/);
@@ -68,16 +68,20 @@ for (const [entry, name] of [
       "</head>",
       '<link rel="manifest" href="./manifest.webmanifest"><meta name="theme-color" content="#1e2022"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="По Франку"><link rel="apple-touch-icon" href="./pwa/apple-touch-icon.png"></head>',
     );
-  const wasm = await readFile("src/wasm-base64.txt", "utf8");
+  const wasm =
+    entry === "builder" ? await readFile("src/wasm-base64.txt", "utf8") : "";
   html = html.replace(
     "</body>",
     () =>
       "<script>" +
       app.code.replaceAll("</script", "<\\/script") +
       "</script>" +
-      '<script id="espeak-wasm" type="application/octet-stream">' +
-      wasm +
-      "</script></body>",
+      (wasm
+        ? '<script id="ipa-wasm" type="application/octet-stream">' +
+          wasm +
+          "</script>"
+        : "") +
+      "</body>",
   );
   // Keep the doctype first. Legal text belongs at the end, off the first paint.
   await writeFile(

@@ -155,7 +155,7 @@ try {
     await card
       .getByRole("button", { name: "Save to My Words", exact: true })
       .click();
-    await card.getByRole("button", { name: "Saved", exact: true }).waitFor();
+    await card.getByRole("button", { name: "Remove from My Words", exact: true }).waitFor();
     await card.getByRole("button", { name: "Close", exact: true }).click();
     assert.equal(
       await p.locator(".word.chosen").count(),

@@ -18,6 +18,7 @@ const setRange = async (locator, value) => {
   await locator.evaluate((node, value) => {
     node.value = String(value);
     node.dispatchEvent(new Event("input", { bubbles: true }));
+    node.dispatchEvent(new Event("change", { bubbles: true }));
   }, value);
   await locator.page().waitForTimeout(100);
 };
@@ -79,7 +80,7 @@ try {
     await tools.click();
     await p
       .locator(".reading-menu")
-      .getByRole("button", { name: "Themes & Voice", exact: true })
+      .getByRole("button", { name: "Themes", exact: true })
       .click();
     const panel = p.locator(".folio-popover.type");
     await bounded(panel, width, height);

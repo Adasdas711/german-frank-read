@@ -280,6 +280,9 @@ describe("reader preferences", () => {
     const { defaults, checkedSettings } = await import("../src/storage");
     expect(defaults.language).toBe("en");
     expect(defaults.showClean).toBe(false);
+    const withoutVoice = checkedSettings({ voice: "system", rate: 1.25 });
+    expect(withoutVoice).not.toHaveProperty("voice");
+    expect(withoutVoice).not.toHaveProperty("rate");
     expect(checkedSettings({})).toMatchObject({
       uiScale: 100,
       readingUiScale: 100,
@@ -359,7 +362,6 @@ describe("Books v2 settings and search", () => {
         current: "uuid",
         font: "sans",
         readingFlow: "continuous",
-        rate: 1.25,
       }),
     ).toMatchObject({
       language: "ru",
@@ -367,7 +369,6 @@ describe("Books v2 settings and search", () => {
       current: "uuid",
       font: "Golos Text",
       pageTurn: "scroll",
-      rate: 1.25,
       designVersion: 2,
     });
     expect(

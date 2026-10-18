@@ -10,7 +10,8 @@ import {
   compareText,
   type Source,
 } from "./builder-core";
-import { voiceRequest, speak, toPhonemes, unlockAudio } from "./voice";
+import { phoneticIPA } from "./phonetics";
+import { toPhonemes } from "./ipa";
 import * as store from "./storage";
 import demoSources from "./demo-source.json";
 import * as pdfjs from "pdfjs-dist";
@@ -253,7 +254,7 @@ function Builder() {
           2: word,
         }),
       );
-      if (!base[word]) base[word] = await voiceRequest("ipa", word);
+      if (!base[word]) base[word] = await phoneticIPA(word);
       const ai = source.ipa?.[word];
       let accepted = ai;
       try {
@@ -767,7 +768,6 @@ function Builder() {
                         <th>{t("IPA · итог")}</th>
                         <th>{t("Лемма")}</th>
                         <th>{t("Источник / eSpeak")}</th>
-                        <th>{t("Голос")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -848,24 +848,6 @@ function Builder() {
                                 <br />
                                 {origIPA[word]}
                               </small>
-                            </td>
-                            <td>
-                              <button
-                                class="icon"
-                                disabled={busy || !ipa[word]}
-                                aria-label={t("Озвучить ") + word}
-                                onClick={() => {
-                                  unlockAudio();
-                                  void run(async () => {
-                                    await speak(word, ipa[word], {
-                                      voice: "espeak",
-                                      rate: 1,
-                                    });
-                                  });
-                                }}
-                              >
-                                <Icon name="sound" />
-                              </button>
                             </td>
                           </tr>
                         ))}

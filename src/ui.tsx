@@ -120,11 +120,6 @@ export function Icon({ name, size = 20 }: { name: string; size?: number }) {
       </>
     ),
     moon: <path d="M20.5 13.5A8.5 8.5 0 0 1 10.5 3a8.5 8.5 0 1 0 10 10.5Z" />,
-    sound: (
-      <>
-        <path d="M4 10v4h4l5 4V6L8 10zM17 8a6 6 0 0 1 0 8M20 5a10 10 0 0 1 0 14" />
-      </>
-    ),
     back: <path d="m15 5-7 7 7 7" />,
     next: <path d="m9 5 7 7-7 7" />,
     upload: (
@@ -144,7 +139,6 @@ export function Icon({ name, size = 20 }: { name: string; size?: number }) {
         <path d="M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7" />
       </>
     ),
-    stop: <rect x="6" y="6" width="12" height="12" />,
     menu: <path d="M4 6h16M4 12h16M4 18h16" />,
     search: (
       <>

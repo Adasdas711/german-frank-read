@@ -20,6 +20,7 @@
     "test:collections": "node tests/collections.mjs",
     "test:gestures": "node tests/gestures.mjs",
     "test:reader-fixes": "node tests/reader-fixes.mjs",
+    "test:reading-controls": "node tests/reading-controls.mjs",
     "test:reader-dock": "node tests/reader-dock.mjs",
     "test:word-sheet": "node tests/word-sheet.mjs",
     "test:pwa-selection": "node tests/pwa-selection.mjs",

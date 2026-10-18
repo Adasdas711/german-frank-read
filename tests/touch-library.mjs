@@ -201,9 +201,7 @@ try {
       await dialog.waitFor({ state: "detached", timeout: 900 });
     }
     await tools.tap();
-    await dialog
-      .getByRole("button", { name: "Themes & Voice", exact: true })
-      .tap();
+    await dialog.getByRole("button", { name: "Themes", exact: true }).tap();
     const themes = p.locator(".folio-popover.type");
     await themes.waitFor({ timeout: 900 });
     await themes.getByRole("button", { name: "Close", exact: true }).tap();

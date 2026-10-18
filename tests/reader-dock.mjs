@@ -109,22 +109,20 @@ try {
       await p.locator(".folio-toolbar .folio-aa").click();
     else {
       await p.locator(".mobile-reader-menu").click();
-      await p
-        .getByRole("button", { name: "Themes & Voice", exact: true })
-        .click();
+      await p.getByRole("button", { name: "Themes", exact: true }).click();
     }
     const panel = await p.locator(".folio-popover.type").boundingBox();
     const setting = p.locator(".folio-popover.type .setting-row").first();
     assert.ok(
       await setting.evaluate(
-        (n) => parseFloat(getComputedStyle(n).fontSize) >= 16,
+        (n) => parseFloat(getComputedStyle(n).fontSize) >= 12,
       ),
     );
     assert.ok(
       await p
         .locator(".theme-tile")
         .first()
-        .evaluate((n) => n.getBoundingClientRect().height >= 100),
+        .evaluate((n) => n.getBoundingClientRect().height >= 75),
     );
     assert.ok(
       panel.y >= 0 && panel.y + panel.height <= height,

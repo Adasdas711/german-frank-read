@@ -3328,10 +3328,10 @@ body,
 }
 .books-reader .folio-popover.type {
   width: min(
-    calc(520px * var(--ui-scale)),
+    calc(400px * var(--ui-scale)),
     calc(100vw - calc(36px * var(--ui-scale)))
   );
-  padding: calc(24px * var(--ui-scale));
+  padding: calc(16px * var(--ui-scale));
   border-radius: calc(28px * var(--ui-scale));
 }
 
@@ -3454,87 +3454,87 @@ body,
   }
 }
 .themes-panel .sheet-heading {
-  grid-template-columns: calc(44px * var(--ui-scale)) 1fr calc(
-      44px * var(--ui-scale)
+  grid-template-columns: calc(35.2px * var(--ui-scale)) 1fr calc(
+      35.2px * var(--ui-scale)
     );
-  margin-bottom: calc(22px * var(--ui-scale));
+  margin-bottom: calc(17.6px * var(--ui-scale));
 }
 .themes-panel .sheet-heading > strong {
-  font-size: calc(18px * var(--ui-scale));
+  font-size: calc(14.4px * var(--ui-scale));
 }
 .themes-panel .sheet-heading .round {
-  width: calc(44px * var(--ui-scale));
-  min-width: calc(44px * var(--ui-scale));
-  height: calc(44px * var(--ui-scale));
-  min-height: calc(44px * var(--ui-scale));
-  padding: calc(10px * var(--ui-scale));
+  width: calc(35.2px * var(--ui-scale));
+  min-width: calc(35.2px * var(--ui-scale));
+  height: calc(35.2px * var(--ui-scale));
+  min-height: calc(35.2px * var(--ui-scale));
+  padding: calc(8px * var(--ui-scale));
 }
 .themes-panel .appearance-tools > button {
-  min-height: calc(50px * var(--ui-scale));
-  font-size: calc(22px * var(--ui-scale));
+  min-height: calc(40px * var(--ui-scale));
+  font-size: calc(17.6px * var(--ui-scale));
 }
 .themes-panel .theme-grid {
-  gap: calc(14px * var(--ui-scale));
-  margin-bottom: calc(22px * var(--ui-scale));
+  gap: calc(11.2px * var(--ui-scale));
+  margin-bottom: calc(17.6px * var(--ui-scale));
 }
 .themes-panel .theme-tile {
-  min-height: calc(100px * var(--ui-scale));
-  padding: calc(12px * var(--ui-scale)) calc(6px * var(--ui-scale));
+  min-height: calc(80px * var(--ui-scale));
+  padding: calc(9.6px * var(--ui-scale)) calc(4.8px * var(--ui-scale));
 }
 .themes-panel .theme-tile > span {
-  font-size: calc(30px * var(--ui-scale));
+  font-size: calc(24px * var(--ui-scale));
 }
 .themes-panel .theme-tile small {
-  font-size: calc(13px * var(--ui-scale));
+  font-size: calc(10.4px * var(--ui-scale));
   line-height: 1.3;
 }
 .themes-panel > .wide {
-  min-height: calc(50px * var(--ui-scale));
-  font-size: calc(16px * var(--ui-scale));
+  min-height: calc(40px * var(--ui-scale));
+  font-size: calc(12.8px * var(--ui-scale));
 }
 .themes-panel .setting-row,
 .themes-panel .switch-label,
 .themes-panel .range-row,
 .themes-panel .font-list button,
 .themes-panel select {
-  min-height: calc(52px * var(--ui-scale));
-  font-size: calc(16px * var(--ui-scale));
+  min-height: calc(41.6px * var(--ui-scale));
+  font-size: calc(12.8px * var(--ui-scale));
 }
 .themes-panel .range-row {
-  padding: calc(18px * var(--ui-scale)) calc(16px * var(--ui-scale));
+  padding: calc(14.4px * var(--ui-scale)) calc(12.8px * var(--ui-scale));
 }
 .themes-panel .range-row input {
-  height: calc(30px * var(--ui-scale));
+  height: calc(24px * var(--ui-scale));
 }
 .themes-panel .swatches {
-  gap: calc(8px * var(--ui-scale));
+  gap: calc(6.4px * var(--ui-scale));
   flex-wrap: wrap;
   max-width: 100%;
 }
 .themes-panel .setting-row {
   flex-wrap: wrap;
-  gap: calc(12px * var(--ui-scale));
+  gap: calc(9.6px * var(--ui-scale));
 }
 .themes-panel .swatches button {
-  width: calc(28px * var(--ui-scale));
-  min-width: calc(28px * var(--ui-scale));
-  height: calc(28px * var(--ui-scale));
-  min-height: calc(28px * var(--ui-scale));
+  width: calc(22.4px * var(--ui-scale));
+  min-width: calc(22.4px * var(--ui-scale));
+  height: calc(22.4px * var(--ui-scale));
+  min-height: calc(22.4px * var(--ui-scale));
 }
 .themes-panel .turn-menu {
-  width: calc(220px * var(--ui-scale));
-  top: calc(60px * var(--ui-scale));
+  width: calc(176px * var(--ui-scale));
+  top: calc(48px * var(--ui-scale));
 }
 .themes-panel .turn-menu button {
-  min-height: calc(48px * var(--ui-scale));
-  font-size: calc(16px * var(--ui-scale));
+  min-height: calc(38.4px * var(--ui-scale));
+  font-size: calc(12.8px * var(--ui-scale));
 }
 @media (max-width: 520px) {
   .themes-panel .theme-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .books-reader .folio-popover.type {
-    padding: calc(18px * var(--ui-scale));
+    padding: calc(16px * var(--ui-scale));
   }
 }
 
@@ -3651,4 +3651,91 @@ body,
 }
 .folio-columns .word {
   filter: none;
+}
+
+/* Every reading panel opens beside the menu at the right edge. */
+.books-reader .folio-popover.contents,
+.books-reader .folio-popover.words {
+  left: auto;
+  right: max(calc(18px * var(--ui-scale)), env(safe-area-inset-right));
+  width: min(
+    calc(380px * var(--ui-scale)),
+    calc(100vw - calc(36px * var(--ui-scale)))
+  );
+}
+.books-reader .folio-popover input[type="range"] {
+  touch-action: none;
+}
+.themes-panel .interface-size .range-row {
+  padding: calc(10px * var(--ui-scale)) calc(12px * var(--ui-scale));
+  font-size: calc(12px * var(--ui-scale));
+}
+.themes-panel .interface-size-reset {
+  min-height: calc(36px * var(--ui-scale));
+  padding: calc(8px * var(--ui-scale)) calc(12px * var(--ui-scale));
+}
+.themes-panel select {
+  max-width: 100%;
+  min-width: 0;
+}
+.folio-popover.words h2 {
+  font: 600 calc(15px * var(--ui-scale)) system-ui;
+  margin: 0;
+}
+.reader-word-list {
+  display: grid;
+  gap: calc(8px * var(--ui-scale));
+}
+.reader-saved-word {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: calc(6px * var(--ui-scale)) calc(10px * var(--ui-scale));
+  padding: calc(12px * var(--ui-scale));
+  background: #8882;
+  border-radius: calc(12px * var(--ui-scale));
+}
+.reader-saved-word details {
+  min-width: 0;
+  grid-column: 1;
+}
+.reader-saved-word summary {
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.reader-saved-word summary strong {
+  font-size: calc(15px * var(--ui-scale));
+}
+.reader-saved-word summary small {
+  display: block;
+  font-size: calc(11px * var(--ui-scale));
+  margin-top: calc(4px * var(--ui-scale));
+}
+.reader-saved-word > .round {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+.reader-saved-word p,
+.reader-saved-word blockquote {
+  font-size: calc(13px * var(--ui-scale));
+  line-height: 1.5;
+  margin: calc(6px * var(--ui-scale)) 0 0;
+  overflow-wrap: anywhere;
+}
+.reader-saved-word > p {
+  grid-column: 1;
+}
+.reader-saved-word details[open] + p {
+  display: none;
+}
+/* Up to four presets per row; larger interface settings wrap instead of clipping. */
+.themes-panel .theme-grid {
+  display: flex;
+  flex-wrap: wrap;
+}
+.themes-panel .theme-tile {
+  flex: 1 0 calc(25% - calc(8.4px * var(--ui-scale)));
+  min-width: min(100%, calc(54px * var(--ui-scale)));
+}
+.switch-label input::after {
+  content: none;
 }

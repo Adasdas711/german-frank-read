@@ -1,6 +1,7 @@
 import type { Settings } from "./storage";
 import { defaults } from "./storage";
 import { useT } from "./i18n";
+import { useLayoutEffect, useState } from "preact/hooks";
 
 export function InterfaceSize({
   settings,
@@ -12,6 +13,18 @@ export function InterfaceSize({
   readingOnly?: boolean;
 }) {
   const t = useT();
+  const [draft, setDraft] = useState({
+    uiScale: settings.uiScale,
+    readingUiScale: settings.readingUiScale,
+  });
+  useLayoutEffect(
+    () =>
+      setDraft({
+        uiScale: settings.uiScale,
+        readingUiScale: settings.readingUiScale,
+      }),
+    [settings.uiScale, settings.readingUiScale],
+  );
   const keys = readingOnly
     ? (["readingUiScale"] as const)
     : (["uiScale", "readingUiScale"] as const);
@@ -24,18 +37,23 @@ export function InterfaceSize({
             <span>
               {t(key === "uiScale" ? "App interface" : "Reading controls")}
             </span>
-            <output>{settings[key]}%</output>
+            <output>{draft[key]}%</output>
             <input
               type="range"
               min="80"
               max="160"
               step="1"
-              value={settings[key]}
+              value={draft[key]}
               aria-label={t(
                 key === "uiScale" ? "App interface" : "Reading controls",
               )}
-              aria-valuetext={`${settings[key]}%`}
-              onInput={(e) => onChange({ [key]: +e.currentTarget.value })}
+              aria-valuetext={`${draft[key]}%`}
+              // Keep the slider still under the finger. Resize and repaginate
+              // once on release, rather than moving the controls during a drag.
+              onInput={(e) =>
+                setDraft((prev) => ({ ...prev, [key]: +e.currentTarget.value }))
+              }
+              onChange={(e) => onChange({ [key]: +e.currentTarget.value })}
             />
           </label>
         ))}

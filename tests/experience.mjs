@@ -85,9 +85,7 @@ const show = async (page) => {
 const appearance = async (page) => {
   await show(page);
   await page.locator(".reader-tools-button").click();
-  await page
-    .getByRole("button", { name: "Themes & Voice", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Themes", exact: true }).click();
   await page.locator(".theme-grid").waitFor();
 };
 const openBook = async (page) => {
@@ -235,16 +233,17 @@ try {
   await page.getByRole("button", { name: "Done", exact: true }).click();
   assert.equal((await value(page, "settings", "app")).font, "Lora");
   assert.equal((await value(page, "settings", "app")).bold, true);
-  await page.getByRole("button", { name: "Page turning", exact: true }).click();
-  await page.getByRole("menuitemradio", { name: "Fast Fade" }).click();
-  assert.equal((await value(page, "settings", "app")).pageTurn, "fade");
-  await page.getByRole("button", { name: "Page turning", exact: true }).click();
-  await page.getByRole("menuitemradio", { name: "Curl", exact: true }).click();
-  assert.equal((await value(page, "settings", "app")).pageTurn, "curl");
-  await page.getByRole("button", { name: "Page turning", exact: true }).click();
   await page
-    .getByRole("menuitemradio", { name: "Scroll", exact: true })
-    .click();
+    .getByRole("combobox", { name: "Page turning", exact: true })
+    .selectOption("fade");
+  assert.equal((await value(page, "settings", "app")).pageTurn, "fade");
+  await page
+    .getByRole("combobox", { name: "Page turning", exact: true })
+    .selectOption("curl");
+  assert.equal((await value(page, "settings", "app")).pageTurn, "curl");
+  await page
+    .getByRole("combobox", { name: "Page turning", exact: true })
+    .selectOption("scroll");
   await page.keyboard.press("Escape");
   await page
     .locator(".folio-viewport")
@@ -255,8 +254,9 @@ try {
   );
   await page.screenshot({ path: ".test-results/experience/scroll.png" });
   await appearance(page);
-  await page.getByRole("button", { name: "Page turning", exact: true }).click();
-  await page.getByRole("menuitemradio", { name: "Slide", exact: true }).click();
+  await page
+    .getByRole("combobox", { name: "Page turning", exact: true })
+    .selectOption("slide");
   await page.keyboard.press("Escape");
   await show(page);
   await page.locator(".reader-tools-button").click();
@@ -546,11 +546,8 @@ try {
   await openBook(motion.page);
   await appearance(motion.page);
   await motion.page
-    .getByRole("button", { name: "Page turning", exact: true })
-    .click();
-  await motion.page
-    .getByRole("menuitemradio", { name: "Curl", exact: true })
-    .click();
+    .getByRole("combobox", { name: "Page turning", exact: true })
+    .selectOption("curl");
   await motion.page.keyboard.press("Escape");
   await motion.page.keyboard.press("ArrowRight");
   await motion.page.waitForTimeout(60);

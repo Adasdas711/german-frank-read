@@ -50,7 +50,6 @@ import {
   importBackup,
   exportWords,
 } from "./transfer";
-import { speak, stop, unlockAudio } from "./voice";
 import { ensureDemos } from "./demo-library";
 import {
   pageFor,
@@ -120,8 +119,7 @@ function App() {
     ),
     [fileError, setFileError] = useState(""),
     [fileBusy, setFileBusy] = useState(false);
-  const [word, setWord] = useState<WordSelection | null>(null),
-    [busy, setBusy] = useState(false);
+  const [word, setWord] = useState<WordSelection | null>(null);
   const [libraryFilter, setLibraryFilter] = useState("all");
   const [collections, setCollections] = useState<BookCollection[]>([]),
     [collectionFilter, setCollectionFilter] = useState("");
@@ -225,7 +223,6 @@ function App() {
   const fileRef = useRef<HTMLInputElement>(null),
     backupRef = useRef<HTMLInputElement>(null),
     searchRef = useRef<HTMLInputElement>(null);
-  const audioRunId = useRef(0);
   const settingsRef = useRef(settings),
     progressRef = useRef(progress),
     booksRef = useRef(books);
@@ -365,7 +362,8 @@ function App() {
     setSettings(prefs);
     settingsRef.current = prefs;
     setSaved(w);
-    if (!s || s.designVersion !== 2) await store.put("settings", "app", prefs);
+    if (!s || s.designVersion !== 2 || "voice" in s || "rate" in s)
+      await store.put("settings", "app", prefs);
   };
   const commit = useCallback(async (p: Progress) => {
     const previous = progressRef.current.find((x) => x.book === p.book);
@@ -392,9 +390,6 @@ function App() {
     const change = () => {
       setRoute(location.hash.slice(2) || "home");
       setWord(null);
-      stop();
-      audioRunId.current++;
-      setBusy(false);
       window.scrollTo(0, 0);
     };
     window.addEventListener("hashchange", change);
@@ -822,26 +817,9 @@ function App() {
   const wordKey = word
     ? [bookId, lemma?.[0] || word.form, word.at].join("|")
     : "";
-  const listen = async (text: string, phonetic?: string, toggle = false) => {
-    const id = ++audioRunId.current;
-    if (busy && toggle) {
-      stop();
-      setBusy(false);
-      return;
-    }
-    unlockAudio();
-    setBusy(true);
-    try {
-      const duration = await speak(text, phonetic, settings, () => {
-        if (id === audioRunId.current) setBusy(false);
-      });
-      if (duration === 0 && id === audioRunId.current) setBusy(false);
-    } catch (e) {
-      if (id === audioRunId.current) {
-        setBusy(false);
-        notify((e as Error).message, true);
-      }
-    }
+  const removeSavedWord = async (key: string) => {
+    await store.remove("words", key);
+    setSaved((prev) => prev.filter((word) => word.key !== key));
   };
   const saveWord = async () => {
     if (!word) return;
@@ -883,13 +861,6 @@ function App() {
           <div class="word-panel-actions">
             <button
               class="round"
-              aria-label={t("Pronounce word")}
-              onClick={() => void listen(word.form, ipa)}
-            >
-              <Icon name="sound" />
-            </button>
-            <button
-              class="round"
               aria-label={t("Close")}
               onClick={() => setWord(null)}
             >
@@ -907,14 +878,22 @@ function App() {
         </details>
         <button
           class="primary wide"
-          disabled={saved.some((w) => w.key === wordKey)}
-          onClick={() => void run(saveWord)}
+          aria-pressed={saved.some((w) => w.key === wordKey)}
+          onClick={() =>
+            void run(() =>
+              saved.some((w) => w.key === wordKey)
+                ? removeSavedWord(wordKey)
+                : saveWord(),
+            )
+          }
         >
           <Icon
-            name={saved.some((w) => w.key === wordKey) ? "check" : "bookmark"}
+            name={saved.some((w) => w.key === wordKey) ? "trash" : "bookmark"}
           />
           {t(
-            saved.some((w) => w.key === wordKey) ? "Saved" : "Save to My Words",
+            saved.some((w) => w.key === wordKey)
+              ? "Remove from My Words"
+              : "Save to My Words",
           )}
         </button>
       </aside>
@@ -1516,10 +1495,6 @@ function App() {
               notify(t("Book completed"));
             })
           }
-          onListen={(text, ipa) =>
-            void listen(text || plain(active.content.c[0][0]), ipa, true)
-          }
-          busy={busy}
           progressPercent={currentProgress?.percent || 0}
           renderFragment={renderFragment}
           wordPanel={wordPanel}
@@ -1531,7 +1506,8 @@ function App() {
             (b) => positionKey(b.at, b.offset) === bookmarkKey,
           )}
           bookmarks={currentProgress?.bookmarks}
-          onWords={() => showBookWords(bookId)}
+          savedWords={saved.filter((w) => w.book === bookId)}
+          onRemoveWord={(key) => void run(() => removeSavedWord(key))}
         />
       ) : (
         <div
@@ -2654,7 +2630,7 @@ function App() {
               class="setting-row"
               onClick={() => setOverlay("appearance")}
             >
-              <span>{t("Themes & Voice")}</span>
+              <span>{t("Themes")}</span>
               <span>
                 Aa <Icon name="next" size={15} />
               </span>
@@ -2798,10 +2774,7 @@ function App() {
         </Modal>
       )}
       {overlay === "appearance" && (
-        <Modal
-          title={t("Themes & Voice")}
-          onClose={() => setOverlay("settings")}
-        >
+        <Modal title={t("Themes")} onClose={() => setOverlay("settings")}>
           <ThemesPanel
             settings={settings}
             onChange={(p) => void run(() => saveSettings(p))}
