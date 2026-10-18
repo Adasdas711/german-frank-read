@@ -28,15 +28,12 @@ type Props = {
   onSettings(settings: Partial<Settings>): void;
   onMode(mode: string): void;
   onJump(at: string): void;
-  onComplete(): void;
   onIndex?(pages: PageEntry[]): void;
   onBookmark?(): void;
   bookmarked?: boolean;
-  bookmarks?: { at: string; offset: number }[];
   savedWords: SavedWord[];
   onRemoveWord(key: string): void;
   measureOnly?: boolean;
-  progressPercent?: number;
   renderFragment(chunks: Chunk[], at: string): ComponentChildren;
   wordPanel: ComponentChildren;
   wordAnchor?: HTMLElement;
@@ -54,7 +51,6 @@ type MeasuredLayout = {
   layout: Layout;
   entries: PageEntry[];
   sources: string[];
-  chapters: number[];
 };
 // Reuse exact layout indexes when reopening a book with the same settings.
 const measuredLayouts = new WeakMap<Content, Map<string, MeasuredLayout>>();
@@ -77,14 +73,14 @@ export function PagedReader(props: Props) {
   const t = useT();
   const scrolling = settings.pageTurn === "scroll";
   const [bookQuery, setBookQuery] = useState(""),
-    [menu, setMenu] = useState(false),
-    [bookmarkView, setBookmarkView] = useState(false);
+    [menu, setMenu] = useState(false);
   const [pageIndex, setPageIndex] = useState<PageEntry[]>([]);
-  const [chapterPages, setChapterPages] = useState<number[]>([]);
   const [pageSources, setPageSources] = useState<string[]>([]);
   const emittedIndex = useRef("");
   const [controls, setControls] = useState(false),
-    [panel, setPanel] = useState<"type" | "contents" | "words" | null>(null);
+    [panel, setPanel] = useState<
+      "type" | "contents" | "search" | "words" | null
+    >(null);
   const [page, setPage] = useState(0);
   const [layout, setLayout] = useState<Layout>({
     width: 0,
@@ -110,7 +106,6 @@ export function PagedReader(props: Props) {
       type: string;
     } | null>(null),
     suppressClick = useRef(false);
-  const timer = useRef<ReturnType<typeof setTimeout>>();
   const lookupTimer = useRef<ReturnType<typeof setTimeout>>();
   const allowLookup = useRef(false),
     longPressed = useRef(false);
@@ -129,14 +124,6 @@ export function PagedReader(props: Props) {
   }, []);
   const show = () => {
     setControls(true);
-    clearTimeout(timer.current);
-    timer.current = setTimeout(() => {
-      if (
-        !root.current?.contains(document.activeElement) ||
-        document.activeElement === root.current
-      )
-        setControls(false);
-    }, 3500);
   };
   useLayoutEffect(() => {
     if (props.measureOnly) return;
@@ -151,7 +138,6 @@ export function PagedReader(props: Props) {
     document.addEventListener("visibilitychange", cancelHold);
     return () => {
       document.documentElement.classList.remove("reading-pages");
-      clearTimeout(timer.current);
       clearTimeout(lookupTimer.current);
       window.removeEventListener("blur", cancelHold);
       document.removeEventListener("visibilitychange", cancelHold);
@@ -190,8 +176,22 @@ export function PagedReader(props: Props) {
       ),
     [content],
   );
+  const textRange = useRef<Range>();
+  // Read actual glyph positions. Inline form-control rectangles can describe
+  // their original flow box instead of its fragment in WebKit columns.
+  const textRect = (element: Element) => {
+    const range = (textRange.current ||= document.createRange());
+    range.selectNodeContents(element);
+    return (
+      Array.from(range.getClientRects()).find(
+        (r) => r.width > 0 && r.height > 0,
+      ) ||
+      element.getClientRects()[0] ||
+      element.getBoundingClientRect()
+    );
+  };
   function columnOf(element: Element, geometry: Layout) {
-    const box = element.getClientRects()[0] || element.getBoundingClientRect();
+    const box = textRect(element);
     if (scrolling)
       return Math.max(
         0,
@@ -220,10 +220,7 @@ export function PagedReader(props: Props) {
     ];
     const [ci, fi] = bookmark.at.split(".").map((n) => +n - 1);
     const length = plain(content.c[ci]?.[fi] || []).length;
-    const sourceOffset =
-      mode !== "frank" || !settings.showClean
-        ? bookmark.offset % (length + 1)
-        : bookmark.offset;
+    const sourceOffset = bookmark.offset % (length + 1);
     const word =
       words.find((word) => Number(word.dataset.bookChar) >= sourceOffset) ||
       words.at(-1) ||
@@ -259,25 +256,6 @@ export function PagedReader(props: Props) {
         text.current.style.width = viewportBox.width + "px";
         // Apply the destination column geometry before any layout read. A mode
         // switch must not lay out the whole novel once with the old columns first.
-        const widthHint = state.current.layout.width || innerWidth;
-        const columnsFor = (w: number) =>
-          scrolling || mode === "parallel"
-            ? 1
-            : settings.columns === "1"
-              ? 1
-              : settings.columns === "2" && w >= 600
-                ? 2
-                : w >= 940
-                  ? 2
-                  : 1;
-        const hintColumns = columnsFor(widthHint);
-        text.current.style.columnCount = scrolling
-          ? "auto"
-          : String(hintColumns);
-        text.current.style.columnGap =
-          (hintColumns === 2
-            ? Math.min(100, Math.max(52, widthHint * 0.075))
-            : 48) + "px";
         const width = viewportBox.width;
         const columns =
           scrolling || mode === "parallel"
@@ -291,6 +269,10 @@ export function PagedReader(props: Props) {
                   : 1;
         const gap =
           columns === 2 ? Math.min(100, Math.max(52, width * 0.075)) : 48;
+        const columnWidth = (width - gap * (columns - 1)) / columns;
+        text.current.style.columnWidth = scrolling
+          ? "auto"
+          : columnWidth + "px";
         text.current.style.columnCount = scrolling ? "auto" : String(columns);
         text.current.style.columnGap = gap + "px";
         const cacheKey = JSON.stringify([
@@ -300,7 +282,6 @@ export function PagedReader(props: Props) {
           settings.font,
           settings.fontSize,
           settings.readingUiScale,
-          settings.showClean,
           settings.columns,
           settings.lineSpacing,
           settings.letterSpacing,
@@ -325,7 +306,6 @@ export function PagedReader(props: Props) {
         if (cached) {
           setPageIndex(cached.entries);
           setPageSources(cached.sources);
-          setChapterPages(cached.chapters);
           const restored = positionFor(cached.layout);
           text.current.style.transition = "none";
           setLayout(cached.layout);
@@ -337,7 +317,6 @@ export function PagedReader(props: Props) {
           });
           return;
         }
-        const columnWidth = (width - gap * (columns - 1)) / columns;
         const count = scrolling
           ? Math.max(
               1,
@@ -367,8 +346,7 @@ export function PagedReader(props: Props) {
         const origin = text.current.getBoundingClientRect();
         const stride = (width + gap) / columns;
         const leafOf = (element: Element) => {
-          const rect =
-            element.getClientRects()[0] || element.getBoundingClientRect();
+          const rect = textRect(element);
           return Math.max(
             0,
             Math.floor(
@@ -433,7 +411,13 @@ export function PagedReader(props: Props) {
             lastLeaf = Math.max(lastLeaf, leaf);
           }
         }
-        const leaves = Math.max(1, entries.length, lastLeaf + 1);
+        // The overflow extent is independent of element rectangles. Never
+        // collapse a multi-column book to one page because a fragment box was
+        // reported in the first column by the browser.
+        const extentLeaves = scrolling
+          ? Math.ceil(text.current.scrollHeight / viewportHeight)
+          : Math.ceil((text.current.scrollWidth + gap - 0.5) / stride);
+        const leaves = Math.max(1, extentLeaves, entries.length, lastLeaf + 1);
         for (let i = 0; i < leaves; i++)
           if (!entries[i])
             entries[i] = entries[i - 1] ||
@@ -449,26 +433,21 @@ export function PagedReader(props: Props) {
             )
             .join("\n"),
         );
-        const chapterStarts = [
-          ...text.current.querySelectorAll(".folio-chapter-title"),
-        ].map((heading) => columnOf(heading, next) + 1);
         if (document.fonts.status === "loaded") {
           cache.set(cacheKey, {
             layout: next,
             entries,
             sources: measuredSources,
-            chapters: chapterStarts,
           });
           if (cache.size > 6) cache.delete(cache.keys().next().value!);
         }
-        const json = JSON.stringify([entries, measuredSources, chapterStarts]);
+        const json = JSON.stringify([entries, measuredSources]);
         if (
           document.fonts.status === "loaded" &&
           json !== emittedIndex.current
         ) {
           emittedIndex.current = json;
           setPageIndex(entries);
-          setChapterPages(chapterStarts);
           setPageSources(measuredSources);
           state.current.props.onIndex?.(entries);
         }
@@ -502,7 +481,6 @@ export function PagedReader(props: Props) {
     settings.font,
     settings.fontSize,
     settings.readingUiScale,
-    settings.showClean,
     settings.columns,
     settings.lineSpacing,
     settings.letterSpacing,
@@ -761,7 +739,7 @@ export function PagedReader(props: Props) {
       if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey)
         return;
       const target = event.target as HTMLElement;
-      if (event.key === "Enter") {
+      if (event.key === "Enter" || event.key === " ") {
         const word = target.closest<HTMLElement>("[data-book-char]");
         if (word) {
           event.preventDefault();
@@ -797,7 +775,7 @@ export function PagedReader(props: Props) {
     return () => window.removeEventListener("keydown", key);
   }, [scrolling, settings.pageTurn]);
   useLayoutEffect(() => {
-    if (props.measureOnly || scrolling) return;
+    if (props.measureOnly) return;
     let distance = 0,
       lastEvent = 0,
       turned = false;
@@ -809,6 +787,10 @@ export function PagedReader(props: Props) {
         )
       )
         return;
+      if (scrolling) {
+        hide();
+        return;
+      }
       event.preventDefault();
       const now = performance.now();
       if (now - lastEvent > 300) {
@@ -835,22 +817,13 @@ export function PagedReader(props: Props) {
     root.current!.addEventListener("wheel", wheel, { passive: false });
     return () => root.current?.removeEventListener("wheel", wheel);
   }, [scrolling, settings.pageTurn]);
-  const isEdge = (x: number) => {
-    if (scrolling) return false;
-    const box = root.current!.getBoundingClientRect();
-    const fraction = (x - box.left) / box.width;
-    return fraction < 0.12 || fraction > 0.88;
-  };
-  const tap = (x: number) => {
+  const tap = () => {
     if (panel || menu || wordPanel) {
       hide();
       props.onDismissWord();
       return;
     }
-    if (isEdge(x)) {
-      const box = root.current!.getBoundingClientRect();
-      turn(x - box.left < box.width / 2 ? -1 : 1);
-    } else if (controls) hide();
+    if (controls) hide();
     else show();
   };
   const searchSnippet = (text: string, q: string) => {
@@ -925,6 +898,7 @@ export function PagedReader(props: Props) {
           start.moved = true;
           suppressClick.current = true;
           clearTimeout(lookupTimer.current);
+          hide();
         }
       }}
       onPointerCancel={() => {
@@ -945,6 +919,13 @@ export function PagedReader(props: Props) {
           moved ||
           longPressed.current ||
           performance.now() - start.started > 450;
+        if (!suppressClick.current) {
+          // A tap is a short, stationary pointer press. Handle it here: touch
+          // browsers can omit the compatibility click after scrolling.
+          suppressClick.current = true;
+          tap();
+          return;
+        }
         if (
           !scrolling &&
           start.type !== "mouse" &&
@@ -963,7 +944,7 @@ export function PagedReader(props: Props) {
           )
         )
           return;
-        if (suppressClick.current && event.detail !== 0) {
+        if (suppressClick.current && (event.detail !== 0 || event.isTrusted)) {
           event.preventDefault();
           event.stopPropagation();
           return;
@@ -972,22 +953,19 @@ export function PagedReader(props: Props) {
         if (word && (event.detail > 0 || event.isTrusted)) {
           event.preventDefault();
           event.stopPropagation();
-          if (event.detail === 1) tap(event.clientX);
+          if (event.detail <= 1) tap();
         }
       }}
       onClick={(event) => {
         if (
           (event.target as HTMLElement).closest(
-            "button,a,input,select,label,.reader-exit,.reader-tools-button,.folio-toolbar,.folio-bottom,.folio-popover,.word-panel,.reading-menu",
+            "button,a,input,select,label,[data-book-char],.reader-exit,.reader-tools-button,.folio-toolbar,.folio-bottom,.folio-popover,.word-panel,.reading-menu",
           )
         )
           return;
-        if (event.detail <= 1) tap(event.clientX);
+        if (event.detail <= 1) tap();
       }}
     >
-      {!props.measureOnly && (
-        <div class="folio-running-title">{manifest.title}</div>
-      )}
       {!props.measureOnly && (
         <header
           class={
@@ -1103,17 +1081,12 @@ export function PagedReader(props: Props) {
                   setMenu(false);
                 }}
               >
-                <span>
-                  {t("Contents")} ·{" "}
-                  {props.progressPercent ??
-                    Math.round((page / Math.max(1, layout.count - 1)) * 100)}
-                  %
-                </span>
+                <span>{t("Contents")}</span>
                 <Icon name="menu" />
               </button>
               <button
                 onClick={() => {
-                  setPanel("contents");
+                  setPanel("search");
                   setMenu(false);
                   setTimeout(
                     () =>
@@ -1222,17 +1195,41 @@ export function PagedReader(props: Props) {
               role="dialog"
               aria-label={t("Contents")}
             >
+              <nav aria-label={t("Chapters")}>
+                {manifest.chapters.map((chapter, ci) => (
+                  <button
+                    class="page-entry chapter-entry"
+                    data-chapter={ci + 1}
+                    aria-current={
+                      Number(at.split(".")[0]) === ci + 1
+                        ? "location"
+                        : undefined
+                    }
+                    onClick={() => {
+                      props.onJump(`${ci + 1}.1`);
+                      hide();
+                    }}
+                  >
+                    <strong>
+                      {chapter[0] || t("Chapter {0}", { 0: ci + 1 })}
+                    </strong>
+                  </button>
+                ))}
+              </nav>
+            </section>
+          )}
+          {panel === "search" && (
+            <section
+              class="folio-popover search glass"
+              role="dialog"
+              aria-label={t("Search Book")}
+            >
               <div class="row between">
-                <h2>{t("Contents")}</h2>
+                <h2>{t("Search Book")}</h2>
                 <button class="round" aria-label={t("Close")} onClick={hide}>
                   <Icon name="close" />
                 </button>
               </div>
-              {page === layout.count - 1 && (
-                <button class="wide quiet" onClick={props.onComplete}>
-                  {t("Finish reading")}
-                </button>
-              )}
               <input
                 class="book-search"
                 aria-label={t("Search Book")}
@@ -1240,77 +1237,15 @@ export function PagedReader(props: Props) {
                 value={bookQuery}
                 onInput={(e) => setBookQuery(e.currentTarget.value)}
               />
-              <div class="tabs">
-                <button
-                  aria-pressed={!bookmarkView}
-                  onClick={() => setBookmarkView(false)}
-                >
-                  {t("Chapters")}
-                </button>
-                <button
-                  aria-pressed={bookmarkView}
-                  onClick={() => setBookmarkView(true)}
-                >
-                  {t("Bookmarks")}
-                </button>
-              </div>
-              <nav aria-label={t("Chapters")}>
-                {!bookmarkView &&
-                  !bookQuery.trim() &&
-                  manifest.chapters.map((chapter, ci) => {
-                    const current = Number(at.split(".")[0]) === ci + 1;
-                    return (
-                      <button
-                        class="page-entry chapter-entry"
-                        data-chapter={ci + 1}
-                        aria-current={current ? "location" : undefined}
-                        onClick={() => {
-                          props.onJump(`${ci + 1}.1`);
-                          hide();
-                        }}
-                      >
-                        <span>
-                          <strong>
-                            {chapter[0] || t("Chapter {0}", { 0: ci + 1 })}
-                          </strong>
-                          <small
-                            aria-label={t("Page {0}", {
-                              0: chapterPages[ci] || 1,
-                            })}
-                          >
-                            {chapterPages[ci] || 1}
-                          </small>
-                        </span>
-                      </button>
-                    );
-                  })}
-                {(bookmarkView || bookQuery.trim()) &&
-                  pageIndex.map((entry, i) => {
-                    const isBookmarked = props.bookmarks?.some((b) => {
-                      const start = pageIndex[i],
-                        end = pageIndex[i + 1];
-                      const key = (x: { at: string; offset: number }) => {
-                        const [c, f] = x.at.split(".").map(Number);
-                        return c * 1e12 + f * 1e7 + x.offset;
-                      };
-                      return (
-                        key(b) >= key(start) && (!end || key(b) < key(end))
-                      );
-                    });
-                    if (bookmarkView && !isBookmarked) return null;
-                    if (bookQuery) {
-                      const needle = bookQuery.toLocaleLowerCase();
-                      if (!pageSources[i]?.toLocaleLowerCase().includes(needle))
-                        return null;
-                    }
+              <nav aria-label={t("Search results")}>
+                {bookQuery.trim() &&
+                  pageIndex.map((_, i) => {
+                    const needle = bookQuery.trim().toLocaleLowerCase();
+                    if (!pageSources[i]?.toLocaleLowerCase().includes(needle))
+                      return null;
                     return (
                       <button
                         class="page-entry"
-                        aria-current={
-                          Math.floor(i / layout.columns) === page
-                            ? "location"
-                            : undefined
-                        }
                         onClick={() => {
                           jumpPage(Math.floor(i / layout.columns));
                           hide();
@@ -1319,24 +1254,12 @@ export function PagedReader(props: Props) {
                         <span>
                           <strong>{t("Page {0}", { 0: i + 1 })}</strong>
                           <small>
-                            {bookQuery
-                              ? searchSnippet(pageSources[i], bookQuery)
-                              : entry.preview}
+                            {searchSnippet(pageSources[i], bookQuery.trim())}
                           </small>
                         </span>
-                        {isBookmarked ? (
-                          <Icon name="bookmark" size={14} />
-                        ) : i < page * layout.columns ? (
-                          <Icon name="check" size={14} />
-                        ) : Math.floor(i / layout.columns) === page ? (
-                          <em>{t("NOW")}</em>
-                        ) : null}
                       </button>
                     );
                   })}
-                {bookmarkView && !props.bookmarks?.length && (
-                  <p class="muted">{t("No bookmarks yet")}</p>
-                )}
               </nav>
             </section>
           )}

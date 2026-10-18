@@ -1,3 +1,4 @@
+import { revealReader } from "./reader-helpers.mjs";
 import { chromium } from "playwright-core";
 import { createServer } from "node:http";
 import { readFile, mkdir } from "node:fs/promises";
@@ -193,6 +194,7 @@ try {
     const dialog = p.locator(".reading-menu");
     const timings = [];
     for (let i = 0; i < 8; i++) {
+      await revealReader(p, true);
       const started = performance.now();
       await tools.tap();
       await dialog.waitFor({ timeout: 900 });
@@ -200,20 +202,23 @@ try {
       await tools.tap();
       await dialog.waitFor({ state: "detached", timeout: 900 });
     }
+    await revealReader(p, true);
     await tools.tap();
     await dialog.getByRole("button", { name: "Themes", exact: true }).tap();
     const themes = p.locator(".folio-popover.type");
     await themes.waitFor({ timeout: 900 });
     await themes.getByRole("button", { name: "Close", exact: true }).tap();
     await themes.waitFor({ state: "detached", timeout: 900 });
+    await revealReader(p, true);
     await tools.tap();
     await dialog.waitFor();
     await dialog.getByRole("button").first().tap();
     const contents = p.locator(".folio-popover.contents");
     await contents.waitFor({ timeout: 900 });
-    await contents.getByRole("button", { name: "Close", exact: true }).tap();
+    await tools.tap();
     await contents.waitFor({ state: "detached", timeout: 900 });
     // Dragging a control away before release must never activate it.
+    await revealReader(p, true);
     const t = await tools.boundingBox();
     await touch("touchStart", [{ x: t.x + 20, y: t.y + 20 }]);
     await touch("touchMove", [{ x: t.x - 25, y: t.y + 20 }]);

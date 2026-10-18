@@ -362,7 +362,13 @@ function App() {
     setSettings(prefs);
     settingsRef.current = prefs;
     setSaved(w);
-    if (!s || s.designVersion !== 2 || "voice" in s || "rate" in s)
+    if (
+      !s ||
+      s.designVersion !== 2 ||
+      "voice" in s ||
+      "rate" in s ||
+      "showClean" in s
+    )
       await store.put("settings", "app", prefs);
   };
   const commit = useCallback(async (p: Progress) => {
@@ -582,11 +588,10 @@ function App() {
           content={active.content}
           manifest={active.manifest}
           mode={mode}
-          repeat={settings.showClean}
           onWord={onWord}
         />
       ) : null,
-    [active, mode, settings.showClean, onWord],
+    [active, mode, onWord],
   );
   const onPosition = (address: string, offset: number) => {
     if (!active) return;
@@ -627,7 +632,6 @@ function App() {
         settings.font,
         settings.fontSize,
         settings.readingUiScale,
-        settings.showClean,
         settings.pageTurn,
         settings.bold,
         settings.hintSize,
@@ -1483,19 +1487,6 @@ function App() {
           onJump={(address) =>
             go(books.find((b) => b.manifest.id === bookId)!, address, 0)
           }
-          onComplete={() =>
-            void run(async () => {
-              const p = progressRef.current.find((x) => x.book === bookId)!;
-              await commit({
-                ...p,
-                percent: 100,
-                updatedAt: new Date().toISOString(),
-              });
-              location.hash = "/home";
-              notify(t("Book completed"));
-            })
-          }
-          progressPercent={currentProgress?.percent || 0}
           renderFragment={renderFragment}
           wordPanel={wordPanel}
           wordAnchor={word?.element}
@@ -1505,7 +1496,6 @@ function App() {
           bookmarked={currentProgress?.bookmarks?.some(
             (b) => positionKey(b.at, b.offset) === bookmarkKey,
           )}
-          bookmarks={currentProgress?.bookmarks}
           savedWords={saved.filter((w) => w.book === bookId)}
           onRemoveWord={(key) => void run(() => removeSavedWord(key))}
         />
@@ -2635,14 +2625,6 @@ function App() {
                 Aa <Icon name="next" size={15} />
               </span>
             </button>
-            <Toggle
-              checked={settings.showClean}
-              onChange={(showClean) =>
-                void run(() => saveSettings({ showClean }))
-              }
-            >
-              {t("Repeat without hints")}
-            </Toggle>
             <label class="setting-row">
               {t("Default mode")}
               <select

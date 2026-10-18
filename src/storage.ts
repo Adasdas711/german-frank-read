@@ -30,7 +30,6 @@ export type Settings = {
   font: string;
   fontSize: number;
   theme: string;
-  showClean: boolean;
   readingFlow: "pages";
   bookStyleVersion: 1;
   language: Language;
@@ -67,7 +66,6 @@ export const defaults: Settings = {
   font: "Literata",
   fontSize: 19,
   theme: "dark",
-  showClean: false,
   readingFlow: "pages",
   bookStyleVersion: 1,
   language: "en",
@@ -268,7 +266,6 @@ export function checkedSettings(s: any): Settings {
       ? s.theme
       : defaults.theme,
     language: ["en", "ru", "de"].includes(s?.language) ? s.language : "en",
-    showClean: typeof s?.showClean === "boolean" ? s.showClean : false,
     readingFlow: "pages",
     bookStyleVersion: 1,
     readingDefaultsVersion: 1,

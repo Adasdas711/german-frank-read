@@ -237,7 +237,7 @@ try {
   assert.equal(prefs.language, "de");
   assert.equal(prefs.font, "Golos Text");
   assert.equal(prefs.pageTurn, "scroll");
-  assert.equal(prefs.showClean, true);
+  assert.equal("showClean" in prefs, false);
   await page.locator(".continue-open").first().click();
   await page.locator(".books-reader[data-ready=true]").waitFor();
   assert.match(page.url(), /1\.2\/frank$/);

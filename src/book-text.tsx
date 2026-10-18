@@ -17,7 +17,6 @@ export const BookText = memo(function BookText({
   content,
   manifest,
   mode,
-  repeat,
   onWord,
 }: {
   chunks: Chunk[];
@@ -25,7 +24,6 @@ export const BookText = memo(function BookText({
   content: Content;
   manifest: Manifest;
   mode: string;
-  repeat: boolean;
   onWord?: (w: WordSelection) => void;
 }) {
   const source = plain(chunks),
@@ -70,14 +68,16 @@ export const BookText = memo(function BookText({
         // The split captures words at odd indexes; avoid tokenizing each one a
         // second time when opening a complete novel.
         return i % 2 === 1 ? (
-          <button
+          <span
             key={i}
             class="word"
+            role="button"
+            tabIndex={0}
             lang={manifest.lang}
             data-book-char={offset}
           >
             {part}
-          </button>
+          </span>
         ) : (
           part
         );
@@ -161,11 +161,6 @@ export const BookText = memo(function BookText({
       <section class="reading-panel">
         <p lang={manifest.lang}>{inlineText}</p>
       </section>
-      {mode === "frank" && repeat && (
-        <section class="reading-panel repeat-panel">
-          <p lang={manifest.lang}>{text(source, source.length + 1)}</p>
-        </section>
-      )}
     </div>
   );
 });

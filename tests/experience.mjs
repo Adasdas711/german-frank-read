@@ -1,3 +1,4 @@
+import { revealReader, choosePageTurn } from "./reader-helpers.mjs";
 import { chromium } from "playwright-core";
 import { createServer } from "node:http";
 import { readFile, mkdir } from "node:fs/promises";
@@ -79,8 +80,7 @@ const fresh = async (viewport = { width: 1440, height: 960 }) => {
 };
 const show = async (page) => {
   await page.keyboard.press("Escape");
-  await page.mouse.click(page.viewportSize().width / 2, 10);
-  await page.locator(".folio-toolbar.visible").waitFor();
+  await revealReader(page);
 };
 const appearance = async (page) => {
   await show(page);
@@ -162,8 +162,16 @@ try {
   await page.getByRole("button", { name: "Bookmark", exact: true }).click();
   assert.equal((await all(page, "progress"))[0].bookmarks.length, 1);
   await page.locator(".reading-menu").getByRole("button").first().click();
-  await page.getByRole("button", { name: "Bookmarks", exact: true }).click();
-  assert.equal(await page.locator(".page-entry").count(), 1);
+  assert.equal(
+    await page.locator(".folio-popover.contents .chapter-entry").count(),
+    1,
+  );
+  assert.equal(
+    await page
+      .locator(".folio-popover.contents input,.folio-popover.contents .tabs")
+      .count(),
+    0,
+  );
   await page.keyboard.press("Escape");
   await show(page);
   await page.locator(".reader-tools-button").click();
@@ -233,17 +241,11 @@ try {
   await page.getByRole("button", { name: "Done", exact: true }).click();
   assert.equal((await value(page, "settings", "app")).font, "Lora");
   assert.equal((await value(page, "settings", "app")).bold, true);
-  await page
-    .getByRole("combobox", { name: "Page turning", exact: true })
-    .selectOption("fade");
+  await choosePageTurn(page.locator(".themes-panel"), "Fast Fade");
   assert.equal((await value(page, "settings", "app")).pageTurn, "fade");
-  await page
-    .getByRole("combobox", { name: "Page turning", exact: true })
-    .selectOption("curl");
+  await choosePageTurn(page.locator(".themes-panel"), "Curl");
   assert.equal((await value(page, "settings", "app")).pageTurn, "curl");
-  await page
-    .getByRole("combobox", { name: "Page turning", exact: true })
-    .selectOption("scroll");
+  await choosePageTurn(page.locator(".themes-panel"), "Scroll");
   await page.keyboard.press("Escape");
   await page
     .locator(".folio-viewport")
@@ -254,9 +256,7 @@ try {
   );
   await page.screenshot({ path: ".test-results/experience/scroll.png" });
   await appearance(page);
-  await page
-    .getByRole("combobox", { name: "Page turning", exact: true })
-    .selectOption("slide");
+  await choosePageTurn(page.locator(".themes-panel"), "Slide");
   await page.keyboard.press("Escape");
   await show(page);
   await page.locator(".reader-tools-button").click();
@@ -334,8 +334,13 @@ try {
   assert.ok((await visibleWord(page)).some((w) => w.form === "Esel"));
   await show(page);
   await page.locator(".reader-tools-button").click();
-  await page.locator(".reading-menu").getByRole("button").first().click();
-  await page.getByLabel("Search Book").fill("Esel");
+  await page
+    .locator(".reading-menu")
+    .getByRole("button", { name: "Search Book", exact: true })
+    .click();
+  await page
+    .getByRole("textbox", { name: "Search Book", exact: true })
+    .fill("Esel");
   assert.ok(await page.locator(".page-entry").count());
   await page.screenshot({ path: ".test-results/experience/book-search.png" });
   await page.keyboard.press("Escape");
@@ -545,9 +550,7 @@ try {
   await motion.page.emulateMedia({ reducedMotion: "no-preference" });
   await openBook(motion.page);
   await appearance(motion.page);
-  await motion.page
-    .getByRole("combobox", { name: "Page turning", exact: true })
-    .selectOption("curl");
+  await choosePageTurn(motion.page.locator(".themes-panel"), "Curl");
   await motion.page.keyboard.press("Escape");
   await motion.page.keyboard.press("ArrowRight");
   await motion.page.waitForTimeout(60);

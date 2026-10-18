@@ -1,3 +1,4 @@
+import { revealReader } from "./reader-helpers.mjs";
 import { chromium } from "playwright-core";
 import { createServer } from "node:http";
 import { readFile, mkdir } from "node:fs/promises";
@@ -66,6 +67,7 @@ try {
     }
     await p.evaluate((id) => (location.hash = `/read/${id}/1.1/frank`), id);
     await p.locator(".books-reader[data-ready=true]").waitFor();
+    await revealReader(p);
     const tools = p.locator(".reader-tools-button");
     const text = p.locator(".folio-columns");
     const bookFont = await fontSize(text);
@@ -106,12 +108,24 @@ try {
       );
       await bounded(panel, width, height);
       await bounded(tools, width, height);
+      await panel
+        .getByRole("button", { name: "Page turning", exact: true })
+        .click();
+      await bounded(
+        panel.getByRole("menu", { name: "Page turning", exact: true }),
+        width,
+        height,
+      );
+      await panel
+        .getByRole("menuitemradio", { name: "Slide", exact: true })
+        .click();
     }
     await panel
       .getByRole("button", { name: "Reset interface size", exact: true })
       .click();
     assert.equal(await readerRange.inputValue(), "100");
     await p.keyboard.press("Escape");
+    await revealReader(p);
     await p.locator(".reader-exit").click();
     await heading.waitFor();
     await p

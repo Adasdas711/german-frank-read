@@ -279,7 +279,7 @@ describe("reader preferences", () => {
   it("uses English by default, preserves existing languages and migrates reading preferences", async () => {
     const { defaults, checkedSettings } = await import("../src/storage");
     expect(defaults.language).toBe("en");
-    expect(defaults.showClean).toBe(false);
+    expect(defaults).not.toHaveProperty("showClean");
     const withoutVoice = checkedSettings({ voice: "system", rate: 1.25 });
     expect(withoutVoice).not.toHaveProperty("voice");
     expect(withoutVoice).not.toHaveProperty("rate");
@@ -318,7 +318,7 @@ describe("reader preferences", () => {
       theme: "dark",
       current: "book-1",
     });
-    expect(migrated.showClean).toBe(true);
+    expect(migrated).not.toHaveProperty("showClean");
     expect(migrated).toMatchObject({
       fontSize: 24,
       theme: "dark",
@@ -326,7 +326,7 @@ describe("reader preferences", () => {
     });
     expect(
       checkedSettings({ ...migrated, showClean: true, language: "de" }),
-    ).toMatchObject({ showClean: true, language: "de" });
+    ).toMatchObject({ language: "de" });
   });
   it("translates messages and parameters without touching book data", async () => {
     const { translate, translateMessage } = await import("../src/i18n");
@@ -365,7 +365,6 @@ describe("Books v2 settings and search", () => {
       }),
     ).toMatchObject({
       language: "ru",
-      showClean: false,
       current: "uuid",
       font: "Golos Text",
       pageTurn: "scroll",

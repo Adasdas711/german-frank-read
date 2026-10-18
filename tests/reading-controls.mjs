@@ -1,3 +1,4 @@
+import { revealReader, choosePageTurn } from "./reader-helpers.mjs";
 import { chromium } from "playwright-core";
 import { createServer } from "node:http";
 import { readFile, mkdir } from "node:fs/promises";
@@ -40,11 +41,28 @@ try {
     await p.evaluate((id) => (location.hash = `/read/${id}/1.1/frank`), id);
     const root = p.locator(".books-reader");
     await p.locator(".books-reader[data-ready=true]").waitFor();
+    assert(
+      await p.locator(".reader-tools-button").isHidden(),
+      "tools hidden on opening",
+    );
+    assert(
+      await p.locator(".reader-exit").isHidden(),
+      "exit hidden on opening",
+    );
+    assert(
+      await p.locator(".folio-page-number").isHidden(),
+      "page number hidden on opening",
+    );
+    assert.equal(await p.locator(".folio-running-title").count(), 0);
+    await p.screenshot({
+      path: `.test-results/reading-controls/text-only-${width}.png`,
+    });
     const tools = p.locator(".reader-tools-button");
     const menu = p.locator(".reading-menu");
     const activate = async (target) => (touch ? target.tap() : target.click());
     const openMenu = async () => {
       await p.keyboard.press("Escape");
+      await revealReader(p, touch);
       await activate(tools);
       await menu.waitFor();
     };
@@ -59,9 +77,13 @@ try {
       );
     for (const turn of ["slide", "curl", "fade", "scroll"]) {
       await openThemes();
-      await p
-        .getByRole("combobox", { name: "Page turning", exact: true })
-        .selectOption(turn);
+      await choosePageTurn(
+        p.locator(".themes-panel"),
+        { slide: "Slide", curl: "Curl", fade: "Fast Fade", scroll: "Scroll" }[
+          turn
+        ],
+        activate,
+      );
       await p.waitForFunction(
         (turn) =>
           document
@@ -123,6 +145,16 @@ try {
       0,
     );
     assert.equal(await p.locator("#espeak-wasm,#ipa-wasm").count(), 0);
+    assert.equal(
+      await p.getByText("Repeat without hints", { exact: true }).count(),
+      0,
+    );
+    assert.equal(
+      await themes
+        .getByRole("combobox", { name: "Page turning", exact: true })
+        .count(),
+      0,
+    );
     const box = await themes.boundingBox();
     assert(box.width <= 440 && box.x + box.width <= width);
     // Interleave native toggles, range input, select and buttons repeatedly.
@@ -130,10 +162,13 @@ try {
       await activate(
         themes.getByRole("button", { name: "Larger", exact: true }),
       );
-      const checkbox = themes.getByRole("checkbox").first();
-      const before = await checkbox.isChecked();
-      await activate(checkbox);
-      assert.equal(await checkbox.isChecked(), !before);
+      const toggle = themes.getByRole("button", {
+        name: "Follow system appearance",
+        exact: true,
+      });
+      const before = await toggle.getAttribute("aria-pressed");
+      await activate(toggle);
+      assert.notEqual(await toggle.getAttribute("aria-pressed"), before);
       const slider = themes.getByRole("slider", {
         name: "Reading controls",
         exact: true,
@@ -142,14 +177,12 @@ try {
       const old = Number(await slider.inputValue());
       await slider.press("ArrowRight");
       assert.equal(Number(await slider.inputValue()), old + 1);
-      await themes
-        .getByRole("combobox", { name: "Page turning", exact: true })
-        .selectOption(i % 2 ? "slide" : "curl");
+      await choosePageTurn(themes, i % 2 ? "Slide" : "Curl", activate);
       await activate(
         themes.getByRole("button", { name: "Smaller", exact: true }),
       );
-      await activate(checkbox);
-      assert.equal(await checkbox.isChecked(), before);
+      await activate(toggle);
+      assert.equal(await toggle.getAttribute("aria-pressed"), before);
     }
     const range = themes.getByRole("slider", {
       name: "Reading controls",
@@ -189,9 +222,7 @@ try {
     await themes
       .getByRole("button", { name: "Reset interface size", exact: true })
       .click();
-    await themes
-      .getByRole("combobox", { name: "Page turning", exact: true })
-      .selectOption("slide");
+    await choosePageTurn(themes, "Slide", activate);
     await p.screenshot({
       path: `.test-results/reading-controls/themes-${width}.png`,
     });
@@ -204,6 +235,19 @@ try {
       width - c.x - c.width < 30 && c.x >= 0,
       "contents opens at right edge",
     );
+    assert.equal(
+      await contents.locator(":scope > *").count(),
+      1,
+      "Contents has only chapter navigation",
+    );
+    assert.equal(await contents.locator("button").count(), 3);
+    assert.equal(await contents.locator("input,small,.tabs").count(), 0);
+    assert(
+      (await contents
+        .locator("strong")
+        .first()
+        .evaluate((n) => parseFloat(getComputedStyle(n).fontSize))) >= 18,
+    );
     await p.screenshot({
       path: `.test-results/reading-controls/contents-${width}.png`,
     });
@@ -211,11 +255,12 @@ try {
     await activate(
       menu.getByRole("button", { name: "Search Book", exact: true }),
     );
-    await contents
+    const search = p.locator(".folio-popover.search");
+    await search
       .getByRole("textbox", { name: "Search Book", exact: true })
       .fill("Gregor");
     assert(
-      (await contents.locator(".page-entry").count()) > 0,
+      (await search.locator(".page-entry").count()) > 0,
       "search current full book",
     );
     await p.keyboard.press("Escape");
@@ -293,6 +338,7 @@ try {
       "deletion updates word card immediately",
     );
     await p.keyboard.press("Escape");
+    await revealReader(p, touch);
     await activate(p.locator(".reader-exit"));
     await p.waitForURL(/#\/home$/);
     assert.deepEqual(errors, []);

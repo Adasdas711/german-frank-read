@@ -1,3 +1,4 @@
+import { revealReader } from "./reader-helpers.mjs";
 import { chromium } from "playwright-core";
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
@@ -96,8 +97,12 @@ try {
       .getAttribute("data-columns"));
     assert.equal(
       await number(p),
-      turn === "scroll" ? start : start + cols,
-      turn + " edge click",
+      start,
+      turn + " tap shows controls instead of turning",
+    );
+    assert(
+      await p.locator(".books-reader.controls-visible").count(),
+      "stationary tap shows controls",
     );
     const before = await number(p);
     await p.mouse.move(700, 450);
@@ -155,6 +160,11 @@ try {
       turn + " swipe once",
     );
     assert.equal(await p.getByLabel("Word details").count(), 0);
+    assert.equal(
+      await p.locator(".books-reader.controls-visible").count(),
+      0,
+      "swipe does not show controls",
+    );
     await p.keyboard.press("Home");
     await settle(p);
     const q = await point(p);
@@ -193,12 +203,16 @@ try {
       );
     }
     // Text fields and controls retain native editing and don't turn the book.
-    await p.mouse.click(195, 60);
-    await p.locator(".mobile-reader-menu").click();
-    await p.locator(".reading-menu").getByRole("button").first().click();
-    await p.getByLabel("Search Book").fill("Esel");
-    await p.getByLabel("Search Book").press("Control+a");
-    assert.equal(await p.getByLabel("Search Book").inputValue(), "Esel");
+    await revealReader(p, true);
+    await p.locator(".mobile-reader-menu").tap();
+    await p
+      .locator(".reading-menu")
+      .getByRole("button", { name: "Search Book", exact: true })
+      .tap();
+    const search = p.getByRole("textbox", { name: "Search Book", exact: true });
+    await search.fill("Esel");
+    await search.press("Control+a");
+    assert.equal(await search.inputValue(), "Esel");
     await context.close();
     console.log("PASS gestures " + turn);
   }

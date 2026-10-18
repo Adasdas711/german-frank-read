@@ -1,3 +1,4 @@
+import { revealReader } from "./reader-helpers.mjs";
 import { chromium } from "playwright-core";
 import { createServer } from "node:http";
 import { readFile, mkdir } from "node:fs/promises";
@@ -41,7 +42,7 @@ try {
     await p.waitForTimeout(100);
     const show = async () => {
       await p.keyboard.press("Escape");
-      await p.mouse.click(width / 2, 10);
+      await revealReader(p);
       await p.locator(".folio-toolbar.visible").waitFor();
     };
     assert.equal(
@@ -112,7 +113,7 @@ try {
       await p.getByRole("button", { name: "Themes", exact: true }).click();
     }
     const panel = await p.locator(".folio-popover.type").boundingBox();
-    const setting = p.locator(".folio-popover.type .setting-row").first();
+    const setting = p.locator(".folio-popover.type .range-row").first();
     assert.ok(
       await setting.evaluate(
         (n) => parseFloat(getComputedStyle(n).fontSize) >= 12,
@@ -142,23 +143,21 @@ try {
       await p.locator(".mobile-reader-menu").click();
       await p.locator(".reading-menu").getByRole("button").first().click();
     }
-    assert.ok(
+    assert.equal(
       await p
         .getByRole("button", { name: "Finish reading", exact: true })
-        .isVisible(),
+        .count(),
+      0,
     );
     const chapters = p.locator(".chapter-entry");
     assert.equal(await chapters.count(), 10);
     for (const node of await chapters.all()) {
       assert.ok(!/^\d+\./.test(await node.locator("strong").textContent()));
-      assert.match((await node.locator("small").textContent()).trim(), /^\d+$/);
-      assert.equal(await node.locator("em").count(), 0);
-      assert.ok(
-        await node.evaluate(
-          (n) =>
-            getComputedStyle(n.querySelector("strong")).display === "inline" &&
-            getComputedStyle(n.querySelector("small")).display === "inline",
-        ),
+      assert.equal(await node.locator("small,em").count(), 0);
+      assert(
+        await node
+          .locator("strong")
+          .evaluate((n) => parseFloat(getComputedStyle(n).fontSize) >= 18),
       );
     }
     await p.screenshot({
@@ -167,17 +166,15 @@ try {
     if (name === "pc") {
       await p.keyboard.press("Escape");
       await p.evaluate(() => {
-        const original = Element.prototype.getClientRects;
+        const original = Range.prototype.getClientRects;
         window.wordReads = 0;
-        Element.prototype.getClientRects = function (...args) {
-          if (
-            this.hasAttribute("data-book-char") &&
-            this.closest(".books-reader:not(.pagination-probe)")
-          )
+        Range.prototype.getClientRects = function (...args) {
+          if (this.startContainer.parentElement?.closest("[data-book-char]"))
             window.wordReads++;
           return original.apply(this, args);
         };
       });
+      await revealReader(p);
       await p.locator(".reader-tools-button").click();
       for (const [i, mode] of [
         "clean",

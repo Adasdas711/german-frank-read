@@ -1,4 +1,4 @@
-import { useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import type { Settings } from "./storage";
 import {
   themes,
@@ -22,6 +22,19 @@ export function ThemesPanel({
   const t = useT();
   const [view, setView] = useState<"themes" | "custom" | "font">("themes");
   const [draft, setDraft] = useState(settings);
+  const [turnOpen, setTurnOpen] = useState(false);
+  const turnControl = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!turnOpen) return;
+    const dismiss = (event: PointerEvent) => {
+      if (!turnControl.current?.contains(event.target as Node))
+        setTurnOpen(false);
+    };
+    document.addEventListener("pointerdown", dismiss, true);
+    return () => {
+      document.removeEventListener("pointerdown", dismiss, true);
+    };
+  }, [turnOpen]);
   const update = (p: Partial<Settings>) => setDraft((s) => ({ ...s, ...p }));
   const range = (
     label: string,
@@ -107,6 +120,60 @@ export function ThemesPanel({
             >
               A
             </button>
+            <div
+              class="page-turn-control"
+              ref={turnControl}
+              onKeyDown={(event) => {
+                if (event.key === "Escape" && turnOpen) {
+                  event.stopPropagation();
+                  setTurnOpen(false);
+                  turnControl.current
+                    ?.querySelector<HTMLButtonElement>("button")
+                    ?.focus({ preventScroll: true });
+                }
+              }}
+            >
+              <button
+                aria-label={t("Page turning")}
+                aria-haspopup="menu"
+                aria-expanded={turnOpen}
+                onClick={() => setTurnOpen(!turnOpen)}
+              >
+                <Icon
+                  name={settings.pageTurn === "scroll" ? "scroll" : "pages"}
+                />
+              </button>
+              {turnOpen && (
+                <div
+                  class="turn-menu glass"
+                  role="menu"
+                  aria-label={t("Page turning")}
+                >
+                  {[
+                    ["slide", "Slide", "slide"],
+                    ["curl", "Curl", "pages"],
+                    ["fade", "Fast Fade", "fade"],
+                    ["scroll", "Scroll", "scroll"],
+                  ].map(([id, label, icon]) => (
+                    <button
+                      role="menuitemradio"
+                      aria-checked={settings.pageTurn === id}
+                      onClick={() => {
+                        setTurnOpen(false);
+                        onChange({ pageTurn: id as Settings["pageTurn"] });
+                        turnControl.current
+                          ?.querySelector<HTMLButtonElement>("button")
+                          ?.focus({ preventScroll: true });
+                      }}
+                    >
+                      <Icon name={icon} />
+                      <span>{t(label)}</span>
+                      {settings.pageTurn === id && <Icon name="check" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <button
               aria-label={t("Follow system appearance")}
               aria-pressed={settings.followSystem}
@@ -149,35 +216,6 @@ export function ThemesPanel({
             <Icon name="sliders" />
             {t("Customize")}
           </button>
-          <div class="group">
-            <label class="setting-row">
-              {t("Page turning")}
-              <select
-                aria-label={t("Page turning")}
-                value={settings.pageTurn}
-                onChange={(e) =>
-                  onChange({
-                    pageTurn: e.currentTarget.value as Settings["pageTurn"],
-                  })
-                }
-              >
-                {[
-                  ["slide", "Slide"],
-                  ["curl", "Curl"],
-                  ["fade", "Fast Fade"],
-                  ["scroll", "Scroll"],
-                ].map(([value, label]) => (
-                  <option value={value}>{t(label)}</option>
-                ))}
-              </select>
-            </label>
-            <Toggle
-              checked={settings.showClean}
-              onChange={(showClean) => onChange({ showClean })}
-            >
-              {t("Repeat without hints")}
-            </Toggle>
-          </div>
         </>
       ) : (
         <>

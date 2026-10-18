@@ -1,3 +1,4 @@
+import { revealReader } from "./reader-helpers.mjs";
 import { chromium } from "playwright-core";
 import { createServer } from "node:http";
 import { readFile, mkdir } from "node:fs/promises";
@@ -30,6 +31,7 @@ try {
   await p.locator(".books-reader[data-ready=true]").waitFor();
   await p.waitForTimeout(200);
   const timing = [];
+  await revealReader(p);
   await p.locator(".reader-tools-button").click();
   // Real full-story mode changes must reuse the same source-word DOM nodes.
   await p.evaluate(

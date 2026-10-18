@@ -1,4 +1,4 @@
-const CACHE = "franka-offline-aef6c5653d826360";
+const CACHE = "franka-offline-785fd8a2877d6d2f";
 const FILES = [
   "./index.html",
   "./fbook-builder.html",
@@ -14,7 +14,10 @@ self.addEventListener("install", (event) => {
       .open(CACHE)
       .then((cache) =>
         cache.addAll(urls.map((url) => new Request(url, { cache: "reload" }))),
-      ),
+      )
+      // Each page is self-contained. Activate the complete new cache even if
+      // another app tab is open; the next launch must not keep serving old code.
+      .then(() => self.skipWaiting()),
   );
 });
 self.addEventListener("activate", (event) => {

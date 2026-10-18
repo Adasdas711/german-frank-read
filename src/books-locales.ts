@@ -307,7 +307,6 @@ const rows: [string, string, string][] = [
     "Menüs wechseln sofort. Hinweise und Übersetzungen bleiben in der Sprache des Buches.",
   ],
   ["Themes", "Темы", "Themen"],
-  ["Repeat without hints", "Повтор без подсказок", "Ohne Hinweise wiederholen"],
   ["Default mode", "Режим по умолчанию", "Standardmodus"],
   ["Data", "Данные", "Daten"],
   [

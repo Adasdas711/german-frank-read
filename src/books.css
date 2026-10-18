@@ -1416,7 +1416,10 @@ html.reading-pages body {
 }
 .books-reader:not([data-mode="parallel"]) .sentence-row,
 .books-reader:not([data-mode="parallel"]) .sentence-original {
-  display: contents;
+  display: inline;
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 .books-reader:not([data-mode="parallel"]) .sentence-row > .translation {
   display: none;
@@ -1450,12 +1453,6 @@ html.reading-pages body {
   line-height: 1.6;
   letter-spacing: 0;
   word-spacing: 0;
-}
-.folio-columns .repeat-panel {
-  margin: 1em 0 1.5em;
-}
-.folio-columns .repeat-panel p {
-  color: var(--folio-ink);
 }
 .folio-chapter-title {
   break-after: avoid;
@@ -3655,6 +3652,7 @@ body,
 
 /* Every reading panel opens beside the menu at the right edge. */
 .books-reader .folio-popover.contents,
+.books-reader .folio-popover.search,
 .books-reader .folio-popover.words {
   left: auto;
   right: max(calc(18px * var(--ui-scale)), env(safe-area-inset-right));
@@ -3738,4 +3736,57 @@ body,
 }
 .switch-label input::after {
   content: none;
+}
+
+/* Reading starts with text only. Pointer gestures never reveal the controls. */
+.books-reader:not(.controls-visible) .reader-exit,
+.books-reader:not(.controls-visible) .reader-tools-button,
+.books-reader:not(.controls-visible) .folio-toolbar {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+.books-reader.controls-visible .reader-exit,
+.books-reader.controls-visible .reader-tools-button {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+}
+.books-reader .folio-page-number {
+  visibility: hidden;
+}
+.books-reader .folio-popover.contents .chapter-entry {
+  min-height: calc(52px * var(--ui-scale));
+  padding: calc(12px * var(--ui-scale));
+}
+.books-reader .folio-popover.contents .chapter-entry strong {
+  font-size: calc(18px * var(--ui-scale));
+  line-height: 1.45;
+}
+.folio-popover.search h2 {
+  font: 600 calc(15px * var(--ui-scale)) system-ui;
+}
+.folio-popover.search > .row {
+  margin-bottom: calc(12px * var(--ui-scale));
+}
+.page-turn-control {
+  position: static;
+  flex: 1;
+}
+.page-turn-control > button {
+  width: 100%;
+  min-height: calc(40px * var(--ui-scale));
+  padding: calc(6px * var(--ui-scale));
+  background: transparent;
+  border: 0;
+}
+.themes-panel .page-turn-control .turn-menu {
+  top: 100%;
+  width: calc(185px * var(--ui-scale));
+  max-width: calc(100vw - calc(70px * var(--ui-scale)));
+  z-index: 5;
+}
+.themes-panel .page-turn-control .turn-menu button {
+  min-height: calc(42px * var(--ui-scale));
+  font-size: calc(13px * var(--ui-scale));
 }

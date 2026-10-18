@@ -52,7 +52,11 @@ try {
         const candidates = [
           ...document.querySelectorAll(".folio-columns [data-book-char]"),
         ]
-          .map((n) => ({ n, r: n.getBoundingClientRect() }))
+          .flatMap((n) => {
+            const range = document.createRange();
+            range.selectNodeContents(n);
+            return [...range.getClientRects()].map((r) => ({ n, r }));
+          })
           .filter(
             ({ r }) =>
               r.width &&
@@ -89,7 +93,23 @@ try {
     };
     const bounds = async () => {
       const r = await card.boundingBox(),
-        source = await p.locator("[data-note-target]").boundingBox();
+        source = await p.locator("[data-note-target]").evaluate((n) => {
+          const range = document.createRange();
+          range.selectNodeContents(n);
+          const v = document
+            .querySelector(".folio-viewport")
+            .getBoundingClientRect();
+          return [...range.getClientRects()]
+            .find(
+              (r) =>
+                r.width &&
+                r.right > v.left &&
+                r.left < v.right &&
+                r.bottom > v.top &&
+                r.top < v.bottom,
+            )
+            .toJSON();
+        });
       assert(
         r.x >= 11 &&
           r.x + r.width <= width - 11 &&
@@ -155,7 +175,9 @@ try {
     await card
       .getByRole("button", { name: "Save to My Words", exact: true })
       .click();
-    await card.getByRole("button", { name: "Remove from My Words", exact: true }).waitFor();
+    await card
+      .getByRole("button", { name: "Remove from My Words", exact: true })
+      .waitFor();
     await card.getByRole("button", { name: "Close", exact: true }).click();
     assert.equal(
       await p.locator(".word.chosen").count(),

@@ -26,7 +26,9 @@ export function WordPopover({
       const bottom = top + (visual?.height || innerHeight) - 24;
       node.style.maxWidth = Math.max(0, right - left) + "px";
       const canvas = anchor.closest(".folio-viewport")?.getBoundingClientRect();
-      const word = [...anchor.getClientRects()].find(
+      const range = document.createRange();
+      range.selectNodeContents(anchor);
+      const word = [...range.getClientRects()].find(
         (rect) =>
           rect.width &&
           rect.right > left &&

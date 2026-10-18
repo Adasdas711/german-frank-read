@@ -3,12 +3,19 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import assert from "node:assert/strict";
 const prefix = "/german-frank-read/";
+let updatedWorker = false;
 const server = createServer(async (q, s) => {
   try {
     const path = new URL(q.url, "http://localhost").pathname;
     if (!path.startsWith(prefix)) throw Error();
     const file = path.slice(prefix.length) || "index.html";
-    const data = await readFile(file);
+    let data = await readFile(file);
+    if (file === "sw.js" && updatedWorker)
+      data = Buffer.from(
+        data
+          .toString()
+          .replace(/franka-offline-[a-f0-9]+/, "franka-offline-update-test"),
+      );
     s.setHeader(
       "Content-Type",
       file.endsWith(".js")
@@ -155,6 +162,38 @@ try {
     false,
     "context menu cancelled",
   );
+  // An open tab must not leave an installed PWA on the old reader indefinitely.
+  const other = await context.newPage();
+  await other.goto(base);
+  await other.getByRole("heading", { name: "Home", exact: true }).waitFor();
+  updatedWorker = true;
+  await p.evaluate(async () => {
+    const registration = await navigator.serviceWorker.getRegistration();
+    await registration.update();
+  });
+  await p.waitForFunction(async () =>
+    (await caches.keys()).includes("franka-offline-update-test"),
+  );
+  await p.waitForFunction(async () => {
+    const registration = await navigator.serviceWorker.getRegistration();
+    const versions = (await caches.keys()).filter((name) =>
+      name.startsWith("franka-offline-"),
+    );
+    return (
+      registration.active?.state === "activated" &&
+      !registration.waiting &&
+      versions.length === 1 &&
+      versions[0] === "franka-offline-update-test"
+    );
+  });
+  await p.reload();
+  await p.locator(".word-selection-toggle").waitFor();
+  assert.equal(
+    await p.locator(".word-row").count(),
+    4,
+    "worker update preserves saved words",
+  );
+  await other.close();
   await context.setOffline(true);
   await p.reload();
   await p.locator(".word-selection-toggle").waitFor();
@@ -180,7 +219,7 @@ try {
   await builder.goto(base + "fbook-builder.html");
   assert.ok((await builder.title()).length > 0);
   console.log(
-    "Passed: round controls, spacing, drag select/deselect, normal click, blocked context menu, subpath manifest, offline reader/words/builder.",
+    "Passed: round controls, drag selection, blocked context menu, subpath manifest, PWA update with another tab open, retained words, offline reader/words/builder.",
   );
   await context.close();
 } finally {
