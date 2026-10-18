@@ -2,7 +2,7 @@ import { chromium } from "playwright-core";
 import { createServer } from "node:http";
 import { readFile, mkdir } from "node:fs/promises";
 import assert from "node:assert/strict";
-import { revealReader } from "./reader-helpers.mjs";
+import { revealReader, choosePageTurn } from "./reader-helpers.mjs";
 
 const html = await readFile("index.html");
 const server = createServer((_, res) => {
@@ -60,6 +60,13 @@ try {
       themes = p.locator(".folio-popover.type");
     await tools.tap();
     await menu.waitFor();
+    assert.equal(
+      await tools.isVisible(),
+      false,
+      "the menu button disappears while tools are open",
+    );
+    const panelWidth = (n) => parseFloat(getComputedStyle(n).width);
+    const menuWidth = await menu.evaluate(panelWidth);
     const alpha = (n) =>
       Number(getComputedStyle(n).backgroundColor.match(/[\d.]+/g)?.[3] ?? 1);
     assert.equal(
@@ -81,6 +88,25 @@ try {
         type: "touchMove",
         touchPoints: [{ x: box.x + (box.width * i) / 10, y }],
       });
+    const heldFill = await row.evaluate((n) => ({
+      ratio: parseFloat(getComputedStyle(n, "::before").width) / n.clientWidth,
+      buttonAlpha: Number(
+        getComputedStyle(n.querySelector("button")).backgroundColor.match(
+          /[\d.]+/g,
+        )?.[3] ?? 1,
+      ),
+      dragging: n.dataset.dragging,
+    }));
+    assert.equal(heldFill.dragging, "true");
+    assert(
+      Math.abs(heldFill.ratio - 0.6) < 0.05,
+      "Contents fills while the finger is still down",
+    );
+    assert.equal(
+      heldFill.buttonAlpha,
+      0,
+      "the held button does not hide the fill",
+    );
     await cdp.send("Input.dispatchTouchEvent", {
       type: "touchEnd",
       touchPoints: [],
@@ -115,6 +141,9 @@ try {
         .isVisible(),
       "tapping Contents opens chapters",
     );
+    const contents = p.locator(".folio-popover.contents");
+    assert(Math.abs((await contents.evaluate(panelWidth)) - menuWidth) < 1);
+    assert.equal(await contents.evaluate(alpha), 0);
     await p.keyboard.press("Escape");
     await revealReader(p, true);
     await tools.tap();
@@ -140,18 +169,25 @@ try {
     await themes.evaluate((n) =>
       Promise.all(n.getAnimations().map((a) => a.finished.catch(() => {}))),
     );
-    assert(
-      (await themes.evaluate(alpha)) <= 0.45,
-      "Themes lets the book show through its background",
+    assert.equal(
+      await themes.evaluate(alpha),
+      0,
+      "Themes has no backing rectangle",
     );
+    assert(Math.abs((await themes.evaluate(panelWidth)) - menuWidth) < 1);
+    assert.equal(
+      await themes.evaluate((n) => getComputedStyle(n).backdropFilter),
+      "none",
+    );
+    assert.equal(await tools.isVisible(), false);
     await p.screenshot({
       path: `.test-results/reader-settings/themes-overlay-${width}.png`,
     });
     assert(
-      await themes.evaluate((n) =>
-        getComputedStyle(n).backdropFilter.includes("blur"),
-      ),
-      "text is blurred behind settings",
+      await themes
+        .locator(".appearance-tools")
+        .evaluate((n) => getComputedStyle(n).backdropFilter.includes("blur")),
+      "only individual settings controls blur the text underneath",
     );
     assert(
       await themes
@@ -226,6 +262,12 @@ try {
         ),
       "interface size applies on input, without waiting for release",
     );
+    await p.evaluate(
+      () =>
+        new Promise((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(resolve)),
+        ),
+    );
     assert.equal(
       await p.evaluate(() => window.settingsMeasures),
       0,
@@ -273,6 +315,128 @@ try {
     await themes.screenshot({
       path: `.test-results/reader-settings/themes-${width}.png`,
     });
+    const recordTransition = () =>
+      p.evaluate(() => {
+        window.modeSample = new Promise((resolve, reject) => {
+          let frame;
+          const timeout = setTimeout(() => {
+            cancelAnimationFrame(frame);
+            reject(new Error("mode change did not animate the reader"));
+          }, 5000);
+          const sample = () => {
+            const n = document.querySelector(".folio-viewport");
+            const a = n?.dataset.modeTransition && n.getAnimations()[0];
+            if (!a) {
+              frame = requestAnimationFrame(sample);
+              return;
+            }
+            clearTimeout(timeout);
+            a.pause();
+            a.currentTime = Number(a.effect.getTiming().duration) * 0.2;
+            const start = Number(getComputedStyle(n).opacity);
+            a.currentTime = Number(a.effect.getTiming().duration) * 0.8;
+            const end = Number(getComputedStyle(n).opacity);
+            a.play();
+            resolve({
+              start,
+              end,
+              duration: Number(a.effect.getTiming().duration),
+            });
+          };
+          frame = requestAnimationFrame(sample);
+        });
+      });
+    const checkTransition = async () => {
+      const transition = await p.evaluate(() => window.modeSample);
+      assert(
+        transition.end > transition.start && transition.duration <= 300,
+        "changing the mode briefly animates the book",
+      );
+      await p.waitForFunction(
+        () =>
+          !document.querySelector(".folio-viewport")?.dataset.modeTransition,
+      );
+    };
+    for (const kind of ["Curl", "Fast Fade", "Scroll", "Slide"]) {
+      await recordTransition();
+      await choosePageTurn(themes, kind, (n) => n.tap());
+      await checkTransition();
+    }
+    await themes.getByRole("button", { name: "Close", exact: true }).tap();
+    await menu.waitFor();
+    await menu.getByRole("button", { name: "Contents", exact: true }).tap();
+    await contents.waitFor();
+    await contents.getByRole("button", { name: "Close", exact: true }).tap();
+    await menu.waitFor();
+    assert.equal(await tools.isVisible(), false);
+    await menu.getByRole("button", { name: "Search Book", exact: true }).tap();
+    const search = p.locator(".folio-popover.search");
+    await search.waitFor();
+    assert(Math.abs((await search.evaluate(panelWidth)) - menuWidth) < 1);
+    assert.equal(await search.evaluate(alpha), 0);
+    await search.getByRole("button", { name: "Close", exact: true }).tap();
+    await menu.waitFor();
+    await menu.getByRole("button", { name: "Book words", exact: true }).tap();
+    const words = p.locator(".folio-popover.words");
+    await words.waitFor();
+    assert(Math.abs((await words.evaluate(panelWidth)) - menuWidth) < 1);
+    assert.equal(await words.evaluate(alpha), 0);
+    await words.getByRole("button", { name: "Close", exact: true }).tap();
+    await menu.waitFor();
+    await recordTransition();
+    await menu.getByRole("tab", { name: "Clean", exact: true }).tap();
+    await checkTransition();
+    await recordTransition();
+    await menu.getByRole("tab", { name: "Frank", exact: true }).tap();
+    await checkTransition();
+    const outsideWord = await p
+      .locator(".folio-columns [data-book-char]")
+      .evaluateAll((nodes) => {
+        const menu = document
+          .querySelector(".reading-menu")
+          .getBoundingClientRect();
+        for (const n of nodes) {
+          const range = document.createRange();
+          range.selectNodeContents(n);
+          const r = range.getClientRects()[0];
+          if (
+            r &&
+            r.left > 10 &&
+            r.right < innerWidth - 10 &&
+            r.top > 10 &&
+            r.bottom < Math.min(menu.top, innerHeight / 3)
+          )
+            return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+        }
+        throw new Error("no visible word outside settings");
+      });
+    const positionBeforeDismiss = await p
+      .locator(".reader-page-count")
+      .textContent();
+    await p.touchscreen.tap(outsideWord.x, outsideWord.y);
+    assert.equal(
+      await p.locator(".reader-page-count").textContent(),
+      positionBeforeDismiss,
+      "dismissing settings does not turn a page",
+    );
+    await p.waitForFunction(
+      () =>
+        !document
+          .querySelector(".books-reader")
+          ?.classList.contains("settings-open"),
+    );
+    assert.equal(
+      await p.locator(".word-panel").count(),
+      0,
+      "outside dismissal never opens a word underneath",
+    );
+    await revealReader(p, true);
+    await tools.tap();
+    await menu.getByRole("button", { name: "Themes", exact: true }).tap();
+    await themes.waitFor();
+    await themes.evaluate((n) =>
+      Promise.all(n.getAnimations().map((a) => a.finished.catch(() => {}))),
+    );
     await p.keyboard.press("Escape");
     assert(
       await themes.evaluate((n) => n.inert && n.getAnimations().length > 0),

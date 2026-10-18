@@ -71,12 +71,16 @@ try {
     const tools = p.locator(".reader-tools-button");
     const text = p.locator(".folio-columns");
     const bookFont = await fontSize(text);
+    const bookArea = await p.locator(".folio-viewport").boundingBox();
     assert(
       Math.abs((await fontSize(p.locator(".books-reader"))) - 14 * 1.08) < 0.1,
       "reader interface must not inherit the larger library font",
     );
     assert(
-      Math.abs((await tools.boundingBox()).width - 52 * 1.08) < 0.1,
+      Math.abs(
+        (await tools.evaluate((n) => n.getBoundingClientRect().width)) -
+          52 * 1.08,
+      ) < 0.1,
       "reader default 100% includes the 8% increase",
     );
     await tools.click();
@@ -98,7 +102,8 @@ try {
       await setRange(readerRange, value);
       assert(
         Math.abs(
-          (await tools.boundingBox()).width - (52 * 1.08 * value) / 100,
+          (await tools.evaluate((n) => n.getBoundingClientRect().width)) -
+            (52 * 1.08 * value) / 100,
         ) < 0.1,
       );
       assert.equal(
@@ -106,8 +111,17 @@ try {
         bookFont,
         "interface scaling must not change the book font",
       );
+      assert.deepEqual(
+        await p.locator(".folio-viewport").boundingBox(),
+        bookArea,
+        "interface scaling must not resize the book viewport",
+      );
       await bounded(panel, width, height);
-      await bounded(tools, width, height);
+      assert.equal(
+        await tools.isVisible(),
+        false,
+        "the tools button stays hidden while a panel is open",
+      );
       await panel
         .getByRole("button", { name: "Page turning", exact: true })
         .click();

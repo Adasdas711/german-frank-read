@@ -20,6 +20,11 @@ const browser = await chromium.launch({
 await mkdir(".test-results/reading-controls", { recursive: true });
 try {
   for (const width of [390, 834, 1440]) {
+    if (
+      process.env.TEST_CONTROLS_WIDTH &&
+      width !== Number(process.env.TEST_CONTROLS_WIDTH)
+    )
+      continue;
     const height = width === 390 ? 844 : 1024;
     const touch = width < 1000;
     const context = await browser.newContext({
@@ -156,7 +161,14 @@ try {
       0,
     );
     const box = await themes.boundingBox();
-    assert(box.width <= 440 && box.x + box.width <= width);
+    assert(
+      Math.abs(
+        (await themes.evaluate((n) => parseFloat(getComputedStyle(n).width))) -
+          Math.min(420 * 1.08, width - 36 * 1.08),
+      ) < 1,
+      "Themes shares the reading menu width",
+    );
+    assert(box.x + box.width <= width);
     // Interleave native toggles, range input, select and buttons repeatedly.
     for (let i = 0; i < 3; i++) {
       await activate(
@@ -236,11 +248,17 @@ try {
       "contents opens at right edge",
     );
     assert.equal(
-      await contents.locator(":scope > *").count(),
+      await contents.locator(":scope > nav").count(),
       1,
-      "Contents has only chapter navigation",
+      "Contents has chapter navigation",
     );
-    assert.equal(await contents.locator("button").count(), 3);
+    assert.equal(await contents.locator("nav button").count(), 3);
+    assert.equal(
+      await contents
+        .getByRole("button", { name: "Close", exact: true })
+        .count(),
+      1,
+    );
     assert.equal(await contents.locator("input,small,.tabs").count(), 0);
     assert(
       (await contents
@@ -330,6 +348,8 @@ try {
     assert.equal(await words.locator(".reader-saved-word").count(), 0);
     assert.equal(p.url(), route);
     await activate(words.getByRole("button", { name: "Close", exact: true }));
+    await menu.waitFor();
+    await p.keyboard.press("Escape");
     await lookup();
     assert(
       await note

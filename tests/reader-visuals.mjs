@@ -143,8 +143,10 @@ try {
     );
     const searchBox = await search.boundingBox();
     assert(searchBox.x >= 0 && searchBox.x + searchBox.width <= width + 1);
-    if (width >= 834)
-      assert(searchBox.width >= 550, "search is wider on tablet and desktop");
+    assert(
+      Math.abs(searchBox.width - Math.min(420 * 1.08, width - 36 * 1.08)) < 1,
+      "search and reading tools share a width",
+    );
     await p.screenshot({
       path: `.test-results/reader-visuals/search-${width}-${motion}.png`,
     });

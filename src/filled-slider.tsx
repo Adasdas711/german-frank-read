@@ -45,6 +45,12 @@ export function FilledSlider({
     pending.current = Math.round(
       min + Math.max(0, Math.min(1, (x - p.left) / p.width)) * (max - min),
     );
+    // Paint directly during the drag, before a page jump or a resized panel
+    // commits. Both Contents and Reading controls use the same fill.
+    root.current?.style.setProperty(
+      "--fill",
+      `${max > min ? ((pending.current - min) / (max - min)) * 100 : 0}%`,
+    );
     cancelAnimationFrame(frame.current);
     if (flush) callback.current(pending.current);
     else
@@ -63,6 +69,7 @@ export function FilledSlider({
       onPointerDown={(e) => {
         if (!e.isPrimary || e.button !== 0) return;
         suppress.current = false;
+        delete root.current!.dataset.dragging;
         const box = root.current!.getBoundingClientRect();
         press.current = {
           id: e.pointerId,
@@ -86,6 +93,7 @@ export function FilledSlider({
         }
         if (!p.dragged && Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) {
           p.dragged = true;
+          root.current!.dataset.dragging = "true";
           suppress.current = true;
           root.current!.setPointerCapture(e.pointerId);
         }
@@ -100,11 +108,17 @@ export function FilledSlider({
         if (!p.cancelled && (p.dragged || !onActivate)) write(e.clientX, true);
         suppress.current = p.dragged || p.cancelled;
         press.current = undefined;
+        delete root.current!.dataset.dragging;
       }}
       onPointerCancel={() => {
         press.current = undefined;
         suppress.current = true;
         cancelAnimationFrame(frame.current);
+        delete root.current!.dataset.dragging;
+        root.current!.style.setProperty(
+          "--fill",
+          `${max > min ? ((value - min) / (max - min)) * 100 : 0}%`,
+        );
       }}
       onClickCapture={(e) => {
         if (suppress.current && e.detail > 0) {

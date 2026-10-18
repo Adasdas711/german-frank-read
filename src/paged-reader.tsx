@@ -131,6 +131,7 @@ export function PagedReader(props: Props) {
       started: number;
       moved: boolean;
       type: string;
+      dismiss: boolean;
     } | null>(null),
     suppressClick = useRef(false);
   const lookupTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -150,6 +151,11 @@ export function PagedReader(props: Props) {
     setMenu(false);
   }, []);
   const show = () => {
+    setControls(true);
+  };
+  const backToMenu = () => {
+    setPanel(null);
+    setMenu(true);
     setControls(true);
   };
   useLayoutEffect(() => {
@@ -557,6 +563,39 @@ export function PagedReader(props: Props) {
     gesture.current = null;
     suppressClick.current = false;
   }, [mode, settings.pageTurn]);
+  const previousMode = useRef(`${mode}:${settings.pageTurn}`);
+  useLayoutEffect(() => {
+    const next = `${mode}:${settings.pageTurn}`;
+    if (previousMode.current === next || props.measureOnly) return;
+    previousMode.current = next;
+    let animation: Animation | undefined;
+    // Pagination paints the new layout first. Animate the visible viewport,
+    // without copying the book or delaying further settings changes.
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
+        const node = viewport.current;
+        if (!node) return;
+        const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+        node.dataset.modeTransition = "true";
+        animation = node.animate(
+          [
+            { opacity: 0.4, transform: reduced ? "none" : "translateY(6px)" },
+            { opacity: 1, transform: "none" },
+          ],
+          { duration: reduced ? 120 : 240, easing: "ease-out" },
+        );
+        animation.onfinish = () => {
+          delete node.dataset.modeTransition;
+          animation?.cancel();
+        };
+      });
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      animation?.cancel();
+      if (viewport.current) delete viewport.current.dataset.modeTransition;
+    };
+  }, [mode, settings.pageTurn]);
   const turn = (delta: number, interactive = false, originY = 0.75) => {
     props.onDismissWord();
     clearTimeout(lookupTimer.current);
@@ -748,7 +787,8 @@ export function PagedReader(props: Props) {
         settings.pageTurn +
         (props.measureOnly ? " pagination-probe" : "") +
         (scrolling ? " scroll-reader" : "") +
-        (controls || panel || menu ? " controls-visible" : "")
+        (controls || panel || menu ? " controls-visible" : "") +
+        (panel || menu ? " settings-open" : "")
       }
       style={appearance}
       aria-hidden={props.measureOnly || undefined}
@@ -798,7 +838,9 @@ export function PagedReader(props: Props) {
           started: performance.now(),
           moved: false,
           type: event.pointerType,
+          dismiss: !!(menu || panel),
         };
+        if (gesture.current.dismiss) return;
         const word = target.closest<HTMLElement>("[data-book-char]");
         if (word)
           lookupTimer.current = setTimeout(() => {
@@ -815,8 +857,10 @@ export function PagedReader(props: Props) {
           start.moved = true;
           suppressClick.current = true;
           clearTimeout(lookupTimer.current);
+          if (start.dismiss) return;
           hide();
         }
+        if (start.dismiss) return;
         const dx = event.clientX - start.x,
           dy = event.clientY - start.y;
         if (
@@ -854,6 +898,11 @@ export function PagedReader(props: Props) {
         const dx = event.clientX - start.x,
           dy = event.clientY - start.y;
         const moved = start.moved || Math.hypot(dx, dy) > 10;
+        if (start.dismiss) {
+          suppressClick.current = true;
+          if (!moved) hide();
+          return;
+        }
         if (dragTurn.current) {
           const pending = dragTurn.current;
           suppressClick.current = true;
@@ -940,6 +989,8 @@ export function PagedReader(props: Props) {
             aria-label={t("Reading tools")}
             aria-haspopup="dialog"
             aria-expanded={!!(menu || panel)}
+            aria-hidden={!!(menu || panel)}
+            inert={!!(menu || panel)}
             onClick={() => {
               props.onDismissWord();
               if (menu || panel) hide();
@@ -949,7 +1000,7 @@ export function PagedReader(props: Props) {
               }
             }}
           >
-            <Icon name={menu || panel ? "close" : "menu"} size={24} />
+            <Icon name="menu" size={24} />
           </button>
         </>
       )}
@@ -1124,7 +1175,7 @@ export function PagedReader(props: Props) {
                 <ThemesPanel
                   settings={settings}
                   onChange={props.onSettings}
-                  onClose={hide}
+                  onClose={backToMenu}
                 />
               </section>
             )}
@@ -1139,7 +1190,7 @@ export function PagedReader(props: Props) {
                 <ReaderWords
                   words={props.savedWords}
                   onRemove={props.onRemoveWord}
-                  onClose={hide}
+                  onClose={backToMenu}
                 />
               </section>
             )}
@@ -1151,6 +1202,16 @@ export function PagedReader(props: Props) {
                 role="dialog"
                 aria-label={t("Contents")}
               >
+                <div class="reader-panel-heading row between">
+                  <h2>{t("Chapters")}</h2>
+                  <button
+                    class="round"
+                    aria-label={t("Close")}
+                    onClick={backToMenu}
+                  >
+                    <Icon name="close" />
+                  </button>
+                </div>
                 <nav aria-label={t("Chapters")}>
                   {manifest.chapters.map((chapter, ci) => (
                     <button
@@ -1182,9 +1243,13 @@ export function PagedReader(props: Props) {
                 role="dialog"
                 aria-label={t("Search Book")}
               >
-                <div class="row between">
+                <div class="reader-panel-heading row between">
                   <h2>{t("Search Book")}</h2>
-                  <button class="round" aria-label={t("Close")} onClick={hide}>
+                  <button
+                    class="round"
+                    aria-label={t("Close")}
+                    onClick={backToMenu}
+                  >
                     <Icon name="close" />
                   </button>
                 </div>

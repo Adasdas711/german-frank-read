@@ -2451,8 +2451,8 @@ html.reading-pages body {
     margin-top: calc(10px * var(--ui-scale));
   }
   .folio-viewport {
-    inset: calc(74px * var(--ui-scale))
-      max(calc(22px * var(--ui-scale)), var(--margins))
+    /* Keep the 22px baseline at 108% independent of the controls' scale. */
+    inset: calc(74px * var(--ui-scale)) max(23.76px, var(--margins))
       calc(72px * var(--ui-scale));
   }
   .folio-columns {
@@ -3978,23 +3978,8 @@ body,
   -webkit-backdrop-filter: blur(18px) saturate(140%);
   border-radius: 999px;
 }
-.books-reader .folio-popover.glass {
-  background: color-mix(in srgb, var(--folio-paper) 68%, transparent);
-  backdrop-filter: blur(24px) saturate(140%);
-  -webkit-backdrop-filter: blur(24px) saturate(140%);
-  border-color: color-mix(in srgb, var(--folio-ink) 12%, transparent);
-}
-.books-reader .folio-popover.type.glass {
-  background: color-mix(in srgb, var(--folio-paper) 40%, transparent);
-  backdrop-filter: blur(8px) saturate(120%);
-  -webkit-backdrop-filter: blur(8px) saturate(120%);
-  box-shadow: 0 12px 32px #0002;
-}
 .books-reader .folio-popover.type .themes-panel {
   background: transparent;
-}
-.books-reader .themes-panel :is(.group, .glass-group) {
-  background: color-mix(in srgb, var(--folio-ink) 7%, transparent);
 }
 .books-reader .folio-toolbar {
   min-height: 0;
@@ -4094,4 +4079,101 @@ body,
 }
 .books-reader .folio-popover .filled-control .filled-control-input {
   touch-action: pan-y;
+}
+
+/* All tools share one width and float over the page without a backing panel.
+   Frosted surfaces belong to the controls, including nested theme settings. */
+.books-reader :is(.reading-menu, .folio-popover) {
+  --reader-control-surface: color-mix(
+    in srgb,
+    color-mix(in srgb, var(--folio-ink) 26%, var(--folio-paper)) 65%,
+    transparent
+  );
+}
+.books-reader :is(.reading-menu, .folio-popover).glass {
+  width: min(
+    calc(420px * var(--ui-scale)),
+    calc(100vw - 36px * var(--ui-scale))
+  );
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  scrollbar-width: none;
+}
+.books-reader
+  .folio-popover
+  :is(
+    .sheet-heading,
+    .reader-panel-heading,
+    .group,
+    .glass-group,
+    .book-search,
+    .page-entry,
+    .reader-saved-word,
+    .interface-size-reset,
+    .group-label,
+    .reader-word-list > .muted
+  ) {
+  background: var(--reader-control-surface);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border-radius: calc(22px * var(--ui-scale));
+}
+.books-reader .folio-popover .filled-interface-size > .group {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.books-reader .folio-popover :is(.sheet-heading, .reader-panel-heading) {
+  min-height: calc(56px * var(--ui-scale));
+  padding: calc(8px * var(--ui-scale)) calc(12px * var(--ui-scale));
+  margin: 0 0 calc(8px * var(--ui-scale));
+  border-radius: 999px;
+}
+.books-reader
+  .folio-popover
+  :is(.reader-panel-heading h2, .sheet-heading > strong) {
+  font: 600 calc(17px * var(--ui-scale)) / 1.3 system-ui;
+  margin: 0;
+}
+.books-reader .folio-popover .book-search {
+  border-radius: 999px;
+  min-height: calc(56px * var(--ui-scale));
+  padding: calc(14px * var(--ui-scale)) calc(16px * var(--ui-scale));
+  font-size: calc(18px * var(--ui-scale));
+  margin-bottom: calc(8px * var(--ui-scale));
+}
+.books-reader .folio-popover nav {
+  display: grid;
+  gap: calc(8px * var(--ui-scale));
+}
+.books-reader .folio-popover.contents .chapter-entry {
+  border-radius: calc(22px * var(--ui-scale));
+}
+.books-reader .themes-panel .appearance-tools,
+.books-reader .themes-panel > .wide {
+  border-radius: 999px;
+}
+.books-reader .themes-panel .group-label,
+.books-reader .reader-word-list > .muted {
+  padding: calc(10px * var(--ui-scale)) calc(16px * var(--ui-scale));
+}
+.books-reader .themes-panel .group-label {
+  width: fit-content;
+  border-radius: 999px;
+}
+.books-reader .theme-tile[aria-pressed="true"] {
+  outline-offset: calc(-2px * var(--ui-scale));
+}
+.books-reader.settings-open .reader-tools-button {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+/* The pressed button must not paint over the progress during a drag. */
+.books-reader .contents-progress[data-dragging="true"] > button {
+  background: transparent !important;
+  color: var(--folio-ink) !important;
 }

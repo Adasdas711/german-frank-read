@@ -26,7 +26,7 @@ export function ReaderWords({
   }, [words, query]);
   return (
     <>
-      <div class="row between">
+      <div class="reader-panel-heading row between">
         <h2>
           {t("Book words")} · {words.length}
         </h2>
