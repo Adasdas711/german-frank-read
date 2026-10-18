@@ -198,7 +198,12 @@ export function ThemesPanel({
                     hintColor: "",
                   })
                 }
-                style={{ background: theme.paper, color: theme.ink }}
+                style={{
+                  background: theme.paper,
+                  color: theme.ink,
+                  "--choice-paper": theme.paper,
+                  "--choice-ink": theme.ink,
+                }}
               >
                 <span>Aa</span>
                 <i style={{ color: theme.hint }}>•••</i>

@@ -17,7 +17,12 @@ const browser = await chromium.launch({
 const errors = [];
 const number = async (p) =>
   +(await p.locator(".folio-page-number").textContent()).match(/\d+/)[0];
-const settle = async (p) => p.waitForTimeout(550);
+const settle = async (p) => {
+  await p.waitForFunction(
+    () => !document.querySelector(".books-reader[data-turning]"),
+  );
+  await p.waitForTimeout(100);
+};
 const point = async (p) =>
   p.locator(".folio-columns [data-book-char]").evaluateAll((nodes) => {
     const v = document.querySelector(".folio-viewport").getBoundingClientRect();

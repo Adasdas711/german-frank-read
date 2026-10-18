@@ -1052,7 +1052,6 @@ mark {
   background: #68686d;
   border-radius: calc(20px * var(--ui-scale));
   padding: 0;
-  transition: background 0.15s;
   margin: 0;
 }
 .switch-label input:before {
@@ -1065,7 +1064,6 @@ mark {
   top: calc(2px * var(--ui-scale));
   left: calc(2px * var(--ui-scale));
   transform: none;
-  transition: transform 0.15s;
 }
 .switch-label input:checked {
   background: #5dc9b9;
@@ -3265,14 +3263,8 @@ body,
   );
 }
 .books-reader .folio-viewport {
-  top: max(
-    calc(80px * var(--ui-scale)),
-    calc(env(safe-area-inset-top) + calc(76px * var(--ui-scale)))
-  );
-  bottom: max(
-    calc(88px * var(--ui-scale)),
-    calc(env(safe-area-inset-bottom) + calc(84px * var(--ui-scale)))
-  );
+  top: 0;
+  bottom: 0;
 }
 .books-reader .reading-menu,
 .books-reader .folio-popover {
@@ -3789,4 +3781,145 @@ body,
 .themes-panel .page-turn-control .turn-menu button {
   min-height: calc(42px * var(--ui-scale));
   font-size: calc(13px * var(--ui-scale));
+}
+
+/* Menus cover the page instead of reserving space in its text layout. */
+.books-reader .folio-columns {
+  transition: none;
+}
+.books-reader .folio-popover.search {
+  width: min(
+    calc(560px * var(--ui-scale)),
+    calc(100vw - 36px * var(--ui-scale))
+  );
+  padding: calc(20px * var(--ui-scale));
+}
+.books-reader .folio-popover.search h2 {
+  font-size: calc(20px * var(--ui-scale));
+}
+.books-reader .folio-popover.search .book-search {
+  min-height: calc(56px * var(--ui-scale));
+  font-size: calc(18px * var(--ui-scale));
+  padding: calc(14px * var(--ui-scale)) calc(16px * var(--ui-scale));
+}
+.books-reader .folio-popover.search .page-entry strong {
+  font-size: calc(17px * var(--ui-scale));
+}
+.books-reader .folio-popover.search .page-entry small {
+  font-size: calc(15px * var(--ui-scale));
+  max-width: none;
+}
+.books-reader button:not(:disabled):active,
+.books-reader a:active,
+.books-reader button[aria-pressed="true"],
+.books-reader button[aria-selected="true"],
+.books-reader button[aria-checked="true"],
+.books-reader button[aria-expanded="true"],
+.books-reader button[aria-current] {
+  background: var(--folio-ink) !important;
+  color: var(--folio-paper) !important;
+  filter: none;
+}
+.books-reader
+  button:is(
+    :active,
+    [aria-pressed="true"],
+    [aria-selected="true"],
+    [aria-checked="true"],
+    [aria-expanded="true"],
+    [aria-current]
+  )
+  :is(strong, small, i, .muted) {
+  color: inherit !important;
+}
+.books-reader .primary:not(:disabled):active,
+.books-reader .word-panel .primary[aria-pressed="true"] {
+  background: var(--folio-paper) !important;
+  color: var(--folio-ink) !important;
+  box-shadow: inset 0 0 0 1px var(--folio-ink);
+}
+.books-reader .theme-tile[aria-pressed="true"],
+.books-reader .theme-tile:active {
+  background: var(--choice-ink) !important;
+  color: var(--choice-paper) !important;
+}
+.books-reader .theme-tile[aria-pressed="true"] i {
+  color: inherit !important;
+}
+/* Motion is restricted to reading; the library and builder remain static. */
+.books-shell *,
+.books-shell *::before,
+.books-shell *::after {
+  animation: none !important;
+  transition: none !important;
+}
+@keyframes reader-panel-in {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .books-reader .switch-label input {
+    transition: background-color 150ms;
+  }
+  .books-reader .switch-label input::before {
+    transition: transform 150ms;
+  }
+  .books-reader :is(button, a, summary) {
+    transition:
+      background-color 100ms,
+      color 100ms;
+  }
+  .books-reader :is(.reader-exit, .reader-tools-button, .folio-toolbar) {
+    transition: opacity 140ms;
+  }
+  .books-reader :is(.reading-menu, .folio-popover, .turn-menu, .word-panel) {
+    animation: reader-panel-in 160ms ease-out;
+  }
+}
+.reader-page-layer {
+  position: absolute;
+  z-index: 8;
+  pointer-events: none;
+  background: var(--folio-paper);
+  user-select: none;
+}
+.curl-leaf.reader-page-layer {
+  background: transparent;
+  overflow: visible;
+  perspective: 1600px;
+  perspective-origin: 50% 50%;
+  transform-style: preserve-3d;
+  box-shadow: none;
+}
+.curl-leaf.reader-page-layer::after {
+  content: none;
+}
+.curl-strip {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  transform-style: preserve-3d;
+}
+.curl-face {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  backface-visibility: hidden;
+  background: var(--folio-paper);
+}
+.curl-face.back {
+  transform: rotateY(180deg);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--folio-paper), var(--folio-ink) 8%),
+    var(--folio-paper) 35%,
+    color-mix(in srgb, var(--folio-paper), var(--folio-ink) 12%)
+  );
+  box-shadow: inset 0 0 30px #0002;
 }

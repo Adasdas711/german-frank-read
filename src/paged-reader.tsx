@@ -15,6 +15,7 @@ import { appearanceStyle } from "./appearance";
 import { WordPopover } from "./word-popover";
 import { useControlActivation } from "./control-activation";
 import { ReaderWords } from "./reader-words";
+import { animatePageTurn, pageSnapshot } from "./reader-motion";
 export type PageEntry = { at: string; offset: number; preview: string };
 
 type Props = {
@@ -92,6 +93,7 @@ export function PagedReader(props: Props) {
   const viewport = useRef<HTMLDivElement>(null),
     text = useRef<HTMLDivElement>(null),
     root = useRef<HTMLDivElement>(null);
+  const stopTurn = useRef<() => void>(() => {});
   const state = useRef({ props, page, layout });
   useControlActivation(root, props.measureOnly);
   state.current = { props, page, layout };
@@ -139,6 +141,7 @@ export function PagedReader(props: Props) {
     return () => {
       document.documentElement.classList.remove("reading-pages");
       clearTimeout(lookupTimer.current);
+      stopTurn.current();
       window.removeEventListener("blur", cancelHold);
       document.removeEventListener("visibilitychange", cancelHold);
     };
@@ -246,6 +249,7 @@ export function PagedReader(props: Props) {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         if (closed || !viewport.current || !text.current) return;
+        stopTurn.current();
         const viewportBox = viewport.current.getBoundingClientRect();
         const viewportHeight = viewport.current.clientHeight;
         if (viewportBox.width <= 0 || viewportHeight <= 0) return;
@@ -546,11 +550,9 @@ export function PagedReader(props: Props) {
     if (!props.measureOnly) state.current.props.onPosition(address, char);
   }
   const clearTurnAnimations = () => {
+    stopTurn.current();
+    stopTurn.current = () => {};
     text.current?.getAnimations().forEach((animation) => animation.cancel());
-    root.current?.querySelectorAll(".curl-leaf").forEach((leaf) => {
-      leaf.getAnimations().forEach((animation) => animation.cancel());
-      leaf.remove();
-    });
   };
   useLayoutEffect(() => {
     clearTurnAnimations();
@@ -561,154 +563,68 @@ export function PagedReader(props: Props) {
   const turn = (delta: number) => {
     props.onDismissWord();
     clearTimeout(lookupTimer.current);
-    if (!state.current.layout.ready) return;
+    const geometry = state.current.layout;
+    if (!geometry.ready) return;
     const next = Math.max(
       0,
-      Math.min(state.current.layout.count - 1, state.current.page + delta),
+      Math.min(geometry.count - 1, state.current.page + delta),
     );
     if (next === state.current.page) return;
+    const canvas = text.current!;
+    const from = getComputedStyle(canvas).transform;
     clearTurnAnimations();
-    if (
-      text.current &&
-      !scrolling &&
-      !matchMedia("(prefers-reduced-motion: reduce)").matches
-    ) {
-      if (settings.pageTurn === "fade")
-        text.current.animate([{ opacity: 0.25 }, { opacity: 1 }], {
-          duration: 180,
-        });
-      if (settings.pageTurn === "curl" && viewport.current && root.current) {
-        const geometry = state.current.layout,
-          box = viewport.current.getBoundingClientRect();
-        const leaf = document.createElement("div");
-        leaf.className = "curl-leaf";
-        leaf.setAttribute("aria-hidden", "true");
-        const width =
-          geometry.columns === 2
-            ? (geometry.width - geometry.gap) / 2
-            : geometry.width;
-        Object.assign(leaf.style, {
-          left: (delta > 0 ? box.right - width : box.left) + "px",
-          top: box.top + "px",
-          width: width + "px",
-          height: box.height + "px",
-          transformOrigin: delta > 0 ? "left center" : "right center",
-        });
-        // Paint only the visible leaf. Cloning the entire novel here blocks input
-        // and makes a single trackpad gesture look like several separate gestures.
-        const snapshot = document.createElement("div");
-        snapshot.className = "curl-snapshot";
-        const left = delta > 0 ? box.right - width : box.left;
-        const visibleRect = (rect: DOMRect) =>
-          rect.width > 0 &&
-          rect.left >= left - 1 &&
-          rect.right <= left + width + 1 &&
-          rect.bottom > box.top &&
-          rect.top < box.bottom;
-        const nodes = [
-          ...text.current.querySelectorAll<HTMLElement>("[data-book-char]"),
-        ];
-        const targetLeaf =
-          state.current.page * geometry.columns +
-          (delta > 0 ? geometry.columns - 1 : 0);
-        let lo = 0,
-          hi = nodes.length;
-        while (lo < hi) {
-          const mid = (lo + hi) >>> 1;
-          if (columnOf(nodes[mid], geometry) < targetLeaf) lo = mid + 1;
-          else hi = mid;
-        }
-        const first = nodes[lo];
-        if (first && columnOf(first, geometry) === targetLeaf) {
-          const walker = document.createTreeWalker(
-            text.current,
-            NodeFilter.SHOW_TEXT,
-          );
-          const range = document.createRange();
-          const visibleNode = (node: Node) => {
-            range.selectNodeContents(node);
-            const rects = [...range.getClientRects()];
-            return rects.length ? rects.some(visibleRect) : null;
-          };
-          walker.currentNode = first.firstChild!;
-          let begin = walker.currentNode;
-          while (walker.previousNode()) {
-            if (!walker.currentNode.textContent?.trim()) continue;
-            const shown = visibleNode(walker.currentNode);
-            if (shown === null) continue;
-            if (!shown) break;
-            begin = walker.currentNode;
-          }
-          walker.currentNode = begin;
-          const styles = new Map<Element, CSSStyleDeclaration>();
-          do {
-            const node = walker.currentNode,
-              value = node.textContent || "";
-            if (!value.trim()) continue;
-            const shown = visibleNode(node);
-            if (shown === null) continue;
-            if (!shown) break;
-            const parent = node.parentElement!;
-            let style = styles.get(parent);
-            if (!style) {
-              style = getComputedStyle(parent);
-              styles.set(parent, style);
-            }
-            for (const match of value.matchAll(/\S+/g)) {
-              range.setStart(node, match.index!);
-              range.setEnd(node, match.index! + match[0].length);
-              const rects = [...range.getClientRects()].filter(visibleRect);
-              if (!rects.length) continue;
-              const rect = rects[0];
-              const span = document.createElement("span");
-              span.textContent = match[0];
-              Object.assign(span.style, {
-                position: "absolute",
-                left: rect.left - left + "px",
-                top: rect.top - box.top + "px",
-                font: style.font,
-                color: style.color,
-                backgroundColor: style.backgroundColor,
-                letterSpacing: style.letterSpacing,
-                lineHeight: rect.height + "px",
-                whiteSpace: "pre",
-              });
-              snapshot.append(span);
-            }
-          } while (walker.nextNode());
-        }
-        leaf.append(snapshot);
-        root.current.append(leaf);
-        const animation = leaf.animate(
-          [
-            { transform: "perspective(1600px) rotateY(0deg)", opacity: 1 },
-            {
-              transform: `perspective(1600px) rotateY(${delta > 0 ? -115 : 115}deg)`,
-              opacity: 0.7,
-              offset: 0.8,
-            },
-            {
-              transform: `perspective(1600px) rotateY(${delta > 0 ? -155 : 155}deg)`,
-              opacity: 0,
-            },
-          ],
-          {
-            duration: 480,
-            easing: "cubic-bezier(.2,.6,.3,1)",
-            fill: "forwards",
-          },
-        );
-        animation.onfinish = () => leaf.remove();
+    const box = viewport.current!.getBoundingClientRect();
+    const width =
+      settings.pageTurn === "curl" && geometry.columns === 2
+        ? (geometry.width - geometry.gap) / 2
+        : geometry.width;
+    const motionBox = {
+      left:
+        settings.pageTurn === "curl" && delta > 0
+          ? box.right - width
+          : box.left,
+      top: box.top,
+      width,
+      height: box.height,
+    };
+    let outgoing: HTMLElement | undefined;
+    if (!scrolling && settings.pageTurn !== "slide") {
+      const nodes = [
+        ...canvas.querySelectorAll<HTMLElement>("[data-book-char]"),
+      ];
+      const leaf =
+        state.current.page * geometry.columns +
+        (settings.pageTurn === "curl" && delta > 0 ? geometry.columns - 1 : 0);
+      let low = 0,
+        high = nodes.length;
+      while (low < high) {
+        const middle = (low + high) >>> 1;
+        if (columnOf(nodes[middle], geometry) < leaf) low = middle + 1;
+        else high = middle;
       }
+      outgoing = pageSnapshot(canvas, motionBox, nodes[low]);
     }
     report(next);
     setPage(next);
     hide();
     state.current.page = next;
-    if (scrolling && viewport.current)
+    if (scrolling && viewport.current) {
       viewport.current.scrollTop = next * viewport.current.clientHeight;
-    if (text.current && !scrolling)
-      text.current.style.transform = `translateX(${-next * (state.current.layout.width + state.current.layout.gap)}px)`;
+    } else {
+      const to = `translateX(${-next * (geometry.width + geometry.gap)}px)`;
+      canvas.style.transform = to;
+      if (root.current)
+        stopTurn.current = animatePageTurn({
+          kind: settings.pageTurn as "slide" | "curl" | "fade",
+          canvas,
+          host: root.current,
+          box: motionBox,
+          outgoing,
+          from,
+          to,
+          direction: delta,
+        });
+    }
   };
   const jumpPage = (next: number) => {
     props.onDismissWord();
@@ -854,6 +770,8 @@ export function PagedReader(props: Props) {
           event.preventDefault();
       }}
       onPointerDown={(event) => {
+        const wasTurning = !!root.current?.dataset.turning;
+        clearTurnAnimations();
         clearTimeout(lookupTimer.current);
         gesture.current = null;
         longPressed.current = false;
@@ -862,7 +780,12 @@ export function PagedReader(props: Props) {
           suppressClick.current = true;
           return;
         }
-        const target = event.target as HTMLElement;
+        const target = (
+          wasTurning
+            ? document.elementFromPoint(event.clientX, event.clientY) ||
+              event.target
+            : event.target
+        ) as HTMLElement;
         if (
           target.closest(
             ".reader-exit,.reader-tools-button,.folio-toolbar,.folio-popover,.folio-bottom,.word-panel,.reading-menu",

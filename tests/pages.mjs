@@ -69,13 +69,11 @@ try {
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(base);
   await page.getByRole("heading", { name: "Home", exact: true }).waitFor();
-  await page
-    .locator('input[type=file][accept=".fbook"]')
-    .setInputFiles({
-      name: "long.fbook",
-      mimeType: "application/zip",
-      buffer: Buffer.from(fixture),
-    });
+  await page.locator('input[type=file][accept=".fbook"]').setInputFiles({
+    name: "long.fbook",
+    mimeType: "application/zip",
+    buffer: Buffer.from(fixture),
+  });
   await page.getByRole("button", { name: "Add to Library" }).click();
   await page.getByText("Book added", { exact: true }).waitFor();
   for (const viewport of [
@@ -106,6 +104,9 @@ try {
       let last = "",
         iterations = 0;
       while (iterations++ < 100) {
+        await page.waitForFunction(
+          () => !document.querySelector(".books-reader[data-turning]"),
+        );
         await page.waitForTimeout(30);
         const ids = await page
           .locator(".folio-columns [data-book-char]")

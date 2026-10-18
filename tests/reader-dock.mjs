@@ -95,8 +95,8 @@ try {
       /^\d+ of \d+$/,
     );
     assert.ok(
-      book.y + book.height < toolbar.y || !bottom,
-      name + " reserved toolbar space",
+      Math.abs(book.y) < 1 && Math.abs(book.y + book.height - height) < 1,
+      name + " text covers the full height behind the toolbar",
     );
     await p.getByLabel("Reading position", { exact: true }).click();
     await p.waitForTimeout(80);

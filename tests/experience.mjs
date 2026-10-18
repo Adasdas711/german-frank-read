@@ -147,6 +147,9 @@ try {
     "0",
   );
   await page.keyboard.press("ArrowRight");
+  await page.waitForFunction(
+    () => !document.querySelector(".books-reader[data-turning]"),
+  );
   await page.waitForTimeout(150);
   const bookmark = (await all(page, "progress"))[0];
   assert.ok(bookmark.offset > 0 || bookmark.at !== "1.1");
@@ -555,7 +558,11 @@ try {
   await motion.page.keyboard.press("ArrowRight");
   await motion.page.waitForTimeout(60);
   assert.equal(await motion.page.locator(".curl-leaf").count(), 1);
-  await motion.page.waitForTimeout(520);
+  await motion.page.waitForFunction(
+    () => !document.querySelector(".books-reader[data-turning]"),
+    undefined,
+    { timeout: 2000 },
+  );
   assert.equal(await motion.page.locator(".curl-leaf").count(), 0);
   await motion.context.close();
   assert.deepEqual(errors, []);
