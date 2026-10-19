@@ -90,7 +90,7 @@ try {
       name: "App interface",
       exact: true,
     });
-    await appScale.scrollIntoViewIfNeeded();
+    await appScale.locator("..").scrollIntoViewIfNeeded();
     const appScaleBox = await appScale.locator("..").boundingBox();
     await page.mouse.move(
       appScaleBox.x + appScaleBox.width * 0.25,
@@ -204,7 +204,7 @@ try {
     const drag = async (slider, fraction) => {
       await slider.focus();
       await slider.press("Home");
-      await slider.scrollIntoViewIfNeeded();
+      await slider.locator("..").scrollIntoViewIfNeeded();
       const row = slider.locator("..");
       const box = await row.boundingBox();
       await page.mouse.move(box.x + box.width * 0.1, box.y + box.height / 2);

@@ -136,7 +136,9 @@ export function FilledSlider({
           write(e.clientX, true);
           onCommit?.(pending.current);
         } else if (p.cancelled) onCancel?.();
-        suppress.current = p.dragged || p.cancelled;
+        // Settings have no click action. Suppress compatibility clicks even
+        // after a short motion that never crossed the drag threshold.
+        suppress.current = !onActivate || p.dragged || p.cancelled;
         press.current = undefined;
         delete root.current!.dataset.dragging;
       }}
@@ -187,7 +189,10 @@ export function FilledSlider({
         </div>
       )}
       <input
-        class={"filled-control-input" + (onActivate ? " keyboard-range" : "")}
+        // Pointer gestures belong to the row. Keep the native range only for
+        // keyboard/assistive input so a delayed native touch action cannot
+        // overwrite a relative drag with an absolute thumb position.
+        class="filled-control-input keyboard-range"
         type="range"
         min={min}
         max={max}
@@ -196,6 +201,9 @@ export function FilledSlider({
         aria-label={label}
         aria-valuetext={valueText}
         disabled={disabled || max <= min}
+        onFocus={() =>
+          root.current?.scrollIntoView({ block: "nearest", inline: "nearest" })
+        }
         onInput={(e) => callback.current(+e.currentTarget.value)}
         onChange={(e) => onCommit?.(+e.currentTarget.value)}
       />

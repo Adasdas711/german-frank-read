@@ -124,7 +124,7 @@ try {
       [0.75, -0.1],
       [0.9, 0],
     ]) {
-      await controls.scrollIntoViewIfNeeded();
+      await controls.locator("..").scrollIntoViewIfNeeded();
       const box = await controls.locator("..").boundingBox();
       const y = box.y + box.height / 2;
       await pointer("touchStart", box.x + box.width * start, y);
@@ -138,6 +138,43 @@ try {
         "settings change by drag distance, independent of the press location; a tap does not jump",
       );
     }
+    for (let repeat = 0; repeat < 8; repeat++) {
+      await controls.locator("..").scrollIntoViewIfNeeded();
+      const box = await controls.locator("..").boundingBox();
+      const delta = repeat % 2 ? 4 : -4;
+      const x = box.x + box.width * (delta > 0 ? 0.05 : 0.95),
+        y = box.y + box.height / 2;
+      assert.equal(
+        await page.evaluate(
+          ({ x, y }) =>
+            document.elementFromPoint(x, y).matches('input[type="range"]'),
+          { x, y },
+        ),
+        false,
+        "native range must not also handle pointer gestures",
+      );
+      const before = Number(await controls.inputValue());
+      await pointer("touchStart", x, y);
+      await pointer("touchMove", x + delta, y);
+      await pointer("touchEnd", x + delta, y);
+      expected = Math.max(
+        80,
+        Math.min(160, before + Math.round((delta / box.width) * 80)),
+      );
+      await page.waitForTimeout(100);
+      assert.equal(
+        Number(await controls.inputValue()),
+        expected,
+        "a quick short change in either direction must keep its relative value after compatibility clicks",
+      );
+    }
+    await controls.focus();
+    await controls.press("ArrowRight");
+    assert.equal(
+      Number(await controls.inputValue()),
+      expected + 1,
+      "the keyboard range remains usable",
+    );
     assert.deepEqual(errors, []);
     console.log(
       `PASS: ${touch ? "touch" : "mouse"} repeated edge drags, Contents tap, system and explicit theme selection, relative settings drags`,
