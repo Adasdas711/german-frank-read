@@ -355,7 +355,7 @@ try {
 
       await open();
       await menu
-        .getByRole("menuitem", { name: "Remove from Folder", exact: true })
+        .getByRole("menuitem", { name: "Remove from Collection", exact: true })
         .tap();
       assert(
         !(await state(page)).collections

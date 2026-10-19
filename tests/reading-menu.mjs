@@ -271,7 +271,7 @@ try {
       const before = await state(p);
       await book.click({ button: "right" });
       await menu
-        .getByRole("menuitem", { name: "Remove from Folder", exact: true })
+        .getByRole("menuitem", { name: "Remove from Collection", exact: true })
         .click();
       await book.waitFor({ state: "detached" });
       const after = await state(p);

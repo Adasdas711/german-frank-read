@@ -164,11 +164,11 @@ try {
   await p.getByRole("heading", { name: "B1", exact: true }).waitFor();
   await p.getByRole("button", { name: "Show sidebar", exact: true }).click();
   await p.locator("[data-level=B2]").click({ button: "right" });
-  const menu = p.getByRole("menu", { name: "Folder options" });
+  const menu = p.getByRole("menu", { name: "Collection options" });
   await menu.waitFor();
   assert.ok(
     await menu
-      .getByRole("menuitem", { name: "Delete Folder", exact: true })
+      .getByRole("menuitem", { name: "Delete Collection", exact: true })
       .evaluate((n) => n === document.activeElement),
   );
   await p.keyboard.press("Escape");
@@ -176,7 +176,7 @@ try {
   await p.locator("[data-level=B2]").click({ button: "right" });
   await menu.getByRole("menuitem").click();
   await p
-    .getByRole("dialog", { name: "Delete folder B2?" })
+    .getByRole("dialog", { name: "Delete collection B2?" })
     .getByRole("button", { name: "Done", exact: true })
     .click();
   assert.equal(await p.locator("[data-level=B2]").count(), 0);

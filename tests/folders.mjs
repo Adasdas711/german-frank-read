@@ -90,7 +90,7 @@ try {
     await p.getByRole("tab", { name: "A2", exact: true }).click();
     const initial = await snapshot(p);
     await p.locator(".delete-library-folder").click();
-    const confirm = p.getByRole("dialog", { name: "Delete folder A2?" });
+    const confirm = p.getByRole("dialog", { name: "Delete collection A2?" });
     await confirm
       .getByText("The books will stay in your library.", { exact: true })
       .waitFor();
@@ -101,7 +101,7 @@ try {
     );
     await p.locator(".delete-library-folder").click();
     await p
-      .getByRole("dialog", { name: "Delete folder A2?" })
+      .getByRole("dialog", { name: "Delete collection A2?" })
       .getByRole("button", { name: "Done", exact: true })
       .click();
     await p.getByRole("heading", { name: "All Books", exact: true }).waitFor();
@@ -125,7 +125,7 @@ try {
       await p.getByRole("tab", { name, exact: true }).click();
       await p.locator(".delete-library-folder").click();
       await p
-        .getByRole("dialog", { name: `Delete folder ${name}?` })
+        .getByRole("dialog", { name: `Delete collection ${name}?` })
         .getByRole("button", { name: "Done", exact: true })
         .click();
       await p

@@ -237,6 +237,33 @@ function App() {
     bookId = parts[1],
     at = parts[2] || "1.1",
     mode = parts[3] || settings.defaultMode;
+  const navigationPane = useRef<HTMLElement>(null);
+  const navigationKey = [
+    page,
+    page === "library" ? `${libraryFilter}:${collectionFilter}` : "",
+    page === "words" ? wordTab : "",
+  ].join(":");
+  const previousNavigation = useRef(navigationKey);
+  useLayoutEffect(() => {
+    const previous = previousNavigation.current;
+    previousNavigation.current = navigationKey;
+    const node = navigationPane.current;
+    if (!ready || !node || previous === navigationKey) return;
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const animation = node.animate(
+      [
+        {
+          opacity: reduced ? 0.4 : 0,
+          transform: reduced ? "none" : "translateY(6px)",
+        },
+        { opacity: 1, transform: "none" },
+      ],
+      { duration: reduced ? 160 : 180, easing: "ease-out" },
+    );
+    animation.id = "section-navigation";
+    animation.onfinish = () => animation.cancel();
+    return () => animation.cancel();
+  }, [navigationKey, ready]);
   const decodedCache = useRef(
     new WeakMap<Uint8Array, ReturnType<typeof readBook>>(),
   );
@@ -1008,7 +1035,7 @@ function App() {
   const deleteLibraryFolder = (value: string) => {
     if (value === "all") return;
     setConfirm({
-      title: t("Delete folder {0}?", { 0: t(filterLabel(value)) }),
+      title: t("Delete collection {0}?", { 0: t(filterLabel(value)) }),
       text: t("The books will stay in your library."),
       action: async () => {
         await saveSettings({
@@ -1106,7 +1133,7 @@ function App() {
           : c,
       ),
     );
-    notify(t("Book removed from folder"));
+    notify(t("Book removed from collection"));
   };
   const addToCollection = async (book: Book, id: string) => {
     await saveCollections(
@@ -1664,6 +1691,7 @@ function App() {
             </button>
           </aside>
           <main
+            ref={navigationPane}
             class={"library-main" + (page === "search" ? " search-page" : "")}
           >
             <div class="collapsed-tools">
@@ -1692,7 +1720,7 @@ function App() {
                   libraryFilter !== "all" && (
                     <button
                       class="round glass delete-library-folder"
-                      aria-label={t("Delete folder {0}", {
+                      aria-label={t("Delete collection {0}", {
                         0: t(filterLabel(libraryFilter)),
                       })}
                       onClick={() => deleteLibraryFolder(libraryFilter)}
@@ -2415,8 +2443,8 @@ function App() {
                 <Icon name="collection" />
                 {t(
                   foldersForBook(details).length > 1
-                    ? "Remove from folder {0}"
-                    : "Remove from Folder",
+                    ? "Remove from collection {0}"
+                    : "Remove from Collection",
                   { 0: folder.name },
                 )}
               </button>
@@ -2940,8 +2968,8 @@ function App() {
               <Icon name="collection" size={16} />
               {t(
                 foldersForBook(bookMenu.book, bookMenu.folder).length > 1
-                  ? "Remove from folder {0}"
-                  : "Remove from Folder",
+                  ? "Remove from collection {0}"
+                  : "Remove from Collection",
                 { 0: folder.name },
               )}
             </button>
@@ -2949,7 +2977,7 @@ function App() {
           {!foldersForBook(bookMenu.book, bookMenu.folder).length && (
             <button role="menuitem" class="quiet" disabled>
               <Icon name="collection" size={16} />
-              {t("Remove from Folder")}
+              {t("Remove from Collection")}
             </button>
           )}
           <button

@@ -130,8 +130,8 @@ export function ContinueMenu({
             <Icon name="minus-circle" />
             {t(
               folders.length > 1
-                ? "Remove from folder {0}"
-                : "Remove from Folder",
+                ? "Remove from collection {0}"
+                : "Remove from Collection",
               { 0: folder.name },
             )}
           </button>

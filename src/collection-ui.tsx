@@ -439,12 +439,12 @@ export function FolderContextMenu({
     <ContextMenu
       x={target.x}
       y={target.y}
-      label={t("Folder options")}
+      label={t("Collection options")}
       onClose={onClose}
     >
       <button role="menuitem" class="quiet danger" onClick={onDelete}>
         <Icon name="trash" size={16} />
-        {t("Delete Folder")}
+        {t("Delete Collection")}
       </button>
     </ContextMenu>
   );
