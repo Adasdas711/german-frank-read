@@ -4400,7 +4400,7 @@ body,
 @media (prefers-reduced-motion: no-preference) {
   .books-shell :is(.cover-open, .continue-open),
   .books-shell :is(.shelf-book, .continue-card) .book-cover {
-    transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+    transition: transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1) !important;
   }
   .books-shell
     :is(.shelf-book, .continue-card)[data-book-menu-open]
@@ -4410,15 +4410,15 @@ body,
   body:has(.library-main :is(.home-section, .filter-tabs)) .book-context-menu,
   body:has(.library-main :is(.home-section, .filter-tabs))
     .continue-context-menu {
-    animation: book-options-enter 200ms cubic-bezier(0.16, 1, 0.3, 1) both !important;
+    animation: book-options-enter 400ms cubic-bezier(0.16, 1, 0.3, 1) both !important;
   }
   body:has(.library-main :is(.home-section, .filter-tabs)) .book-details-modal {
-    animation: book-details-enter 240ms cubic-bezier(0.16, 1, 0.3, 1) both !important;
+    animation: book-details-enter 480ms cubic-bezier(0.16, 1, 0.3, 1) both !important;
   }
   body:has(.library-main :is(.home-section, .filter-tabs)) .book-menu-backdrop,
   body:has(.library-main :is(.home-section, .filter-tabs))
     .modal-backdrop:has(> .book-details-modal) {
-    animation: book-backdrop-enter 180ms ease-out both !important;
+    animation: book-backdrop-enter 360ms ease-out both !important;
   }
   body:has(.library-main :is(.home-section, .filter-tabs))
     .book-details-modal
@@ -4427,8 +4427,8 @@ body,
     :is(.book-context-menu, .continue-context-menu)
     button {
     transition:
-      transform 120ms ease-out,
-      background-color 120ms ease-out !important;
+      transform 200ms ease-out,
+      background-color 200ms ease-out !important;
   }
   body:has(.library-main :is(.home-section, .filter-tabs))
     .book-details-modal
@@ -4447,6 +4447,38 @@ body,
 @media (prefers-reduced-motion: no-preference) {
   .books-shell :is(.cover-open, .continue-open):active {
     transform: scale(0.96);
-    transition-duration: 80ms !important;
+    transition-duration: 140ms !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body:has(.library-main :is(.home-section, .filter-tabs))
+    :is(
+      .book-context-menu,
+      .continue-context-menu,
+      .book-details-modal,
+      .book-menu-backdrop
+    ),
+  body:has(.library-main :is(.home-section, .filter-tabs))
+    .modal-backdrop:has(> .book-details-modal) {
+    animation: book-backdrop-enter 480ms ease-out both !important;
+  }
+  .books-shell :is(.cover-open, .continue-open),
+  body:has(.library-main :is(.home-section, .filter-tabs))
+    .book-details-modal
+    button,
+  body:has(.library-main :is(.home-section, .filter-tabs))
+    :is(.book-context-menu, .continue-context-menu)
+    button {
+    transition: opacity 200ms ease-out !important;
+  }
+  .books-shell :is(.cover-open, .continue-open):active,
+  body:has(.library-main :is(.home-section, .filter-tabs))
+    .book-details-modal
+    button:active,
+  body:has(.library-main :is(.home-section, .filter-tabs))
+    :is(.book-context-menu, .continue-context-menu)
+    button:active {
+    opacity: 0.78;
   }
 }
