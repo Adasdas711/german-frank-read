@@ -85,6 +85,11 @@ export function FilledSlider({
           dragged: false,
           cancelled: false,
         };
+        // Keep receiving moves even if a press near an edge leaves the row
+        // before it has travelled far enough to be recognised as a drag.
+        const target =
+          (e.target as Element).closest("button,input") || root.current!;
+        target.setPointerCapture(e.pointerId);
         if (!onActivate) e.preventDefault();
       }}
       onPointerMove={(e) => {
@@ -100,7 +105,6 @@ export function FilledSlider({
           p.dragged = true;
           root.current!.dataset.dragging = "true";
           suppress.current = true;
-          root.current!.setPointerCapture(e.pointerId);
         }
         if (p.dragged) {
           e.preventDefault();
@@ -116,6 +120,18 @@ export function FilledSlider({
         delete root.current!.dataset.dragging;
       }}
       onPointerCancel={() => {
+        press.current = undefined;
+        suppress.current = true;
+        cancelAnimationFrame(frame.current);
+        frame.current = 0;
+        delete root.current!.dataset.dragging;
+        root.current!.style.setProperty(
+          "--fill",
+          `${max > min ? ((value - min) / (max - min)) * 100 : 0}%`,
+        );
+      }}
+      onLostPointerCapture={() => {
+        if (!press.current) return;
         press.current = undefined;
         suppress.current = true;
         cancelAnimationFrame(frame.current);

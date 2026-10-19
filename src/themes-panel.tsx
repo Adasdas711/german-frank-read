@@ -14,6 +14,7 @@ import {
   contrastRatio,
   appearanceStyle,
   themeDefaults,
+  readingTheme,
 } from "./appearance";
 import { useT } from "./i18n";
 import { Icon, Toggle } from "./ui";
@@ -49,6 +50,7 @@ export function ThemesPanel({
   const t = useT();
   const [view, setView] = useState<"themes" | "custom" | "font">("themes");
   const draft = settings;
+  const activeTheme = readingTheme(settings);
   const [turnOpen, setTurnOpen] = useState(false);
   const panel = useRef<HTMLDivElement>(null);
   const firstView = useRef(true);
@@ -230,9 +232,7 @@ export function ThemesPanel({
               <button
                 class="theme-tile"
                 aria-label={theme.name}
-                aria-pressed={
-                  settings.readingTheme === theme.id && !settings.followSystem
-                }
+                aria-pressed={activeTheme.id === theme.id}
                 onClick={() =>
                   onChange({
                     readingTheme: theme.id,
