@@ -1,4 +1,4 @@
-const CACHE = "franka-offline-22b73b6ef49a0ba6";
+const CACHE = "franka-offline-f1a93f982a10041d";
 const FILES = [
   "./index.html",
   "./fbook-builder.html",

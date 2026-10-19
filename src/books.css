@@ -4384,7 +4384,7 @@ body,
 @keyframes book-details-enter {
   from {
     opacity: 0;
-    transform: translateY(12px) scale(0.97);
+    transform: translateY(3px) scale(0.995);
   }
   to {
     opacity: 1;
@@ -4415,7 +4415,7 @@ body,
     animation: book-options-enter 400ms cubic-bezier(0.16, 1, 0.3, 1) both !important;
   }
   body:has(.library-main :is(.home-section, .filter-tabs)) .book-details-modal {
-    animation: book-details-enter 360ms cubic-bezier(0.16, 1, 0.3, 1) both !important;
+    animation: book-details-enter 200ms cubic-bezier(0.16, 1, 0.3, 1) both !important;
   }
   body:has(.library-main :is(.home-section, .filter-tabs)) .book-menu-backdrop,
   body:has(.library-main :is(.home-section, .filter-tabs))
@@ -4487,6 +4487,11 @@ body,
 
 @media (prefers-reduced-motion: reduce) {
   body:has(.library-main :is(.home-section, .filter-tabs)) .book-details-modal {
-    animation-duration: 360ms !important;
+    animation-duration: 200ms !important;
   }
+}
+
+body:has(.library-main :is(.home-section, .filter-tabs))
+  .modal-backdrop:has(> .book-details-modal) {
+  animation-duration: 200ms !important;
 }
