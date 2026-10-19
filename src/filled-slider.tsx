@@ -14,6 +14,10 @@ export function FilledSlider({
   onActivate,
   activationLabel,
   valueText,
+  step = 1,
+  disabled = false,
+  onCommit,
+  onCancel,
 }: {
   value: number;
   min: number;
@@ -24,6 +28,10 @@ export function FilledSlider({
   onActivate?(): void;
   activationLabel?: string;
   valueText?: string;
+  step?: number;
+  disabled?: boolean;
+  onCommit?(value: number): void;
+  onCancel?(): void;
 }) {
   const root = useRef<HTMLDivElement>(null);
   const press = useRef<{
@@ -42,8 +50,13 @@ export function FilledSlider({
   callback.current = onInput;
   const write = (x: number, flush = false) => {
     const p = press.current!;
-    pending.current = Math.round(
-      min + Math.max(0, Math.min(1, (x - p.left) / p.width)) * (max - min),
+    const raw =
+      min + Math.max(0, Math.min(1, (x - p.left) / p.width)) * (max - min);
+    pending.current = Number(
+      Math.max(
+        min,
+        Math.min(max, min + Math.round((raw - min) / step + 1e-9) * step),
+      ).toFixed(8),
     );
     // Paint directly during the drag, before a page jump or a resized panel
     // commits. Both Contents and Reading controls use the same fill.
@@ -72,7 +85,7 @@ export function FilledSlider({
       }}
       ref={root}
       onPointerDown={(e) => {
-        if (!e.isPrimary || e.button !== 0) return;
+        if (disabled || max <= min || !e.isPrimary || e.button !== 0) return;
         suppress.current = false;
         delete root.current!.dataset.dragging;
         const box = root.current!.getBoundingClientRect();
@@ -114,12 +127,16 @@ export function FilledSlider({
       onPointerUp={(e) => {
         const p = press.current;
         if (!p || p.id !== e.pointerId) return;
-        if (!p.cancelled && (p.dragged || !onActivate)) write(e.clientX, true);
+        if (!p.cancelled && (p.dragged || !onActivate)) {
+          write(e.clientX, true);
+          onCommit?.(pending.current);
+        } else if (p.cancelled) onCancel?.();
         suppress.current = p.dragged || p.cancelled;
         press.current = undefined;
         delete root.current!.dataset.dragging;
       }}
       onPointerCancel={() => {
+        onCancel?.();
         press.current = undefined;
         suppress.current = true;
         cancelAnimationFrame(frame.current);
@@ -132,6 +149,7 @@ export function FilledSlider({
       }}
       onLostPointerCapture={() => {
         if (!press.current) return;
+        onCancel?.();
         press.current = undefined;
         suppress.current = true;
         cancelAnimationFrame(frame.current);
@@ -168,12 +186,13 @@ export function FilledSlider({
         type="range"
         min={min}
         max={max}
-        step="1"
+        step={step}
         value={value}
         aria-label={label}
         aria-valuetext={valueText}
-        disabled={max <= min}
+        disabled={disabled || max <= min}
         onInput={(e) => callback.current(+e.currentTarget.value)}
+        onChange={(e) => onCommit?.(+e.currentTarget.value)}
       />
     </div>
   );

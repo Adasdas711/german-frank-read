@@ -51,32 +51,31 @@ export function InterfaceSize({
           </FilledSlider>
         ) : (
           keys.map((key) => (
-            <label class="range-row" key={key}>
+            <FilledSlider
+              key={key}
+              label={t(
+                key === "uiScale" ? "App interface" : "Reading controls",
+              )}
+              min={80}
+              max={160}
+              value={draft[key]}
+              valueText={`${draft[key]}%`}
+              onInput={(value) =>
+                setDraft((prev) => ({ ...prev, [key]: value }))
+              }
+              onCommit={(value) => onChange({ [key]: value })}
+              onCancel={() =>
+                setDraft({
+                  uiScale: settings.uiScale,
+                  readingUiScale: settings.readingUiScale,
+                })
+              }
+            >
               <span>
                 {t(key === "uiScale" ? "App interface" : "Reading controls")}
               </span>
               <output>{draft[key]}%</output>
-              <input
-                type="range"
-                min="80"
-                max="160"
-                step="1"
-                value={draft[key]}
-                aria-label={t(
-                  key === "uiScale" ? "App interface" : "Reading controls",
-                )}
-                aria-valuetext={`${draft[key]}%`}
-                // Keep the slider still under the finger. Resize and repaginate
-                // once on release, rather than moving the controls during a drag.
-                onInput={(e) =>
-                  setDraft((prev) => ({
-                    ...prev,
-                    [key]: +e.currentTarget.value,
-                  }))
-                }
-                onChange={(e) => onChange({ [key]: +e.currentTarget.value })}
-              />
-            </label>
+            </FilledSlider>
           ))
         )}
       </div>

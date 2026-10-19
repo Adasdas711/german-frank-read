@@ -2612,13 +2612,14 @@ function App() {
               <select
                 aria-label={t("Language")}
                 value={settings.language}
-                onChange={(e) =>
-                  void run(() =>
-                    saveSettings({
-                      language: e.currentTarget.value as Settings["language"],
-                    }),
-                  )
-                }
+                onChange={(e) => {
+                  const language = e.currentTarget
+                    .value as Settings["language"];
+                  // Dismiss the native picker before changing the document's
+                  // language so mobile Safari can open it again immediately.
+                  e.currentTarget.blur();
+                  void run(() => saveSettings({ language }));
+                }}
               >
                 <option value="en">English</option>
                 <option value="ru">Русский</option>

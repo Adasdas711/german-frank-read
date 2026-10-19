@@ -14,6 +14,7 @@ import { useT } from "./i18n";
 import { Icon, Toggle } from "./ui";
 import { ReaderPresence } from "./reader-presence";
 import { InterfaceSize } from "./interface-size";
+import { FilledSlider } from "./filled-slider";
 
 export function ThemesPanel({
   settings,
@@ -63,22 +64,18 @@ export function ThemesPanel({
     max: number,
     step: number,
   ) => (
-    <label class="range-row">
-      {t(label)}
-      <span>{draft[key]}</span>
-      <input
-        aria-label={t(label)}
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={draft[key] as number}
-        style={{
-          "--range-fill": `${((Number(draft[key]) - min) / (max - min)) * 100}%`,
-        }}
-        onInput={(e) => update({ [key]: +e.currentTarget.value })}
-      />
-    </label>
+    <FilledSlider
+      label={t(label)}
+      min={min}
+      max={max}
+      step={step}
+      value={draft[key] as number}
+      disabled={key !== "hintSize" && !draft.customLayout}
+      onInput={(value) => update({ [key]: value })}
+    >
+      <span>{t(label)}</span>
+      <output>{draft[key]}</output>
+    </FilledSlider>
   );
   return (
     <div class="themes-panel" ref={panel}>
@@ -362,6 +359,16 @@ export function ThemesPanel({
               </SettingsGroup>
               <button
                 class="wide primary theme-reset"
+                style={{
+                  background: appearanceStyle(draft)["--folio-hint"],
+                  color:
+                    contrastRatio(
+                      "#ffffff",
+                      appearanceStyle(draft)["--folio-hint"],
+                    ) >= 4.5
+                      ? "#ffffff"
+                      : "#080909",
+                }}
                 onClick={() => update({ ...themeDefaults })}
               >
                 {t("Reset Theme")}

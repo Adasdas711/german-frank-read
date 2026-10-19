@@ -4348,3 +4348,20 @@ body,
   font-weight: 600;
   border-radius: calc(18px * var(--ui-scale));
 }
+
+.modal-backdrop {
+  overscroll-behavior: none;
+}
+.modal {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.settings-group .filled-control {
+  margin: calc(8px * var(--ui-scale));
+}
+.settings-group .filled-control-label {
+  font-size: calc(13px * var(--ui-scale));
+}
+.filled-control:has(input:disabled) {
+  opacity: 0.55;
+}

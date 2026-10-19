@@ -165,6 +165,39 @@ export function Icon({ name, size = 20 }: { name: string; size?: number }) {
     </svg>
   );
 }
+let modalLocks = 0;
+let restoreModalScroll = () => {};
+
+function lockModalScroll() {
+  if (modalLocks++ === 0) {
+    const x = window.scrollX,
+      y = window.scrollY;
+    const htmlOverflow = document.documentElement.style.overflow;
+    const body = document.body;
+    const previous = {
+      position: body.style.position,
+      top: body.style.top,
+      left: body.style.left,
+      width: body.style.width,
+    };
+    document.documentElement.style.overflow = "hidden";
+    Object.assign(body.style, {
+      position: "fixed",
+      top: `${-y}px`,
+      left: `${-x}px`,
+      width: "100%",
+    });
+    restoreModalScroll = () => {
+      document.documentElement.style.overflow = htmlOverflow;
+      Object.assign(body.style, previous);
+      window.scrollTo(x, y);
+    };
+  }
+  return () => {
+    if (--modalLocks === 0) restoreModalScroll();
+  };
+}
+
 export function Modal({
   title,
   children,
@@ -180,11 +213,12 @@ export function Modal({
 }) {
   const t = useT();
   const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(lockModalScroll, []);
   useEffect(() => {
     const before = document.activeElement as HTMLElement;
     const dialog = ref.current!;
     const el = dialog.querySelector<HTMLElement>("button,input,select");
-    el?.focus();
+    el?.focus({ preventScroll: true });
     const handle = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
       if (e.key === "Tab") {
@@ -205,12 +239,15 @@ export function Modal({
     document.addEventListener("keydown", handle);
     return () => {
       document.removeEventListener("keydown", handle);
-      before?.focus();
+      before?.focus({ preventScroll: true });
     };
   }, []);
   return (
     <div
       class="modal-backdrop"
+      onTouchMove={(e) => {
+        if (e.target === e.currentTarget) e.preventDefault();
+      }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}

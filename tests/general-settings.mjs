@@ -24,10 +24,16 @@ try {
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));
     await page.goto(`http://127.0.0.1:${server.address().port}`);
-    await page
+    const settingsButton = page
       .getByRole("button", { name: "Settings", exact: true })
-      .first()
-      .click();
+      .first();
+    await settingsButton.waitFor();
+    const backgroundScroll = await page.evaluate(() => {
+      document.body.style.minHeight = "2500px";
+      window.scrollTo(0, 120);
+      return window.scrollY;
+    });
+    await settingsButton.evaluate((node) => node.click());
     const settings = page.locator(".general-settings");
     await settings.waitFor();
     assert.equal(await settings.locator(".settings-group").count(), 5);
@@ -61,7 +67,8 @@ try {
       0,
     );
     const language = settings.locator("select").first();
-    for (const value of ["ru", "de", "en"]) {
+    for (const value of ["ru", "de", "en", "ru", "de", "en"]) {
+      await language.focus();
       await language.selectOption(value);
       await page.waitForFunction(
         (value) => document.documentElement.lang === value,
@@ -69,7 +76,79 @@ try {
       );
       assert.equal(await page.getByRole("dialog").count(), 1);
       assert(await settings.isVisible());
+      assert.equal(
+        await language.evaluate((node) => document.activeElement === node),
+        false,
+        "the native language picker releases focus immediately",
+      );
     }
+    assert.equal(
+      await settings.locator(".interface-size .filled-control").count(),
+      2,
+    );
+    const appScale = settings.getByRole("slider", {
+      name: "App interface",
+      exact: true,
+    });
+    await appScale.scrollIntoViewIfNeeded();
+    const appScaleBox = await appScale.locator("..").boundingBox();
+    await page.mouse.move(
+      appScaleBox.x + appScaleBox.width * 0.25,
+      appScaleBox.y + appScaleBox.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      appScaleBox.x + appScaleBox.width * 0.75,
+      appScaleBox.y + appScaleBox.height / 2,
+      { steps: 4 },
+    );
+    assert.equal(
+      await page
+        .locator("html")
+        .evaluate((node) => node.style.getPropertyValue("--ui-scale")),
+      "1.25",
+      "app size is committed only on release",
+    );
+    await page.mouse.up();
+    await page.waitForFunction(
+      () =>
+        document.documentElement.style.getPropertyValue("--ui-scale") ===
+        "1.75",
+    );
+    await appScale.evaluate((node) => {
+      node.value = "100";
+      node.dispatchEvent(new Event("input", { bubbles: true }));
+      node.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await page.waitForFunction(
+      () =>
+        document.documentElement.style.getPropertyValue("--ui-scale") ===
+        "1.25",
+    );
+    const lockedTop = await page.evaluate(() => document.body.style.top);
+    assert.equal(
+      await page.evaluate(() => document.body.style.position),
+      "fixed",
+    );
+    const box = await settings.boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await settings.evaluate((node) => (node.scrollTop = 0));
+    await page.mouse.wheel(0, 400);
+    await page.waitForTimeout(100);
+    assert(
+      await settings.evaluate((node) => node.scrollTop > 0),
+      "the dialog itself remains scrollable",
+    );
+    await settings.evaluate((node) => (node.scrollTop = node.scrollHeight));
+    await page.mouse.wheel(0, 900);
+    await page.waitForTimeout(100);
+    assert.equal(await page.evaluate(() => document.body.style.top), lockedTop);
+    assert.equal(await page.evaluate(() => window.scrollY), 0);
+    await settings.evaluate((node) => (node.scrollTop = 0));
+    await page.mouse.wheel(0, -900);
+    await page.waitForTimeout(100);
+    assert.equal(await page.evaluate(() => document.body.style.top), lockedTop);
+    assert.equal(await page.evaluate(() => window.scrollY), 0);
     await page.screenshot({
       path: `.test-results/general-settings/settings-${width}.png`,
     });
@@ -110,6 +189,67 @@ try {
       name: "Reset Theme",
       exact: true,
     });
+    assert.equal(
+      await themes.locator(".settings-group .filled-control").count(),
+      5,
+    );
+    const lineSpacing = themes.getByRole("slider", {
+      name: "Line spacing",
+      exact: true,
+    });
+    assert(await lineSpacing.isDisabled());
+    await themes
+      .getByRole("checkbox", { name: "Customize", exact: true })
+      .check();
+    const drag = async (slider, fraction) => {
+      await slider.scrollIntoViewIfNeeded();
+      const row = slider.locator("..");
+      const box = await row.boundingBox();
+      await page.mouse.move(box.x + box.width * 0.1, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(
+        box.x + box.width * fraction,
+        box.y + box.height / 2,
+        { steps: 4 },
+      );
+      await page.mouse.up();
+    };
+    const hintSize = themes.getByRole("slider", {
+      name: "Hint size",
+      exact: true,
+    });
+    await drag(hintSize, 0.5);
+    assert.equal(Number(await hintSize.inputValue()), 0.93);
+    await hintSize.focus();
+    await hintSize.press("ArrowRight");
+    assert.equal(Number(await hintSize.inputValue()), 0.94);
+    await drag(lineSpacing, 0.5);
+    assert.equal(Number(await lineSpacing.inputValue()), 1.75);
+    for (const [name, expected] of [
+      ["Character spacing", 0.06],
+      ["Word spacing", 0.3],
+      ["Margins", 9],
+    ]) {
+      const slider = themes.getByRole("slider", { name, exact: true });
+      await drag(slider, 0.5);
+      assert.equal(Number(await slider.inputValue()), expected);
+    }
+    for (let i = 1; i <= 5; i++) {
+      await themes
+        .getByRole("button", { name: `Hint colour ${i}`, exact: true })
+        .click();
+      const colors = await themes.evaluate((node) => ({
+        hint: getComputedStyle(node.querySelector(".theme-preview .hint"))
+          .color,
+        reset: getComputedStyle(node.querySelector(".theme-reset"))
+          .backgroundColor,
+      }));
+      assert.equal(
+        colors.reset,
+        colors.hint,
+        "Reset Theme uses the effective hint color",
+      );
+    }
     const style = await reset.evaluate((node) => ({
       background: getComputedStyle(node).backgroundColor,
       text: getComputedStyle(node).color,
@@ -136,7 +276,26 @@ try {
     await themes.getByRole("button", { name: "Close", exact: true }).click();
     await settings.waitFor();
     assert.equal(await language.inputValue(), "en");
+    await settings
+      .getByRole("button", { name: "Erase All Data", exact: true })
+      .click();
+    const confirmation = page.getByRole("dialog", {
+      name: "Erase all local data?",
+      exact: true,
+    });
+    await confirmation.waitFor();
+    assert.equal(await page.getByRole("dialog").count(), 2);
+    await confirmation
+      .getByRole("button", { name: "Cancel", exact: true })
+      .click();
+    assert.equal(
+      await page.evaluate(() => document.body.style.position),
+      "fixed",
+      "closing a nested dialog keeps the settings scroll lock",
+    );
     await settings.getByRole("button", { name: "Close", exact: true }).click();
+    assert.equal(await page.evaluate(() => document.body.style.position), "");
+    assert.equal(await page.evaluate(() => window.scrollY), backgroundScroll);
     await page.reload();
     await page.getByRole("heading", { name: "Home", exact: true }).waitFor();
     assert.equal(
@@ -162,7 +321,7 @@ try {
     );
     assert.deepEqual(errors, []);
     console.log(
-      `PASS ${width}px: joined sections, inline languages, single Themes header, all app palettes, reset and persistence`,
+      `PASS ${width}px: joined sections, repeated language changes, fractional filled sliders, matching reset color, scroll lock and persistence`,
     );
     await context.close();
   }
