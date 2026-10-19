@@ -1,11 +1,5 @@
-import type { ComponentChildren } from "preact";
-import {
-  useEffect,
-  useId,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "preact/hooks";
+import { SettingsGroup } from "./settings-group";
+import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import type { Settings } from "./storage";
 import {
   themes,
@@ -20,23 +14,6 @@ import { useT } from "./i18n";
 import { Icon, Toggle } from "./ui";
 import { ReaderPresence } from "./reader-presence";
 import { InterfaceSize } from "./interface-size";
-function SettingsGroup({
-  title,
-  children,
-}: {
-  title: string;
-  children: ComponentChildren;
-}) {
-  const id = useId();
-  return (
-    <section class="theme-setting-group" role="group" aria-labelledby={id}>
-      <h3 id={id} class="group-label">
-        {title}
-      </h3>
-      <div class="group">{children}</div>
-    </section>
-  );
-}
 
 export function ThemesPanel({
   settings,
@@ -384,7 +361,7 @@ export function ThemesPanel({
                 </Toggle>
               </SettingsGroup>
               <button
-                class="wide quiet"
+                class="wide primary theme-reset"
                 onClick={() => update({ ...themeDefaults })}
               >
                 {t("Reset Theme")}

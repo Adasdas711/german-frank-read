@@ -170,11 +170,13 @@ export function Modal({
   children,
   onClose,
   className = "",
+  showHeader = true,
 }: {
   title: string;
   children: any;
   onClose: () => void;
   className?: string;
+  showHeader?: boolean;
 }) {
   const t = useT();
   const ref = useRef<HTMLDivElement>(null);
@@ -220,12 +222,14 @@ export function Modal({
         aria-label={title}
         ref={ref}
       >
-        <div class="row between">
-          <h2>{title}</h2>
-          <button class="icon" aria-label={t("Close")} onClick={onClose}>
-            <Icon name="close" />
-          </button>
-        </div>
+        {showHeader && (
+          <div class="row between">
+            <h2>{title}</h2>
+            <button class="icon" aria-label={t("Close")} onClick={onClose}>
+              <Icon name="close" />
+            </button>
+          </div>
+        )}
         {children}
       </div>
     </div>

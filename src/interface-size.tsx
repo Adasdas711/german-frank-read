@@ -1,5 +1,4 @@
 import type { Settings } from "./storage";
-import { defaults } from "./storage";
 import { useT } from "./i18n";
 import { useLayoutEffect, useState } from "preact/hooks";
 import { FilledSlider } from "./filled-slider";
@@ -31,7 +30,10 @@ export function InterfaceSize({
     : (["uiScale", "readingUiScale"] as const);
   return (
     <section
-      class={"interface-size" + (readingOnly ? " filled-interface-size" : "")}
+      class={
+        "interface-size" +
+        (readingOnly ? " filled-interface-size" : " settings-group")
+      }
     >
       {!readingOnly && <h3 class="group-label">{t("Interface size")}</h3>}
       <div class="group">
@@ -77,21 +79,6 @@ export function InterfaceSize({
             </label>
           ))
         )}
-        <button
-          class="setting-row interface-size-reset"
-          onClick={() =>
-            onChange(
-              readingOnly
-                ? { readingUiScale: defaults.readingUiScale }
-                : {
-                    uiScale: defaults.uiScale,
-                    readingUiScale: defaults.readingUiScale,
-                  },
-            )
-          }
-        >
-          {t("Reset interface size")}
-        </button>
       </div>
     </section>
   );

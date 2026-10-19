@@ -93,6 +93,22 @@ export function readingTheme(s: Settings) {
     : themes.find((theme) => theme.id === s.readingTheme) || themes[0];
   return { ...selected, light: luminance(selected.paper) > 0.5 };
 }
+
+export function applicationStyle(s: Settings) {
+  const theme = readingTheme(s);
+  const accent = readableHint(theme.hint, theme.paper);
+  return {
+    "--bg": theme.paper,
+    "--panel": `color-mix(in srgb, ${theme.paper} 94%, ${theme.ink})`,
+    "--text": theme.ink,
+    "--muted": theme.ink + "a8",
+    "--border": theme.ink + "18",
+    "--teal": accent,
+    "--soft": accent + "22",
+    "--button": theme.ink,
+    "--onbutton": theme.paper,
+  };
+}
 // Preserve the chosen hue while making old/custom colors readable too.
 function readableHint(color: string, paper: string) {
   if (contrastRatio(color, paper) >= 4.5) return color;

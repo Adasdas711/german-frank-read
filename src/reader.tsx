@@ -43,7 +43,8 @@ import {
   type BookCollection,
 } from "./collections";
 import { ThemesPanel } from "./themes-panel";
-import { typesettingKey } from "./appearance";
+import { typesettingKey, readingTheme, applicationStyle } from "./appearance";
+import { SettingsGroup } from "./settings-group";
 import { InterfaceSize } from "./interface-size";
 import {
   exportBackup,
@@ -414,15 +415,24 @@ function App() {
       String((settings.uiScale / 100) * 1.25),
     );
   }, [settings.uiScale]);
+  const appTheme = readingTheme(settings).light ? "light" : "dark";
+  const appColors = applicationStyle(settings);
   useLayoutEffect(() => {
     document.documentElement.lang = settings.language;
-    document.documentElement.dataset.theme = settings.theme;
+    document.documentElement.dataset.theme = appTheme;
+    for (const [key, value] of Object.entries(appColors))
+      document.documentElement.style.setProperty(key, value);
     document.title = t("German with Frank");
     try {
       localStorage.setItem("franka-language", settings.language);
-      localStorage.setItem("franka-theme", settings.theme);
+      localStorage.setItem("franka-theme", appTheme);
     } catch {}
-  }, [settings.language, settings.theme]);
+  }, [
+    settings.language,
+    appTheme,
+    settings.readingTheme,
+    settings.followSystem,
+  ]);
   useEffect(() => {
     if (!message) return;
     const id = setTimeout(() => setMessage(null), message.error ? 10000 : 4000);
@@ -2591,29 +2601,39 @@ function App() {
         </Modal>
       )}
       {overlay === "settings" && (
-        <Modal title={t("Settings")} onClose={() => setOverlay("")}>
-          <h3 class="group-label">{t("General")}</h3>
-          <div class="group">
-            <button class="setting-row" onClick={() => setOverlay("language")}>
-              <span>{t("Language")}</span>
-              <span>
-                {settings.language === "en"
-                  ? "English"
-                  : settings.language === "ru"
-                    ? "Русский"
-                    : "Deutsch"}{" "}
-                <Icon name="next" size={15} />
-              </span>
-            </button>
-          </div>
+        <Modal
+          title={t("Settings")}
+          className="general-settings"
+          onClose={() => setOverlay("")}
+        >
+          <SettingsGroup title={t("General")}>
+            <label class="setting-row">
+              {t("Language")}
+              <select
+                aria-label={t("Language")}
+                value={settings.language}
+                onChange={(e) =>
+                  void run(() =>
+                    saveSettings({
+                      language: e.currentTarget.value as Settings["language"],
+                    }),
+                  )
+                }
+              >
+                <option value="en">English</option>
+                <option value="ru">Русский</option>
+                <option value="de">Deutsch</option>
+              </select>
+            </label>
+          </SettingsGroup>
           <InterfaceSize
             settings={settings}
             onChange={(p) => void run(() => saveSettings(p))}
           />
-          <h3 class="group-label">{t("Reading")}</h3>
-          <div class="group">
+          <SettingsGroup title={t("Reading")}>
             <button
               class="setting-row"
+              aria-label={t("Themes")}
               onClick={() => setOverlay("appearance")}
             >
               <span>{t("Themes")}</span>
@@ -2644,9 +2664,8 @@ function App() {
                 ))}
               </select>
             </label>
-          </div>
-          <h3 class="group-label">Anki</h3>
-          <div class="group">
+          </SettingsGroup>
+          <SettingsGroup title={"Anki"}>
             <label class="setting-row">
               {t("Deck")}
               <input
@@ -2665,9 +2684,8 @@ function App() {
             >
               {t("Mark exported words")}
             </Toggle>
-          </div>
-          <h3 class="group-label">{t("Data")}</h3>
-          <div class="group data-actions">
+          </SettingsGroup>
+          <SettingsGroup title={t("Data")} className="data-actions">
             <button onClick={() => void run(() => exportBackup(true))}>
               <Icon name="upload" />
               <span>
@@ -2685,7 +2703,7 @@ function App() {
               {t("Books on device")}
               <span class="muted">{books.length}</span>
             </div>
-          </div>
+          </SettingsGroup>
           <button
             class="wide danger group"
             onClick={() =>
@@ -2719,40 +2737,12 @@ function App() {
           </p>
         </Modal>
       )}
-      {overlay === "language" && (
-        <Modal title={t("Language")} onClose={() => setOverlay("settings")}>
-          <h3 class="group-label">{t("App language")}</h3>
-          <div class="group language-options">
-            {[
-              ["en", "English", ""],
-              ["ru", "Русский", "Russian"],
-              ["de", "Deutsch", "German"],
-            ].map(([value, label, desc]) => (
-              <button
-                aria-pressed={settings.language === value}
-                onClick={() =>
-                  void run(() =>
-                    saveSettings({ language: value as Settings["language"] }),
-                  )
-                }
-              >
-                <span>
-                  {label}
-                  <small>{desc}</small>
-                </span>
-                {settings.language === value && <Icon name="check" />}
-              </button>
-            ))}
-          </div>
-          <p class="footnote">
-            {t(
-              "Menus switch at once. Hints and translations stay in the book’s language.",
-            )}
-          </p>
-        </Modal>
-      )}
       {overlay === "appearance" && (
-        <Modal title={t("Themes")} onClose={() => setOverlay("settings")}>
+        <Modal
+          title={t("Themes")}
+          showHeader={false}
+          onClose={() => setOverlay("settings")}
+        >
           <ThemesPanel
             settings={settings}
             onChange={(p) => void run(() => saveSettings(p))}

@@ -22,6 +22,7 @@ const setRange = async (locator, value) => {
     node.dispatchEvent(new Event("change", { bubbles: true }));
   }, value);
   await locator.page().waitForTimeout(100);
+  await locator.scrollIntoViewIfNeeded();
 };
 const bounded = async (locator, width, height) => {
   const r = await locator.boundingBox();
@@ -134,9 +135,13 @@ try {
         .getByRole("menuitemradio", { name: "Slide", exact: true })
         .click();
     }
-    await panel
-      .getByRole("button", { name: "Reset interface size", exact: true })
-      .click();
+    assert.equal(
+      await panel
+        .getByRole("button", { name: "Reset interface size", exact: true })
+        .count(),
+      0,
+    );
+    await setRange(readerRange, 100);
     assert.equal(await readerRange.inputValue(), "100");
     await p.keyboard.press("Escape");
     await revealReader(p);
@@ -180,9 +185,13 @@ try {
       "150",
       "custom scale survives reload",
     );
-    await settings
-      .getByRole("button", { name: "Reset interface size", exact: true })
-      .click();
+    assert.equal(
+      await settings
+        .getByRole("button", { name: "Reset interface size", exact: true })
+        .count(),
+      0,
+    );
+    await setRange(appRange, 100);
     assert.equal(await appRange.inputValue(), "100");
     await p.screenshot({
       path: `.test-results/interface-size/settings-${width}.png`,
@@ -196,7 +205,7 @@ try {
     });
     assert.deepEqual(errors, []);
     console.log(
-      `${width}px: app and reader 100% (new baseline); independent sizes 80–160%, unchanged book font, persistence and reset passed`,
+      `${width}px: app and reader 100% (new baseline); independent sizes 80–160%, unchanged book font, persistence and manual return to 100% passed`,
     );
     await context.close();
   }

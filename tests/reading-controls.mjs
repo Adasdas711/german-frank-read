@@ -231,9 +231,16 @@ try {
       Number(await range.inputValue()) > initial,
       "range still responds to physical dragging after neighboring buttons and toggles",
     );
-    await themes
-      .getByRole("button", { name: "Reset interface size", exact: true })
-      .click();
+    assert.equal(
+      await themes
+        .getByRole("button", { name: "Reset interface size", exact: true })
+        .count(),
+      0,
+    );
+    await range.evaluate((node) => {
+      node.value = "100";
+      node.dispatchEvent(new Event("input", { bubbles: true }));
+    });
     await choosePageTurn(themes, "Slide", activate);
     await p.screenshot({
       path: `.test-results/reading-controls/themes-${width}.png`,

@@ -4173,12 +4173,15 @@ body,
 }
 
 /* Section captions and fields share one surface, including the curved shoulder. */
-.themes-panel .theme-setting-group {
-  --section-surface: var(--reader-card-surface, var(--panel));
+.settings-group {
+  --section-surface: var(
+    --reader-card-surface,
+    color-mix(in srgb, var(--panel) 90%, var(--text))
+  );
   --section-radius: calc(20px * var(--ui-scale));
   margin: calc(22px * var(--ui-scale)) 0;
 }
-.themes-panel .theme-setting-group > .group-label {
+.settings-group > .group-label {
   position: relative;
   width: fit-content;
   max-width: calc(100% - var(--section-radius));
@@ -4190,7 +4193,7 @@ body,
   font-weight: 600;
   line-height: 1.4;
 }
-.themes-panel .theme-setting-group > .group-label::after {
+.settings-group > .group-label::after {
   content: "";
   position: absolute;
   left: 100%;
@@ -4203,7 +4206,7 @@ body,
     var(--section-surface) var(--section-radius)
   );
 }
-.themes-panel .theme-setting-group > .group {
+.settings-group.settings-group > .group {
   margin: 0;
   background: var(--section-surface);
   border-radius: 0 var(--section-radius) var(--section-radius)
@@ -4337,4 +4340,11 @@ body,
   .range-row
   input[type="range"] {
   --range-track: color-mix(in srgb, var(--folio-ink) 48%, var(--folio-paper));
+}
+
+.theme-reset {
+  background: var(--teal);
+  color: var(--bg);
+  font-weight: 600;
+  border-radius: calc(18px * var(--ui-scale));
 }

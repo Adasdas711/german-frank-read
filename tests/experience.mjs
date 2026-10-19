@@ -353,16 +353,12 @@ try {
     .locator(".library-sidebar")
     .getByRole("button", { name: "Settings", exact: true })
     .click();
-  await page.getByRole("button", { name: /^Language/ }).click();
-  await page.getByRole("button", { name: "Русский Russian" }).click();
+  const language = page.locator(".general-settings select").first();
+  await language.selectOption("ru");
   assert.equal(await page.locator("html").getAttribute("lang"), "ru");
-  await page.getByRole("button", { name: "Deutsch German" }).click();
+  await language.selectOption("de");
   assert.equal(await page.locator("html").getAttribute("lang"), "de");
-  await page.getByRole("button", { name: "English", exact: true }).click();
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "Close", exact: true })
-    .click();
+  await language.selectOption("en");
   const backupPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: /^Back Up/ }).click();
   const backup = await backupPromise;
