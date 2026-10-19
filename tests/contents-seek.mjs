@@ -103,6 +103,27 @@ try {
         await frame();
         await open();
         const row = p.locator(".contents-progress");
+        await row.evaluate((node) => {
+          node.addEventListener(
+            "pointerdown",
+            (event) => {
+              node.seekX = event.clientX;
+              node.seekStart = {
+                x: event.clientX,
+                width: node.getBoundingClientRect().width,
+                value: Number(node.querySelector("input").value),
+              };
+            },
+            true,
+          );
+          node.addEventListener(
+            "pointermove",
+            (event) => {
+              node.seekX = event.clientX;
+            },
+            true,
+          );
+        });
         const box = await row.boundingBox(),
           y = box.y + box.height / 2;
         const pointer = async (type, fraction) => {
@@ -121,17 +142,22 @@ try {
         };
         let checks = 0;
         for (let repeat = 0; repeat < 2; repeat++) {
+          await row.locator("input").focus();
+          await row.locator("input").press("Home");
+          await frame();
           await pointer("touchStart", 0.2);
           for (const fraction of [
             0, 0.25, 0.5, 0.51, 0.52, 0.75, 1, 0.6, 0.1, 1, 0,
           ]) {
-            await pointer("touchMove", fraction);
+            await pointer("touchMove", 0.2 + fraction);
             await frame();
             const result = await row.evaluate((n) => {
               const input = n.querySelector("input"),
                 vp = document.querySelector(".folio-viewport");
               return {
                 value: +input.value,
+                dragValue: n.seekStart.value,
+                dragFraction: (n.seekX - n.seekStart.x) / n.seekStart.width,
                 max: +input.max,
                 fill:
                   parseFloat(getComputedStyle(n, "::before").width) /
@@ -143,7 +169,15 @@ try {
                   document.querySelector(".reader-page-count").textContent,
               };
             });
-            const expected = Math.round(fraction * result.max);
+            const expected = Math.max(
+              0,
+              Math.min(
+                result.max,
+                Math.round(
+                  result.dragValue + result.dragFraction * result.max + 1e-9,
+                ),
+              ),
+            );
             if (kind === "scroll") {
               assert(
                 Math.abs(result.scroll / result.extent - fraction) < 0.002,
@@ -190,6 +224,7 @@ try {
           await pointer("touchStart", 0.2);
           await pointer("touchMove", 0.8);
           await pointer("touchCancel", 0.8);
+          const resumeStart = Number(await row.locator("input").inputValue());
           await pointer("touchStart", 0.2);
           await pointer("touchMove", 0.6);
           await pointer("touchEnd", 0.6);
@@ -200,7 +235,12 @@ try {
           });
           assert.equal(
             Number(await resumed.inputValue()),
-            Math.round(0.6 * Number(await resumed.getAttribute("max"))),
+            Math.round(
+              Math.min(
+                Number(await resumed.getAttribute("max")),
+                resumeStart + 0.4 * Number(await resumed.getAttribute("max")),
+              ),
+            ),
             "a cancelled gesture must not disable later drags",
           );
         }

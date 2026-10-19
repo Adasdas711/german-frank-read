@@ -38,7 +38,6 @@ export function FilledSlider({
     id: number;
     x: number;
     y: number;
-    left: number;
     width: number;
     value: number;
     dragged: boolean;
@@ -51,11 +50,9 @@ export function FilledSlider({
   callback.current = onInput;
   const write = (x: number, flush = false) => {
     const p = press.current!;
-    // Settings move relative to their value at press time, regardless of where
-    // the row was grabbed. Contents still seeks to an absolute book position.
-    const raw = onActivate
-      ? min + ((x - p.left) / p.width) * (max - min)
-      : p.value + ((x - p.x) / p.width) * (max - min);
+    // Every slider moves from its value at press time, regardless of where
+    // the row was grabbed, including the reader's Contents progress control.
+    const raw = p.value + ((x - p.x) / p.width) * (max - min);
     pending.current = Number(
       Math.max(
         min,
@@ -97,7 +94,6 @@ export function FilledSlider({
           id: e.pointerId,
           x: e.clientX,
           y: e.clientY,
-          left: box.left,
           width: box.width,
           value,
           dragged: false,
@@ -119,7 +115,7 @@ export function FilledSlider({
           p.cancelled = true;
           return;
         }
-        if (!p.dragged && Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) {
+        if (!p.dragged && Math.abs(dx) > 3 && Math.abs(dx) > Math.abs(dy)) {
           p.dragged = true;
           root.current!.dataset.dragging = "true";
           suppress.current = true;
@@ -132,6 +128,11 @@ export function FilledSlider({
       onPointerUp={(e) => {
         const p = press.current;
         if (!p || p.id !== e.pointerId) return;
+        // Short touch gestures may deliver their final movement only on up.
+        const dx = e.clientX - p.x,
+          dy = e.clientY - p.y;
+        p.dragged ||=
+          !p.cancelled && Math.abs(dx) > 3 && Math.abs(dx) > Math.abs(dy);
         if (!p.cancelled && (p.dragged || !onActivate)) {
           write(e.clientX, true);
           onCommit?.(pending.current);

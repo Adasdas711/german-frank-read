@@ -1457,7 +1457,7 @@ html.reading-pages body {
   break-inside: avoid;
   text-align: center;
   font-family: var(--reading);
-  font-size: 1.25em;
+  font-size: 1.75em;
   font-weight: 500;
   line-height: 1.5;
   margin: clamp(calc(18px * var(--ui-scale)), 5vh, calc(64px * var(--ui-scale)))
@@ -1469,10 +1469,11 @@ html.reading-pages body {
 }
 .folio-chapter-title small {
   display: block;
-  font: calc(10px * var(--ui-scale)) / 1.5 system-ui;
+  font: 600 max(16px, 0.65em) / 1.45 system-ui;
   color: var(--folio-muted);
   margin: calc(14px * var(--ui-scale)) auto 0;
   max-width: 90%;
+  overflow-wrap: anywhere;
 }
 .folio-chapter + .folio-chapter {
   break-before: column;

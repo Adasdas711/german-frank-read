@@ -56,7 +56,7 @@ try {
       const box = await row.boundingBox();
       const right = repeat % 2 === 0;
       const start = box.x + box.width * (right ? 0.2 : 0.8);
-      const end = box.x + box.width * (right ? 1 : 0);
+      const end = start + box.width * (right ? 1 : -1);
       // Leave the top edge before the horizontal drag threshold is reached.
       await pointer("touchStart", start, box.y + 2);
       await pointer("touchMove", start + (right ? 2 : -2), box.y - 2);
@@ -70,6 +70,32 @@ try {
         { right },
       );
       assert(await menu.isVisible(), "an edge drag must keep Contents usable");
+    }
+    const position = row.locator("input");
+    await position.evaluate((node) => {
+      node.value = String(Math.round(Number(node.max) / 4));
+      node.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    let positionValue = Number(await position.inputValue());
+    for (const [start, delta] of [
+      [0.75, 0.1],
+      [0.25, 0.1],
+      [0.75, -0.1],
+    ]) {
+      const box = await row.boundingBox(),
+        y = box.y + box.height / 2;
+      await pointer("touchStart", box.x + box.width * start, y);
+      await pointer("touchMove", box.x + box.width * (start + delta), y);
+      await pointer("touchEnd", box.x + box.width * (start + delta), y);
+      positionValue += Math.round(
+        delta * Number(await position.getAttribute("max")),
+      );
+      assert.equal(
+        Number(await position.inputValue()),
+        positionValue,
+        "Contents also changes by movement, not absolute finger position",
+      );
+      assert(await menu.isVisible());
     }
     await activate(menu.getByRole("button", { name: "Contents", exact: true }));
     await page.locator(".folio-popover.contents").waitFor();
