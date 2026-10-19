@@ -3368,8 +3368,8 @@ body,
 }
 .book-details-modal {
   width: min(
-    calc(820px * var(--ui-scale)),
-    calc(100vw - calc(48px * var(--ui-scale)))
+    calc(697px * var(--ui-scale)),
+    calc((100vw - 48px * var(--ui-scale)) * 0.85)
   );
   max-height: calc(100dvh - calc(64px * var(--ui-scale)));
   padding: calc(32px * var(--ui-scale));
@@ -3416,6 +3416,7 @@ body,
   font-size: calc(15px * var(--ui-scale));
 }
 .book-details-modal .detail-actions {
+  flex-wrap: wrap;
   gap: calc(12px * var(--ui-scale));
   margin-top: calc(20px * var(--ui-scale));
 }
@@ -3440,15 +3441,16 @@ body,
 }
 @media (max-width: 700px) {
   .book-details-modal {
-    width: 100%;
+    width: 85%;
     max-height: 94dvh;
     padding: calc(24px * var(--ui-scale)) calc(20px * var(--ui-scale))
       max(calc(24px * var(--ui-scale)), env(safe-area-inset-bottom));
   }
   .book-details-modal .book-details > .book-cover {
-    width: calc(144px * var(--ui-scale));
-    min-width: calc(144px * var(--ui-scale));
-    height: calc(216px * var(--ui-scale));
+    width: min(calc(144px * var(--ui-scale)), 100%);
+    min-width: 0;
+    height: auto;
+    aspect-ratio: 2 / 3;
     flex: 0 0 auto;
   }
   .book-details-modal .book-details h2 {
@@ -4413,7 +4415,7 @@ body,
     animation: book-options-enter 400ms cubic-bezier(0.16, 1, 0.3, 1) both !important;
   }
   body:has(.library-main :is(.home-section, .filter-tabs)) .book-details-modal {
-    animation: book-details-enter 480ms cubic-bezier(0.16, 1, 0.3, 1) both !important;
+    animation: book-details-enter 360ms cubic-bezier(0.16, 1, 0.3, 1) both !important;
   }
   body:has(.library-main :is(.home-section, .filter-tabs)) .book-menu-backdrop,
   body:has(.library-main :is(.home-section, .filter-tabs))
@@ -4480,5 +4482,11 @@ body,
     :is(.book-context-menu, .continue-context-menu)
     button:active {
     opacity: 0.78;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body:has(.library-main :is(.home-section, .filter-tabs)) .book-details-modal {
+    animation-duration: 360ms !important;
   }
 }
