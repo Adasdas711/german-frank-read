@@ -202,13 +202,15 @@ try {
       .getByRole("checkbox", { name: "Customize", exact: true })
       .check();
     const drag = async (slider, fraction) => {
+      await slider.focus();
+      await slider.press("Home");
       await slider.scrollIntoViewIfNeeded();
       const row = slider.locator("..");
       const box = await row.boundingBox();
       await page.mouse.move(box.x + box.width * 0.1, box.y + box.height / 2);
       await page.mouse.down();
       await page.mouse.move(
-        box.x + box.width * fraction,
+        box.x + box.width * (0.1 + fraction),
         box.y + box.height / 2,
         { steps: 4 },
       );
@@ -218,12 +220,12 @@ try {
       name: "Hint size",
       exact: true,
     });
-    await drag(hintSize, 0.5);
+    await drag(hintSize, 0.51);
     assert.equal(Number(await hintSize.inputValue()), 0.93);
     await hintSize.focus();
     await hintSize.press("ArrowRight");
     assert.equal(Number(await hintSize.inputValue()), 0.94);
-    await drag(lineSpacing, 0.5);
+    await drag(lineSpacing, 0.51);
     assert.equal(Number(await lineSpacing.inputValue()), 1.75);
     for (const [name, expected] of [
       ["Character spacing", 0.06],
@@ -231,7 +233,7 @@ try {
       ["Margins", 9],
     ]) {
       const slider = themes.getByRole("slider", { name, exact: true });
-      await drag(slider, 0.5);
+      await drag(slider, 0.51);
       assert.equal(Number(await slider.inputValue()), expected);
     }
     for (let i = 1; i <= 5; i++) {

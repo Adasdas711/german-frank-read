@@ -40,6 +40,7 @@ export function FilledSlider({
     y: number;
     left: number;
     width: number;
+    value: number;
     dragged: boolean;
     cancelled: boolean;
   }>();
@@ -50,8 +51,11 @@ export function FilledSlider({
   callback.current = onInput;
   const write = (x: number, flush = false) => {
     const p = press.current!;
-    const raw =
-      min + Math.max(0, Math.min(1, (x - p.left) / p.width)) * (max - min);
+    // Settings move relative to their value at press time, regardless of where
+    // the row was grabbed. Contents still seeks to an absolute book position.
+    const raw = onActivate
+      ? min + ((x - p.left) / p.width) * (max - min)
+      : p.value + ((x - p.x) / p.width) * (max - min);
     pending.current = Number(
       Math.max(
         min,
@@ -95,6 +99,7 @@ export function FilledSlider({
           y: e.clientY,
           left: box.left,
           width: box.width,
+          value,
           dragged: false,
           cancelled: false,
         };

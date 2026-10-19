@@ -113,9 +113,34 @@ try {
       );
       assert.equal(await system.getAttribute("aria-pressed"), "false");
     }
+    const controls = panel.getByRole("slider", {
+      name: "Reading controls",
+      exact: true,
+    });
+    let expected = Number(await controls.inputValue());
+    for (const [start, delta] of [
+      [0.75, 0.1],
+      [0.2, 0.1],
+      [0.75, -0.1],
+      [0.9, 0],
+    ]) {
+      await controls.scrollIntoViewIfNeeded();
+      const box = await controls.locator("..").boundingBox();
+      const y = box.y + box.height / 2;
+      await pointer("touchStart", box.x + box.width * start, y);
+      if (delta)
+        await pointer("touchMove", box.x + box.width * (start + delta), y);
+      await pointer("touchEnd", box.x + box.width * (start + delta), y);
+      expected += Math.round(delta * 80);
+      assert.equal(
+        Number(await controls.inputValue()),
+        expected,
+        "settings change by drag distance, independent of the press location; a tap does not jump",
+      );
+    }
     assert.deepEqual(errors, []);
     console.log(
-      `PASS: ${touch ? "touch" : "mouse"} repeated edge drags, Contents tap, system and explicit theme selection`,
+      `PASS: ${touch ? "touch" : "mouse"} repeated edge drags, Contents tap, system and explicit theme selection, relative settings drags`,
     );
     await context.close();
   }
