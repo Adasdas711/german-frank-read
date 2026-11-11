@@ -1,6 +1,14 @@
 import { zipSync, strToU8, strFromU8 } from "fflate";
 import * as store from "./storage";
-import { safeUnzip, readBook, escape, csv, download, slug } from "./core";
+import {
+  isReadingMode,
+  safeUnzip,
+  readBook,
+  escape,
+  csv,
+  download,
+  slug,
+} from "./core";
 import type { Book } from "./core";
 import type { SavedWord, Progress } from "./storage";
 import { checkedCollections, mergeCollections } from "./collections";
@@ -67,7 +75,7 @@ export function parseBackup(bytes: Uint8Array) {
       !Number.isFinite(p.percent) ||
       p.percent < 0 ||
       p.percent > 100 ||
-      !["frank", "clean", "parallel"].includes(p.mode) ||
+      !isReadingMode(p.mode) ||
       (p.updatedAt && !Number.isFinite(Date.parse(p.updatedAt)))
     )
       throw Error("Повреждённый прогресс в копии.");

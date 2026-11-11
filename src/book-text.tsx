@@ -134,6 +134,24 @@ export const BookText = memo(function BookText({
       );
     });
   }, [chunks, content, manifest, address, lines]);
+  // Frank + original: the same paragraph again, without hints. Its words carry
+  // offsets of a second copy (source.length + 1 and above), so positions and
+  // lookups still resolve to the original source address.
+  const quote = useMemo(() => {
+    if (mode !== "frank-original" || !source.trim()) return null;
+    const copy = source.length + 1;
+    let previous = 0;
+    return lines.map((line, i) => {
+      const start = previous,
+        end = i === lines.length - 1 ? source.length : line.end;
+      previous = end;
+      return (
+        <span class="sentence-row" key={"q" + line.start}>
+          {text(source.slice(start, end), copy + start)}
+        </span>
+      );
+    });
+  }, [mode, source, lines, manifest]);
   return (
     <div
       class="reading-columns"
@@ -160,6 +178,11 @@ export const BookText = memo(function BookText({
     >
       <section class="reading-panel">
         <p lang={manifest.lang}>{inlineText}</p>
+        {quote && (
+          <blockquote class="original-quote" lang={manifest.lang}>
+            <p lang={manifest.lang}>{quote}</p>
+          </blockquote>
+        )}
       </section>
     </div>
   );

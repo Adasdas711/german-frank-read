@@ -98,11 +98,16 @@ try {
       );
       for (const [mode, label] of [
         ["frank", "Frank"],
+        // A second press on the active Frank tab switches to Frank+.
+        ["frank-original", "Frank"],
         ["clean", "Clean"],
         ["parallel", "Parallel"],
       ]) {
         await openMenu();
-        await activate(menu.getByRole("tab", { name: label, exact: true }));
+        if (
+          (await p.locator(".books-reader").getAttribute("data-mode")) !== mode
+        )
+          await activate(menu.getByRole("tab", { name: label, exact: true }));
         await p.waitForFunction(
           (mode) =>
             document.querySelector(".books-reader").dataset.mode === mode,

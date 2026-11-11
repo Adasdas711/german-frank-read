@@ -85,6 +85,10 @@ export function PagedReader(props: Props) {
   // Only text metrics invalidate pagination. Color and interface-size changes
   // must paint immediately without measuring every sentence in the novel.
   const typesetting = typesettingKey(settings, mode);
+  const frankMode = mode === "frank" || mode === "frank-original";
+  // "Without hints" returns to the Frank variant the reader came from.
+  const lastFrank = useRef<"frank" | "frank-original">("frank");
+  if (frankMode) lastFrank.current = mode;
 
   const [bookQuery, setBookQuery] = useState(""),
     [menu, setMenu] = useState(false);
@@ -257,7 +261,12 @@ export function PagedReader(props: Props) {
     const [ci, fi] = bookmark.at.split(".").map((n) => +n - 1);
     const length = plain(content.c[ci]?.[fi] || []).length;
     const sourceOffset = bookmark.offset % (length + 1);
+    // A position inside the hint-free copy (Frank + original) stays there;
+    // other modes, which render a single copy, fall back to the source offset.
     const word =
+      (bookmark.offset > length
+        ? words.find((word) => Number(word.dataset.bookChar) >= bookmark.offset)
+        : undefined) ||
       words.find((word) => Number(word.dataset.bookChar) >= sourceOffset) ||
       words.at(-1) ||
       fragment;
@@ -402,18 +411,24 @@ export function PagedReader(props: Props) {
           const sourceText = sourceTexts.get(address)!;
           const char = Number(node.dataset.bookChar) || 0;
           const copy = Math.floor(char / (sourceText.length + 1));
+          if (!entries[leaf])
+            entries[leaf] = {
+              at: address,
+              offset: char,
+              preview: sourceText.slice(
+                char % (sourceText.length + 1),
+                (char % (sourceText.length + 1)) + 95,
+              ),
+            };
+          // Book search covers the Frank paragraph only; its hint-free repeat
+          // would report every match twice.
+          if (copy > 0) continue;
           const start = char % (sourceText.length + 1),
             end = start + (node.textContent?.length || 0);
           const groups = (sourceGroups[leaf] ||= []),
             key = address + ":" + copy;
           if (groups.at(-1)?.key === key) groups.at(-1)!.end = end;
           else groups.push({ key, source: sourceText, start, end });
-          if (!entries[leaf])
-            entries[leaf] = {
-              at: address,
-              offset: char,
-              preview: sourceText.slice(start, start + 95),
-            };
         }
         cursor = low;
       }
@@ -1132,22 +1147,39 @@ export function PagedReader(props: Props) {
                   role="tablist"
                   aria-label={t("Default mode")}
                 >
-                  {["frank", "clean", "parallel"].map((value) => (
-                    <button
-                      role="tab"
-                      aria-selected={mode === value}
-                      disabled={value === "parallel" && !content.t}
-                      onClick={() => props.onMode(value)}
-                    >
-                      {t(
-                        value === "frank"
-                          ? "Frank"
-                          : value === "clean"
-                            ? "Clean"
-                            : "Parallel",
-                      )}
-                    </button>
-                  ))}
+                  {["frank", "clean", "parallel"].map((value) => {
+                    const frank = value === "frank";
+                    const selected = frank ? frankMode : mode === value;
+                    return (
+                      <button
+                        role="tab"
+                        aria-selected={selected}
+                        data-reading-mode={value}
+                        disabled={value === "parallel" && !content.t}
+                        onClick={() =>
+                          // A second press on the active Frank tab toggles
+                          // Frank ↔ Frank + original.
+                          props.onMode(
+                            !frank
+                              ? value
+                              : mode === "frank"
+                                ? "frank-original"
+                                : "frank",
+                          )
+                        }
+                      >
+                        {t(
+                          frank
+                            ? mode === "frank-original"
+                              ? "Frank+"
+                              : "Frank"
+                            : value === "clean"
+                              ? "Clean"
+                              : "Parallel",
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
                 <button
                   aria-label={t("Themes")}
@@ -1164,7 +1196,9 @@ export function PagedReader(props: Props) {
                     aria-label={t("Without hints")}
                     aria-pressed={mode === "clean"}
                     onClick={() =>
-                      props.onMode(mode === "clean" ? "frank" : "clean")
+                      props.onMode(
+                        mode === "clean" ? lastFrank.current : "clean",
+                      )
                     }
                   >
                     <Icon name="hints" />

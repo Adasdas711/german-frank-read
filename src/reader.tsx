@@ -11,6 +11,7 @@ import {
   readBook,
   packBook,
   plain,
+  isReadingMode,
   addresses,
   download,
   slug,
@@ -600,10 +601,7 @@ function App() {
       location.hash = `/read/${bookId}/1.1/${settings.defaultMode}`;
       return;
     }
-    if (
-      !["frank", "clean", "parallel"].includes(mode) ||
-      (mode === "parallel" && !active.content.t)
-    ) {
+    if (!isReadingMode(mode) || (mode === "parallel" && !active.content.t)) {
       location.hash = `/read/${bookId}/${at}/frank`;
       return;
     }
@@ -2686,6 +2684,7 @@ function App() {
               >
                 {[
                   ["frank", "Frank"],
+                  ["frank-original", "Frank + original"],
                   ["clean", "Clean"],
                   ["parallel", "Parallel"],
                 ].map(([v, label]) => (

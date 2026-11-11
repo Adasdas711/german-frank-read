@@ -20,6 +20,7 @@
     "test:collections": "node tests/collections.mjs",
     "test:gestures": "node tests/gestures.mjs",
     "test:reader-fixes": "node tests/reader-fixes.mjs",
+    "test:frank-original": "node tests/frank-original.mjs",
     "test:reading-controls": "node tests/reading-controls.mjs",
     "test:reader-visuals": "node tests/reader-visuals.mjs",
     "test:pagination-boxes": "node tests/pagination-boxes.mjs",

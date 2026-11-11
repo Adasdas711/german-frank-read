@@ -8,6 +8,17 @@ import {
   UnzipInflate,
 } from "fflate";
 export const MIME = "application/vnd.fbook+zip";
+// Reading modes. "frank-original" shows each Frank paragraph followed by the
+// same paragraph without hints, formatted as a quotation.
+export const READING_MODES = [
+  "frank",
+  "frank-original",
+  "clean",
+  "parallel",
+] as const;
+export type ReadingMode = (typeof READING_MODES)[number];
+export const isReadingMode = (value: unknown): value is ReadingMode =>
+  (READING_MODES as readonly unknown[]).includes(value);
 export const WORD = /[\p{L}\p{M}]+(?:[’'-][\p{L}\p{M}]+)*/gu;
 export type Chunk = string | [string, number, number?, number?];
 export type Manifest = {

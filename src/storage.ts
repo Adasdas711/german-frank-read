@@ -1,4 +1,4 @@
-import type { Book } from "./core";
+import { isReadingMode, type Book, type ReadingMode } from "./core";
 import type { Language } from "./i18n";
 import { checkedCollections, moveBookToCollection } from "./collections";
 export type Progress = {
@@ -39,7 +39,7 @@ export type Settings = {
   readingTheme: string;
   followSystem: boolean;
   pageTurn: "slide" | "curl" | "fade" | "scroll";
-  defaultMode: "frank" | "clean" | "parallel";
+  defaultMode: ReadingMode;
   sidebarCollapsed: boolean;
   deck: string;
   markExported: boolean;
@@ -289,9 +289,7 @@ export function checkedSettings(s: any): Settings {
       : s?.readingFlow === "continuous"
         ? "scroll"
         : "slide",
-    defaultMode: ["frank", "clean", "parallel"].includes(s?.defaultMode)
-      ? s.defaultMode
-      : "frank",
+    defaultMode: isReadingMode(s?.defaultMode) ? s.defaultMode : "frank",
     sidebarCollapsed: bool("sidebarCollapsed"),
     followSystem: bool("followSystem"),
     markExported: bool("markExported"),

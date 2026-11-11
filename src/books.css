@@ -1379,6 +1379,19 @@ html.reading-pages body {
   widows: 2;
   margin: 0 0 0.7em;
 }
+/* Frank + original: the paragraph without hints, as a quotation. */
+.folio-columns .original-quote {
+  margin: 0 0 0.9em;
+  padding: 0 0 0 0.9em;
+  border-left: 2px solid var(--folio-ink);
+  color: inherit;
+  font: inherit;
+  quotes: none;
+}
+.folio-columns .reading-panel .original-quote p {
+  text-indent: 0;
+  margin: 0;
+}
 .folio-columns .folio-fragment:first-of-type .reading-panel p:first-child {
   text-indent: 0;
 }
@@ -1409,7 +1422,7 @@ html.reading-pages body {
   cursor: pointer;
   text-align: inherit;
 }
-.books-reader:not([data-mode="frank"]) .hint {
+.books-reader:not([data-mode="frank"]):not([data-mode="frank-original"]) .hint {
   display: none;
 }
 .books-reader:not([data-mode="parallel"]) .sentence-row,

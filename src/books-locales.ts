@@ -348,6 +348,8 @@ const rows: [string, string, string][] = [
     "Bücher, Fortschritt und Wörter bleiben nur auf diesem Gerät.",
   ],
   ["Frank", "Франк", "Frank"],
+  ["Frank+", "Франк+", "Frank+"],
+  ["Frank + original", "Франк + оригинал", "Frank + Original"],
   ["Clean", "Оригинал", "Original"],
   ["Parallel", "Параллель", "Parallel"],
   ["Contents", "Содержание", "Inhalt"],
