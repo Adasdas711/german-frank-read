@@ -1,3 +1,4 @@
+import { appBase, useFineInput } from "./input-density";
 import { render } from "preact";
 import {
   useState,
@@ -9,7 +10,7 @@ import {
 } from "preact/hooks";
 import {
   readBook,
-  packBook,
+  repackManifest,
   plain,
   isReadingMode,
   addresses,
@@ -437,12 +438,14 @@ function App() {
     window.addEventListener("hashchange", change);
     return () => window.removeEventListener("hashchange", change);
   }, []);
+  const fine = useFineInput();
   useLayoutEffect(() => {
     document.documentElement.style.setProperty(
       "--ui-scale",
-      String((settings.uiScale / 100) * 1.25),
+      String((settings.uiScale / 100) * appBase(fine)),
     );
-  }, [settings.uiScale]);
+    document.documentElement.dataset.input = fine ? "fine" : "touch";
+  }, [settings.uiScale, fine]);
   const appTheme = readingTheme(settings).light ? "light" : "dark";
   const appColors = applicationStyle(settings);
   useLayoutEffect(() => {
@@ -830,7 +833,17 @@ function App() {
     await refresh();
     setOverlay("");
     setPending(null);
-    notify(t("Book added"));
+    const skipped = pending.warnings;
+    notify(
+      skipped.length
+        ? t("Book added") +
+            ". " +
+            t("Translation not shown in {0} passages, first: {1}", {
+              0: skipped.length,
+              1: skipped[0].at,
+            })
+        : t("Book added"),
+    );
   };
   const removeBook = (b: Book) =>
     setConfirm({
@@ -1195,7 +1208,7 @@ function App() {
       const updated = {
         ...renaming,
         manifest,
-        bytes: packBook(manifest, original.content),
+        bytes: repackManifest(renaming.bytes, manifest),
       };
       await store.put("books", manifest.id, updated);
       setBooks((previous) =>
@@ -1672,21 +1685,27 @@ function App() {
               {t("Export to Anki")}
             </button>
             <div class="sidebar-spacer" />
-            <button
-              class="sidebar-item"
-              onClick={() => {
-                setPending(null);
-                setFileError("");
-                setOverlay("add");
-              }}
-            >
-              <Icon name="plus" size={17} />
-              {t("Add .fbook")}
-            </button>
-            <button class="sidebar-item" onClick={() => setOverlay("settings")}>
-              <Icon name="settings" size={17} />
-              {t("Settings")}
-            </button>
+            {/* Stays visible at the bottom when the list above scrolls. */}
+            <div class="sidebar-footer">
+              <button
+                class="sidebar-item"
+                onClick={() => {
+                  setPending(null);
+                  setFileError("");
+                  setOverlay("add");
+                }}
+              >
+                <Icon name="plus" size={17} />
+                {t("Add .fbook")}
+              </button>
+              <button
+                class="sidebar-item"
+                onClick={() => setOverlay("settings")}
+              >
+                <Icon name="settings" size={17} />
+                {t("Settings")}
+              </button>
+            </div>
           </aside>
           <main
             ref={navigationPane}
@@ -2092,7 +2111,7 @@ function App() {
                     <input
                       ref={searchRef}
                       aria-label={t("Search your library")}
-                      placeholder={t("German with Frank")}
+                      placeholder={t("Books, words and text")}
                       value={query}
                       onInput={(e) => {
                         setQuery(e.currentTarget.value);
@@ -2352,6 +2371,7 @@ function App() {
         <Modal
           title={details.manifest.title}
           className="book-details-modal"
+          hideTitle
           onClose={() => setOverlay("")}
         >
           <div class="book-details">

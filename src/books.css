@@ -1,4 +1,34 @@
 @import "./extra-fonts.css";
+/* Type scale. Sizes are in design pixels and multiplied by --ui-scale where
+   they are used, so local scales (reading controls) keep working. At the
+   default scale they give 11/12/13/15/17/22/30 px. Use these tokens instead
+   of new font sizes; book text uses --size and is not part of this scale.
+
+   !important is kept only where something must win regardless of selector:
+   utility colours (.accent, .danger), pressed/selected states that invert a
+   control, the chosen word, inline styles set by the reader (Scroll mode),
+   text selection in fields, reduced motion, and the library's motion switch
+   with its few opt-in animations. */
+/* Base sizes before the app sets them from settings (see input-density.ts):
+   a mouse or trackpad gets compact controls, touch keeps roomy ones. */
+@media (hover: hover) and (pointer: fine) {
+  :root,
+  :root[data-theme="dark"] {
+    --ui-scale: 1;
+  }
+  :root .books-reader {
+    --ui-scale: 0.9;
+  }
+}
+:root {
+  --fs-micro: 9px;
+  --fs-caption: 9.6px;
+  --fs-footnote: 10.4px;
+  --fs-small: 12px;
+  --fs-body: 13.6px;
+  --fs-headline: 17.6px;
+  --fs-title: 24px;
+}
 :root,
 :root[data-theme="dark"] {
   /* Interface lengths scale locally; book text keeps its own font size.
@@ -51,7 +81,7 @@ body,
   background: var(--bg);
 }
 body {
-  font-size: calc(14px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
 }
 h1,
 h2,
@@ -65,17 +95,17 @@ h2 {
   letter-spacing: -0.035em;
 }
 h1 {
-  font-size: calc(40px * var(--ui-scale));
+  font-size: calc(var(--fs-title) * var(--ui-scale));
   line-height: 1.2;
   font-weight: 600;
 }
 h2 {
-  font-size: calc(25px * var(--ui-scale));
+  font-size: calc(var(--fs-headline) * var(--ui-scale));
   line-height: 1.35;
   font-weight: 600;
 }
 h3 {
-  font-size: calc(15px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
 }
 button,
 a,
@@ -122,7 +152,7 @@ button:disabled {
   border-radius: calc(24px * var(--ui-scale));
   min-height: calc(34px * var(--ui-scale));
   padding: calc(7px * var(--ui-scale)) calc(14px * var(--ui-scale));
-  font-size: calc(12px * var(--ui-scale));
+  font-size: calc(var(--fs-small) * var(--ui-scale));
 }
 .glass {
   background: color-mix(in srgb, var(--panel) 82%, transparent);
@@ -132,6 +162,9 @@ button:disabled {
   box-shadow:
     0 calc(2px * var(--ui-scale)) calc(10px * var(--ui-scale)) #0002,
     inset 0 calc(1px * var(--ui-scale)) #ffffff09;
+}
+.modal:focus {
+  outline: none;
 }
 .glass-group,
 .group {
@@ -146,7 +179,7 @@ button:disabled {
   border: 0;
   border-radius: calc(24px * var(--ui-scale));
   min-height: calc(36px * var(--ui-scale));
-  font-size: calc(13px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
   padding: calc(8px * var(--ui-scale)) calc(18px * var(--ui-scale));
   font-weight: 600;
 }
@@ -165,7 +198,7 @@ button:disabled {
   margin-bottom: calc(18px * var(--ui-scale));
 }
 .empty-state h2 {
-  font-size: calc(24px * var(--ui-scale));
+  font-size: calc(var(--fs-headline) * var(--ui-scale));
 }
 .startup {
   max-width: calc(700px * var(--ui-scale));
@@ -173,7 +206,7 @@ button:disabled {
   padding: calc(30px * var(--ui-scale));
 }
 .startup h1 {
-  font-size: calc(32px * var(--ui-scale));
+  font-size: calc(var(--fs-title) * var(--ui-scale));
 }
 .books-shell {
   min-height: 100dvh;
@@ -194,7 +227,6 @@ button:disabled {
   flex-direction: column;
   gap: calc(3px * var(--ui-scale));
   overflow-y: auto;
-  scrollbar-width: thin;
 }
 .sidebar-brand {
   display: flex;
@@ -202,7 +234,7 @@ button:disabled {
   justify-content: space-between;
   gap: calc(4px * var(--ui-scale));
   font-family: "Literata", serif;
-  font-size: calc(13px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
   font-weight: 600;
   line-height: 1.4;
   margin: 0 0 calc(16px * var(--ui-scale)) calc(6px * var(--ui-scale));
@@ -221,7 +253,7 @@ button:disabled {
   gap: calc(10px * var(--ui-scale));
   padding: calc(8px * var(--ui-scale)) calc(10px * var(--ui-scale));
   min-height: calc(33px * var(--ui-scale));
-  font-size: calc(12px * var(--ui-scale));
+  font-size: calc(var(--fs-small) * var(--ui-scale));
   font-weight: 400;
 }
 .sidebar-item svg {
@@ -236,7 +268,7 @@ button:disabled {
 }
 .library-sidebar h3 {
   font-family: inherit;
-  font-size: calc(11px * var(--ui-scale));
+  font-size: calc(var(--fs-footnote) * var(--ui-scale));
   font-weight: 600;
   letter-spacing: 0;
   color: var(--muted);
@@ -247,9 +279,26 @@ button:disabled {
   flex: 1;
   min-height: calc(26px * var(--ui-scale));
 }
+.sidebar-footer {
+  position: sticky;
+  bottom: calc(-12px * var(--ui-scale));
+  display: flex;
+  flex-direction: column;
+  gap: calc(3px * var(--ui-scale));
+  margin: 0 calc(-12px * var(--ui-scale)) calc(-12px * var(--ui-scale));
+  padding: calc(6px * var(--ui-scale)) calc(12px * var(--ui-scale))
+    calc(12px * var(--ui-scale));
+  /* Opaque version of the sidebar's glass over the page background, so the
+     list scrolling underneath does not show through. */
+  background: color-mix(in srgb, var(--panel) 82%, var(--bg));
+  border-top: calc(1px * var(--ui-scale)) solid var(--border);
+  border-radius: 0 0 calc(18px * var(--ui-scale)) calc(18px * var(--ui-scale));
+}
 .library-main {
   min-width: 0;
-  max-width: calc(1650px * var(--ui-scale));
+  /* About 1200 px with a mouse: wide screens get margins, not a stretched
+     page. */
+  max-width: calc(1200px * var(--ui-scale));
   width: 100%;
   padding: calc(56px * var(--ui-scale))
     clamp(calc(28px * var(--ui-scale)), 4vw, calc(68px * var(--ui-scale)))
@@ -299,43 +348,44 @@ button:disabled {
   scroll-snap-type: x proximity;
   padding-bottom: calc(6px * var(--ui-scale));
 }
+/* With a mouse on a wide screen the shelf wraps into a grid; touch keeps the
+   swipeable row. */
+@media (hover: hover) and (pointer: fine) and (min-width: 1100px) {
+  .continue-shelf {
+    display: grid;
+    grid-template-columns: repeat(
+      auto-fill,
+      minmax(calc(300px * var(--ui-scale)), 1fr)
+    );
+    overflow: visible;
+    scroll-snap-type: none;
+  }
+}
 .continue-card {
   flex: 0 0 min(calc(420px * var(--ui-scale)), 88%);
   scroll-snap-align: start;
-  display: flex;
   gap: calc(17px * var(--ui-scale));
   padding: calc(17px * var(--ui-scale));
-  border-radius: calc(18px * var(--ui-scale));
-  background: var(--panel);
-  align-items: center;
   min-width: 0;
+  cursor: pointer;
 }
 .continue-copy {
   min-width: 0;
   flex: 1;
 }
 .continue-copy > small:first-child {
-  font-size: calc(10px * var(--ui-scale));
+  font-size: calc(var(--fs-caption) * var(--ui-scale));
   color: var(--teal);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 .continue-copy h3 {
   font-family: inherit;
-  font-size: calc(17px * var(--ui-scale));
   font-weight: 600;
   letter-spacing: -0.02em;
-  line-height: 1.3;
   margin: calc(5px * var(--ui-scale)) 0;
-}
-.continue-copy p {
-  font-size: calc(13px * var(--ui-scale));
-  color: var(--muted);
-  margin-bottom: calc(6px * var(--ui-scale));
-}
-.continue-copy small {
-  font-size: calc(11px * var(--ui-scale));
-  color: var(--muted);
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 .continue-copy .primary {
   margin-top: calc(12px * var(--ui-scale));
@@ -353,11 +403,11 @@ button:disabled {
   min-width: 0;
 }
 .new-words-card strong {
-  font-size: calc(14px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
 }
 .new-words-card p {
   color: var(--muted);
-  font-size: calc(12px * var(--ui-scale));
+  font-size: calc(var(--fs-small) * var(--ui-scale));
   margin: calc(5px * var(--ui-scale)) 0 0;
 }
 .new-words-icon {
@@ -373,7 +423,7 @@ button:disabled {
   display: grid;
   grid-template-columns: repeat(
     auto-fill,
-    minmax(calc(142px * var(--ui-scale)), 1fr)
+    minmax(calc(140px * var(--ui-scale)), 1fr)
   );
   gap: calc(30px * var(--ui-scale)) calc(25px * var(--ui-scale));
 }
@@ -472,13 +522,13 @@ button:disabled {
   align-items: center;
   flex-wrap: wrap;
   gap: calc(6px * var(--ui-scale));
-  font-size: calc(11px * var(--ui-scale));
+  font-size: calc(var(--fs-footnote) * var(--ui-scale));
   color: var(--muted);
   margin-top: calc(12px * var(--ui-scale));
   min-height: calc(20px * var(--ui-scale));
 }
 .new-badge {
-  font-size: calc(8px * var(--ui-scale));
+  font-size: calc(var(--fs-micro) * var(--ui-scale));
   font-weight: 600;
   border-radius: calc(3px * var(--ui-scale));
   padding: calc(1px * var(--ui-scale)) calc(4px * var(--ui-scale));
@@ -487,7 +537,7 @@ button:disabled {
 }
 .auto-badge {
   color: #d9b775;
-  font-size: calc(10px * var(--ui-scale));
+  font-size: calc(var(--fs-caption) * var(--ui-scale));
 }
 .book-more {
   background: none;
@@ -496,7 +546,7 @@ button:disabled {
   min-height: calc(18px * var(--ui-scale));
   padding: 0 calc(3px * var(--ui-scale));
   margin-left: auto;
-  font-size: calc(17px * var(--ui-scale));
+  font-size: calc(var(--fs-headline) * var(--ui-scale));
   line-height: 1;
 }
 .filter-tabs {
@@ -508,7 +558,7 @@ button:disabled {
 }
 .filter-tabs button {
   white-space: nowrap;
-  font-size: calc(12px * var(--ui-scale));
+  font-size: calc(var(--fs-small) * var(--ui-scale));
   border-radius: calc(20px * var(--ui-scale));
   border: 0;
   padding: calc(6px * var(--ui-scale)) calc(17px * var(--ui-scale));
@@ -535,7 +585,7 @@ button:disabled {
   border-radius: calc(20px * var(--ui-scale));
   min-height: calc(28px * var(--ui-scale));
   padding: calc(5px * var(--ui-scale)) calc(14px * var(--ui-scale));
-  font-size: calc(12px * var(--ui-scale));
+  font-size: calc(var(--fs-small) * var(--ui-scale));
   color: var(--muted);
   flex: 1;
   white-space: nowrap;
@@ -555,7 +605,7 @@ button:disabled {
 }
 .word-toolbar small {
   color: var(--muted);
-  font-size: calc(12px * var(--ui-scale));
+  font-size: calc(var(--fs-small) * var(--ui-scale));
 }
 .word-toolbar .tabs {
   min-width: calc(250px * var(--ui-scale));
@@ -568,7 +618,7 @@ button:disabled {
 .word-table-head {
   display: grid;
   grid-template-columns: 24% 20% 35% 21%;
-  font-size: calc(9px * var(--ui-scale));
+  font-size: calc(var(--fs-micro) * var(--ui-scale));
   color: var(--muted);
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -607,7 +657,7 @@ button:disabled {
   text-align: left;
   background: none;
   border: 0;
-  font-size: calc(12px * var(--ui-scale));
+  font-size: calc(var(--fs-small) * var(--ui-scale));
   font-weight: 400;
   min-height: calc(36px * var(--ui-scale));
 }
@@ -616,17 +666,17 @@ button:disabled {
   overflow-wrap: anywhere;
 }
 .word-main > span:first-child strong {
-  font-size: calc(14px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
 }
 .word-main > span:first-child small {
   display: block;
-  font-size: calc(10px * var(--ui-scale));
+  font-size: calc(var(--fs-caption) * var(--ui-scale));
   color: var(--muted);
   margin-top: calc(3px * var(--ui-scale));
 }
 .word-sentence {
   color: var(--muted);
-  font-size: calc(11px * var(--ui-scale));
+  font-size: calc(var(--fs-footnote) * var(--ui-scale));
 }
 .word-book {
   width: 21%;
@@ -637,7 +687,7 @@ button:disabled {
   align-items: center;
   justify-content: flex-start;
   gap: calc(8px * var(--ui-scale));
-  font-size: calc(10px * var(--ui-scale));
+  font-size: calc(var(--fs-caption) * var(--ui-scale));
   font-weight: 400;
   text-align: left;
   min-height: calc(30px * var(--ui-scale));
@@ -705,12 +755,12 @@ button:disabled {
 }
 .word-group h3 {
   font-family: inherit;
-  font-size: calc(13px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
   line-height: 1.4;
   margin-bottom: calc(4px * var(--ui-scale));
 }
 .word-group header small {
-  font-size: calc(10px * var(--ui-scale));
+  font-size: calc(var(--fs-caption) * var(--ui-scale));
   color: var(--muted);
 }
 .mini-cover .book-cover.small {
@@ -735,13 +785,13 @@ button:disabled {
   padding: calc(12px * var(--ui-scale)) calc(16px * var(--ui-scale));
 }
 .word-group .word-main > span:first-child strong {
-  font-size: calc(13px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
 }
 .word-group .word-sentence {
-  font-size: calc(10px * var(--ui-scale));
+  font-size: calc(var(--fs-caption) * var(--ui-scale));
 }
 .word-group .pill {
-  font-size: calc(10px * var(--ui-scale));
+  font-size: calc(var(--fs-caption) * var(--ui-scale));
   padding: calc(6px * var(--ui-scale)) calc(10px * var(--ui-scale));
   min-height: calc(28px * var(--ui-scale));
   white-space: nowrap;
@@ -760,16 +810,13 @@ button:disabled {
 }
 .selection-bar button {
   white-space: nowrap;
-  font-size: calc(12px * var(--ui-scale));
+  font-size: calc(var(--fs-small) * var(--ui-scale));
 }
 .sidebar-collapsed .selection-bar {
   left: 50%;
 }
 .search-controls {
   display: flex;
-  align-items: center;
-  gap: calc(20px * var(--ui-scale));
-  margin-bottom: calc(30px * var(--ui-scale));
 }
 .search-field {
   display: flex;
@@ -786,7 +833,7 @@ button:disabled {
   min-width: 0;
   width: 100%;
   padding: calc(9px * var(--ui-scale)) 0;
-  font-size: calc(13px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
   outline: none;
 }
 .search-field .round {
@@ -798,17 +845,13 @@ button:disabled {
 }
 .search-controls .tabs {
   flex-shrink: 0;
-  min-width: calc(290px * var(--ui-scale));
 }
 .result-count {
-  font-size: calc(10px * var(--ui-scale));
+  font-size: calc(var(--fs-caption) * var(--ui-scale));
   letter-spacing: 0.05em;
   color: var(--muted);
   margin-bottom: calc(16px * var(--ui-scale));
   text-transform: uppercase;
-}
-.search-result-list {
-  max-width: calc(900px * var(--ui-scale));
 }
 .book-result,
 .saved-result {
@@ -823,7 +866,7 @@ button:disabled {
   padding: calc(14px * var(--ui-scale)) calc(18px * var(--ui-scale));
   text-align: left;
   justify-content: flex-start;
-  font-size: calc(13px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
 }
 .book-result > span,
 .saved-result > span {
@@ -832,12 +875,12 @@ button:disabled {
 }
 .book-result > span strong {
   display: block;
-  font-size: calc(14px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
   margin-bottom: calc(5px * var(--ui-scale));
 }
 .book-result small,
 .saved-result small {
-  font-size: calc(11px * var(--ui-scale));
+  font-size: calc(var(--fs-footnote) * var(--ui-scale));
   color: var(--muted);
 }
 .book-result .book-cover.small {
@@ -848,7 +891,7 @@ button:disabled {
 }
 .saved-result p {
   margin: calc(3px * var(--ui-scale)) 0;
-  font-size: calc(12px * var(--ui-scale));
+  font-size: calc(var(--fs-small) * var(--ui-scale));
   font-weight: 400;
 }
 .text-results {
@@ -869,11 +912,11 @@ button:disabled {
 }
 .result-book-heading h3 {
   font-family: inherit;
-  font-size: calc(14px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
   margin: 0 0 calc(4px * var(--ui-scale));
 }
 .result-book-heading small {
-  font-size: calc(11px * var(--ui-scale));
+  font-size: calc(var(--fs-footnote) * var(--ui-scale));
   color: var(--muted);
 }
 .text-hit {
@@ -889,7 +932,7 @@ button:disabled {
   background: transparent;
   gap: calc(7px * var(--ui-scale));
   font-family: "Literata", serif;
-  font-size: calc(14px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
   line-height: 1.6;
   font-weight: 400;
 }
@@ -908,7 +951,7 @@ mark {
 .recent-searches h2 {
   font-family: inherit;
   letter-spacing: 0;
-  font-size: calc(14px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
 }
 .recent-searches > button {
   display: flex;
@@ -921,11 +964,11 @@ mark {
   border-radius: 0;
   border-bottom: calc(1px * var(--ui-scale)) solid var(--border);
   padding-left: 0;
-  font-size: calc(14px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
 }
 .recent-searches > p {
   margin-top: calc(22px * var(--ui-scale));
-  font-size: calc(12px * var(--ui-scale));
+  font-size: calc(var(--fs-small) * var(--ui-scale));
 }
 /* Sheets use the same surface and controls on all three device layouts. */
 .modal-backdrop {
@@ -936,6 +979,7 @@ mark {
   display: flex;
   align-items: center;
   justify-content: center;
+  overscroll-behavior: none;
 }
 .modal {
   width: calc(480px * var(--ui-scale));
@@ -947,6 +991,7 @@ mark {
   padding: calc(22px * var(--ui-scale));
   box-shadow: 0 calc(28px * var(--ui-scale)) calc(100px * var(--ui-scale)) #0007;
   overflow: auto;
+  overscroll-behavior: contain;
 }
 .modal > .row:first-child {
   margin-bottom: calc(22px * var(--ui-scale));
@@ -954,7 +999,7 @@ mark {
 }
 .modal > .row:first-child h2 {
   font-family: inherit;
-  font-size: calc(15px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
   letter-spacing: 0;
   font-weight: 600;
   flex: 1;
@@ -978,7 +1023,7 @@ mark {
 }
 .group-label {
   font-family: inherit;
-  font-size: calc(10px * var(--ui-scale));
+  font-size: calc(var(--fs-caption) * var(--ui-scale));
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--muted);
@@ -996,7 +1041,7 @@ mark {
   background: transparent;
   border: 0;
   border-radius: 0;
-  font-size: calc(12px * var(--ui-scale));
+  font-size: calc(var(--fs-small) * var(--ui-scale));
   min-height: calc(46px * var(--ui-scale));
   border-bottom: calc(1px * var(--ui-scale)) solid var(--border);
   font-weight: 400;
@@ -1020,7 +1065,7 @@ mark {
   padding: calc(2px * var(--ui-scale)) 0;
   text-align: right;
   border-radius: 0;
-  font-size: calc(12px * var(--ui-scale));
+  font-size: calc(var(--fs-small) * var(--ui-scale));
   color: var(--muted);
 }
 .setting-row select option {
@@ -1032,7 +1077,7 @@ mark {
   flex-direction: row-reverse;
   justify-content: space-between;
   gap: calc(16px * var(--ui-scale));
-  font-size: calc(12px * var(--ui-scale));
+  font-size: calc(var(--fs-small) * var(--ui-scale));
   padding: calc(14px * var(--ui-scale));
   min-height: calc(48px * var(--ui-scale));
   border-bottom: calc(1px * var(--ui-scale)) solid var(--border);
@@ -1073,7 +1118,7 @@ mark {
 }
 .footnote {
   color: var(--muted);
-  font-size: calc(10px * var(--ui-scale));
+  font-size: calc(var(--fs-caption) * var(--ui-scale));
   line-height: 1.6;
   text-align: center;
   margin: calc(14px * var(--ui-scale)) calc(4px * var(--ui-scale)) 0;
@@ -1087,7 +1132,7 @@ mark {
   border-radius: 0;
   width: 100%;
   justify-content: flex-start;
-  font-size: calc(12px * var(--ui-scale));
+  font-size: calc(var(--fs-small) * var(--ui-scale));
   text-align: left;
   padding: calc(14px * var(--ui-scale));
 }
@@ -1096,7 +1141,7 @@ mark {
 }
 .data-actions small {
   display: block;
-  font-size: calc(9px * var(--ui-scale));
+  font-size: calc(var(--fs-micro) * var(--ui-scale));
   color: var(--muted);
   font-weight: 400;
   margin-top: calc(4px * var(--ui-scale));
@@ -1112,7 +1157,7 @@ mark {
   border: 0;
   border-radius: 0;
   padding: calc(14px * var(--ui-scale));
-  font-size: calc(12px * var(--ui-scale));
+  font-size: calc(var(--fs-small) * var(--ui-scale));
   font-weight: 400;
 }
 .language-options button svg,
@@ -1122,7 +1167,7 @@ mark {
 .language-options small {
   display: block;
   color: var(--muted);
-  font-size: calc(10px * var(--ui-scale));
+  font-size: calc(var(--fs-caption) * var(--ui-scale));
   margin-top: calc(3px * var(--ui-scale));
 }
 .anki-options > button small {
@@ -1133,30 +1178,19 @@ mark {
 .book-details {
   display: flex;
   align-items: center;
-  gap: calc(20px * var(--ui-scale));
-}
-.book-details > .book-cover {
-  width: calc(140px * var(--ui-scale));
-  min-width: calc(140px * var(--ui-scale));
-  flex: 0 0 calc(140px * var(--ui-scale));
 }
 .book-details > div:last-child {
   min-width: 0;
   flex: 1;
 }
 .book-details h2 {
-  font-size: calc(24px * var(--ui-scale));
-  line-height: 1.2;
   margin: calc(8px * var(--ui-scale)) 0;
 }
 .book-details p {
-  font-size: calc(11px * var(--ui-scale));
   color: var(--muted);
-  line-height: 1.4;
   margin-bottom: calc(16px * var(--ui-scale));
 }
 .book-details .eyebrow {
-  font-size: calc(8px * var(--ui-scale));
   letter-spacing: 0.06em;
   color: var(--muted);
   font-family: inherit;
@@ -1169,28 +1203,17 @@ mark {
 .book-details .progress > div {
   background: var(--teal);
 }
-.book-details .muted {
-  font-size: calc(10px * var(--ui-scale));
-}
 .detail-actions {
   display: flex;
-  gap: calc(7px * var(--ui-scale));
-  margin-top: calc(12px * var(--ui-scale));
 }
 .detail-actions button {
   flex: 1;
-  font-size: calc(10px * var(--ui-scale));
-  min-height: calc(29px * var(--ui-scale));
-  padding: calc(5px * var(--ui-scale)) calc(8px * var(--ui-scale));
   border: 0;
   border-radius: calc(20px * var(--ui-scale));
   background: #8882;
 }
 .detail-actions .primary {
   background: var(--button);
-}
-.detail-more {
-  margin-top: calc(22px * var(--ui-scale));
 }
 .detail-more button {
   display: flex;
@@ -1200,8 +1223,6 @@ mark {
   border-radius: 0;
   background: none;
   width: 100%;
-  padding: calc(12px * var(--ui-scale)) calc(14px * var(--ui-scale));
-  font-size: calc(12px * var(--ui-scale));
 }
 .detail-more button svg {
   color: var(--teal);
@@ -1218,10 +1239,10 @@ mark {
   padding: calc(28px * var(--ui-scale)) calc(16px * var(--ui-scale));
 }
 .file-drop strong {
-  font-size: calc(13px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
 }
 .file-drop small {
-  font-size: calc(11px * var(--ui-scale));
+  font-size: calc(var(--fs-footnote) * var(--ui-scale));
 }
 .file-drop-icon {
   display: grid;
@@ -1243,11 +1264,11 @@ mark {
   min-width: 0;
 }
 .import-preview strong {
-  font-size: calc(13px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
 }
 .import-preview small {
   display: block;
-  font-size: calc(10px * var(--ui-scale));
+  font-size: calc(var(--fs-caption) * var(--ui-scale));
   color: var(--muted);
   margin: calc(5px * var(--ui-scale)) 0 calc(12px * var(--ui-scale));
 }
@@ -1255,7 +1276,7 @@ mark {
   display: flex;
   align-items: center;
   gap: calc(6px * var(--ui-scale));
-  font-size: calc(10px * var(--ui-scale));
+  font-size: calc(var(--fs-caption) * var(--ui-scale));
   margin: calc(7px * var(--ui-scale)) 0;
   line-height: 1.5;
 }
@@ -1273,7 +1294,7 @@ html.reading-pages body {
 }
 .books-reader {
   --ui-scale: 1.08;
-  font-size: calc(14px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
   position: fixed;
   inset: 0;
   height: 100dvh;
@@ -1308,7 +1329,7 @@ html.reading-pages body {
   left: 25%;
   right: 25%;
   text-align: center;
-  font-size: calc(10px * var(--ui-scale));
+  font-size: calc(var(--fs-caption) * var(--ui-scale));
   color: var(--folio-muted);
   white-space: nowrap;
   overflow: hidden;
@@ -1317,8 +1338,6 @@ html.reading-pages body {
 }
 .folio-columns,
 .folio-columns * {
-  user-select: none;
-  -webkit-user-select: none;
   -webkit-touch-callout: none;
   -webkit-user-drag: none;
 }
@@ -1348,6 +1367,42 @@ html.reading-pages body {
 .turn-fade .folio-columns,
 .turn-curl .folio-columns {
   transition: none;
+}
+/* Paged reading: each chapter is its own multicol box in a horizontal row
+   (see prepareChapters). Widths come from the reader's measurement. */
+.books-reader:not(.scroll-reader) .folio-columns[data-chaptered] {
+  display: flex;
+  align-items: flex-start;
+}
+.books-reader:not(.scroll-reader)
+  .folio-columns[data-chaptered]
+  > .folio-chapter {
+  flex: none;
+  /* Until measured, a chapter is one screen wide, so off-screen chapters are
+     skipped from the very first frame instead of all overlapping at x = 0. */
+  box-sizing: content-box;
+  width: var(--chapter-page, 100vw);
+  height: var(--chapter-height, 100vh);
+  column-count: var(--chapter-columns, 1);
+  column-gap: inherit;
+  column-fill: auto;
+  /* Room for the chapter's further columns (see sizeChapter). */
+  padding-right: var(--chapter-pad, 0px);
+  margin-right: var(--chapter-shift, 0px);
+}
+.books-reader:not(.scroll-reader)
+  .folio-columns[data-chapter-pages]
+  > .folio-chapter {
+  content-visibility: auto;
+  contain-intrinsic-size: var(--chapter-page, 100vw)
+    var(--chapter-height, 100vh);
+  overflow-clip-margin: 24px;
+}
+/* The chapter being measured is laid out normally. */
+.books-reader:not(.scroll-reader)
+  .folio-columns[data-chapter-pages]
+  > .folio-chapter[data-measuring] {
+  content-visibility: visible;
 }
 .folio-columns section {
   margin: 0;
@@ -1405,15 +1460,8 @@ html.reading-pages body {
   line-height: inherit;
 }
 .folio-columns .word {
-  display: inline;
   min-width: 0;
-  min-height: 0;
-  padding: 0;
   margin: 0;
-  background: transparent;
-  border: 0;
-  border-radius: calc(2px * var(--ui-scale));
-  font: inherit;
   line-height: inherit;
   letter-spacing: inherit;
   word-spacing: inherit;
@@ -1421,6 +1469,7 @@ html.reading-pages body {
   vertical-align: baseline;
   cursor: pointer;
   text-align: inherit;
+  filter: none;
 }
 .books-reader:not([data-mode="frank"]):not([data-mode="frank-original"]) .hint {
   display: none;
@@ -1493,26 +1542,18 @@ html.reading-pages body {
 }
 .folio-page-number {
   position: absolute;
-  bottom: max(calc(28px * var(--ui-scale)), env(safe-area-inset-bottom));
   left: 30%;
   right: 30%;
   text-align: center;
-  font-size: calc(10px * var(--ui-scale));
   color: var(--folio-muted);
   pointer-events: none;
 }
 .folio-toolbar {
   position: absolute;
-  top: calc(16px * var(--ui-scale));
-  left: calc(20px * var(--ui-scale));
-  right: calc(20px * var(--ui-scale));
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: calc(16px * var(--ui-scale));
   z-index: 10;
-  opacity: 0;
-  pointer-events: none;
   transition: opacity 0.18s;
 }
 .folio-toolbar.visible,
@@ -1529,7 +1570,7 @@ html.reading-pages body {
   gap: calc(7px * var(--ui-scale));
 }
 .folio-toolbar-title {
-  font-size: calc(10px * var(--ui-scale));
+  font-size: calc(var(--fs-caption) * var(--ui-scale));
   max-width: 35%;
   text-align: center;
   color: var(--folio-muted);
@@ -1540,18 +1581,11 @@ html.reading-pages body {
 .folio-round {
   border: calc(1px * var(--ui-scale)) solid #ffffff08;
   border-radius: 50%;
-  width: calc(36px * var(--ui-scale));
-  height: calc(36px * var(--ui-scale));
-  min-width: calc(36px * var(--ui-scale));
-  min-height: calc(36px * var(--ui-scale));
-  display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: calc(8px * var(--ui-scale));
   background: color-mix(in srgb, var(--folio-paper) 60%, #888 20%);
   color: var(--folio-ink);
-  backdrop-filter: blur(calc(16px * var(--ui-scale)));
-  font-size: calc(13px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
 }
 .folio-aa {
   font-family: "Literata", serif;
@@ -1562,22 +1596,8 @@ html.reading-pages body {
 .folio-round.marked svg {
   fill: var(--folio-hint);
 }
-.reader-mode-tabs {
-  background: color-mix(in srgb, var(--folio-paper) 60%, #888 25%);
-  backdrop-filter: blur(calc(20px * var(--ui-scale)));
-}
 .reader-mode-tabs button {
-  font-size: calc(10px * var(--ui-scale));
-  min-height: calc(26px * var(--ui-scale));
-  padding: calc(4px * var(--ui-scale)) calc(13px * var(--ui-scale));
   color: var(--folio-muted);
-}
-.reader-mode-tabs [aria-selected="true"] {
-  background: var(--folio-ink) !important;
-  color: var(--folio-paper) !important;
-}
-.mobile-reader-menu {
-  display: none;
 }
 .folio-bottom {
   position: absolute;
@@ -1603,7 +1623,7 @@ html.reading-pages body {
   flex-direction: column;
   align-items: center;
   gap: calc(4px * var(--ui-scale));
-  font-size: calc(11px * var(--ui-scale));
+  font-size: calc(var(--fs-footnote) * var(--ui-scale));
   color: var(--folio-muted);
 }
 .controls-visible .folio-page-number {
@@ -1639,45 +1659,23 @@ html.reading-pages body {
 }
 .folio-popover {
   position: absolute;
-  top: calc(66px * var(--ui-scale));
-  right: calc(20px * var(--ui-scale));
-  width: calc(340px * var(--ui-scale));
   max-width: calc(100vw - calc(24px * var(--ui-scale)));
-  max-height: calc(100dvh - calc(90px * var(--ui-scale)));
   overflow: auto;
   z-index: 25;
-  border-radius: calc(22px * var(--ui-scale));
-  padding: calc(16px * var(--ui-scale));
-  background: color-mix(in srgb, var(--folio-paper), #777 25%);
   color: var(--folio-ink);
-  box-shadow: 0 calc(18px * var(--ui-scale)) calc(60px * var(--ui-scale)) #0005;
-}
-.folio-popover.contents {
-  left: calc(20px * var(--ui-scale));
-  right: auto;
-  width: calc(320px * var(--ui-scale));
-}
-.folio-popover.contents h2 {
-  font: 600 calc(14px * var(--ui-scale)) system-ui;
-  margin: 0;
 }
 .folio-popover.contents > .row {
   gap: calc(8px * var(--ui-scale));
-  margin-bottom: calc(12px * var(--ui-scale));
 }
 .folio-popover.contents > .row > small {
-  font-size: calc(9px * var(--ui-scale));
+  font-size: calc(var(--fs-micro) * var(--ui-scale));
   color: var(--folio-muted);
   margin-left: auto;
 }
 .book-search {
   width: 100%;
   border: 0;
-  border-radius: calc(9px * var(--ui-scale));
   background: #8882;
-  padding: calc(10px * var(--ui-scale)) calc(12px * var(--ui-scale));
-  font-size: calc(12px * var(--ui-scale));
-  margin-bottom: calc(12px * var(--ui-scale));
 }
 .folio-popover.contents .tabs {
   margin-bottom: calc(12px * var(--ui-scale));
@@ -1691,27 +1689,23 @@ html.reading-pages body {
   width: 100%;
   padding: calc(12px * var(--ui-scale)) calc(10px * var(--ui-scale));
   border: 0;
-  border-radius: calc(8px * var(--ui-scale));
   background: none;
   color: var(--folio-muted);
   min-height: calc(55px * var(--ui-scale));
 }
 .page-entry strong {
-  font-size: calc(11px * var(--ui-scale));
   font-weight: 500;
   display: block;
   color: var(--folio-ink);
   margin-bottom: calc(5px * var(--ui-scale));
 }
 .page-entry small {
-  font-size: calc(10px * var(--ui-scale));
   line-height: 1.5;
   display: block;
-  max-width: calc(235px * var(--ui-scale));
   font-weight: 400;
 }
 .page-entry em {
-  font-size: calc(8px * var(--ui-scale));
+  font-size: calc(var(--fs-micro) * var(--ui-scale));
   font-style: normal;
   color: var(--folio-hint);
 }
@@ -1719,8 +1713,6 @@ html.reading-pages body {
   background: #8882;
 }
 .folio-popover.contents .chapter-entry {
-  min-height: calc(38px * var(--ui-scale));
-  padding: calc(8px * var(--ui-scale)) calc(10px * var(--ui-scale));
   gap: 0;
 }
 .chapter-entry > span {
@@ -1748,14 +1740,8 @@ html.reading-pages body {
 }
 .reading-menu {
   position: absolute;
-  right: calc(20px * var(--ui-scale));
-  bottom: calc(80px * var(--ui-scale));
-  width: calc(285px * var(--ui-scale));
-  border-radius: calc(22px * var(--ui-scale));
-  padding: calc(12px * var(--ui-scale));
   z-index: 20;
   color: var(--folio-ink);
-  background: color-mix(in srgb, var(--folio-paper), #888 25%);
 }
 .reading-menu > button {
   display: flex;
@@ -1764,9 +1750,6 @@ html.reading-pages body {
   border: 0;
   background: #8881;
   border-radius: calc(9px * var(--ui-scale));
-  padding: calc(12px * var(--ui-scale));
-  font-size: calc(12px * var(--ui-scale));
-  margin-bottom: calc(7px * var(--ui-scale));
 }
 .reading-menu .tabs {
   margin: calc(10px * var(--ui-scale)) 0;
@@ -1774,14 +1757,9 @@ html.reading-pages body {
 .reading-menu-icons {
   display: flex;
   justify-content: space-around;
-  gap: calc(8px * var(--ui-scale));
-  margin-top: calc(12px * var(--ui-scale));
 }
 .reading-menu-icons button {
   border: 0;
-  min-height: calc(38px * var(--ui-scale));
-  width: calc(38px * var(--ui-scale));
-  border-radius: 50%;
   background: #8882;
   padding: calc(8px * var(--ui-scale));
 }
@@ -1789,35 +1767,21 @@ html.reading-pages body {
   color: var(--folio-hint);
 }
 .word-panel h2 {
-  font-size: calc(24px * var(--ui-scale));
   margin: 0;
   letter-spacing: 0;
-}
-.word-panel .muted {
-  font-size: calc(11px * var(--ui-scale));
-  line-height: 1.6;
-}
-.word-panel > p {
-  font-size: calc(14px * var(--ui-scale));
-  margin: calc(10px * var(--ui-scale)) 0 calc(14px * var(--ui-scale));
 }
 .word-context {
   background: #0002;
   border-radius: calc(9px * var(--ui-scale));
-  padding: calc(12px * var(--ui-scale));
-  margin-bottom: calc(14px * var(--ui-scale));
 }
 .word-context p {
-  font-size: calc(12px * var(--ui-scale));
+  font-size: calc(var(--fs-small) * var(--ui-scale));
   line-height: 1.6;
   margin: 0 0 calc(5px * var(--ui-scale));
 }
 .word-context p:last-child {
   color: var(--folio-hint);
   margin: 0;
-}
-.word-panel .primary {
-  font-size: calc(12px * var(--ui-scale));
 }
 .books-reader button:focus-visible,
 .books-reader a:focus-visible {
@@ -1844,16 +1808,11 @@ html.reading-pages body {
 /* Appearance editor */
 .sheet-heading {
   display: grid;
-  grid-template-columns: calc(36px * var(--ui-scale)) 1fr calc(
-      36px * var(--ui-scale)
-    );
   align-items: center;
   gap: calc(10px * var(--ui-scale));
-  margin-bottom: calc(17px * var(--ui-scale));
   text-align: center;
 }
 .sheet-heading > strong {
-  font-size: calc(13px * var(--ui-scale));
   font-weight: 600;
 }
 .sheet-heading .done {
@@ -1873,10 +1832,9 @@ html.reading-pages body {
   flex: 1;
   border: 0;
   background: none;
-  min-height: calc(35px * var(--ui-scale));
   padding: calc(6px * var(--ui-scale));
   font-family: "Literata", serif;
-  font-size: calc(15px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
   border-radius: calc(10px * var(--ui-scale));
 }
 .appearance-tools > button[aria-pressed="true"] {
@@ -1884,10 +1842,7 @@ html.reading-pages body {
   color: var(--teal);
 }
 .theme-grid {
-  display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: calc(10px * var(--ui-scale));
-  margin-bottom: calc(16px * var(--ui-scale));
 }
 .theme-tile {
   display: flex;
@@ -1897,13 +1852,10 @@ html.reading-pages body {
   gap: calc(2px * var(--ui-scale));
   border: calc(2px * var(--ui-scale)) solid transparent;
   border-radius: calc(12px * var(--ui-scale));
-  padding: calc(7px * var(--ui-scale)) calc(4px * var(--ui-scale));
-  min-height: calc(68px * var(--ui-scale));
   box-shadow: 0 calc(2px * var(--ui-scale)) calc(4px * var(--ui-scale)) #0001;
 }
 .theme-tile[aria-pressed="true"] {
   outline: calc(2px * var(--ui-scale)) solid var(--teal);
-  outline-offset: calc(2px * var(--ui-scale));
 }
 .theme-tile > span {
   font:
@@ -1911,7 +1863,7 @@ html.reading-pages body {
     serif;
 }
 .theme-tile > i {
-  font-size: calc(10px * var(--ui-scale));
+  font-size: calc(var(--fs-caption) * var(--ui-scale));
   line-height: 0.8;
   font-style: normal;
 }
@@ -1921,26 +1873,10 @@ html.reading-pages body {
 }
 .themes-panel > .wide {
   margin-bottom: calc(16px * var(--ui-scale));
-  min-height: calc(33px * var(--ui-scale));
-  font-size: calc(11px * var(--ui-scale));
   border: 0;
 }
 .themes-panel .group {
   margin-top: calc(16px * var(--ui-scale));
-}
-.themes-panel .group-label + .group {
-  margin-top: 0;
-}
-.themes-panel .setting-row,
-.themes-panel .switch-label {
-  font-size: calc(11px * var(--ui-scale));
-}
-.themes-panel .sheet-heading .round {
-  width: calc(30px * var(--ui-scale));
-  min-width: calc(30px * var(--ui-scale));
-  height: calc(30px * var(--ui-scale));
-  min-height: calc(30px * var(--ui-scale));
-  padding: calc(7px * var(--ui-scale));
 }
 .turn-menu {
   position: absolute;
@@ -1961,7 +1897,7 @@ html.reading-pages body {
   gap: calc(10px * var(--ui-scale));
   width: 100%;
   padding: calc(10px * var(--ui-scale));
-  font-size: calc(12px * var(--ui-scale));
+  font-size: calc(var(--fs-small) * var(--ui-scale));
   min-height: calc(39px * var(--ui-scale));
 }
 .turn-menu button > span {
@@ -1978,7 +1914,7 @@ html.reading-pages body {
   line-height: var(--line);
   letter-spacing: var(--letters);
   word-spacing: var(--words);
-  font-size: calc(13px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
 }
 .theme-preview > b {
   font-size: calc(24px * var(--ui-scale));
@@ -1999,7 +1935,7 @@ html.reading-pages body {
   border-radius: 0;
   padding: calc(13px * var(--ui-scale)) calc(15px * var(--ui-scale));
   min-height: calc(44px * var(--ui-scale));
-  font-size: calc(14px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
   font-weight: 400;
 }
 .font-list [aria-pressed="true"] {
@@ -2012,7 +1948,7 @@ html.reading-pages body {
   flex-wrap: wrap;
   gap: calc(10px * var(--ui-scale));
   padding: calc(14px * var(--ui-scale));
-  font-size: calc(10px * var(--ui-scale));
+  font-size: calc(var(--fs-caption) * var(--ui-scale));
   border-bottom: calc(1px * var(--ui-scale)) solid var(--border);
 }
 .range-row > span {
@@ -2025,13 +1961,8 @@ html.reading-pages body {
 }
 .swatches {
   display: flex;
-  gap: calc(5px * var(--ui-scale));
 }
 .swatches button {
-  width: calc(17px * var(--ui-scale));
-  min-width: calc(17px * var(--ui-scale));
-  height: calc(17px * var(--ui-scale));
-  min-height: calc(17px * var(--ui-scale));
   border: 0;
   border-radius: 50%;
   padding: 0;
@@ -2041,7 +1972,6 @@ html.reading-pages body {
   outline-offset: calc(2px * var(--ui-scale));
 }
 .disabled-layout {
-  opacity: 0.35;
   pointer-events: none;
 }
 .toast {
@@ -2052,7 +1982,7 @@ html.reading-pages body {
   border: calc(1px * var(--ui-scale)) solid #8883;
   color: var(--text);
   box-shadow: 0 calc(10px * var(--ui-scale)) calc(40px * var(--ui-scale)) #0003;
-  font-size: calc(13px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
   max-width: calc(100vw - calc(30px * var(--ui-scale)));
 }
 @media (min-width: 1500px) {
@@ -2096,7 +2026,7 @@ html.reading-pages body {
     background: none;
     border: 0;
     border-radius: calc(28px * var(--ui-scale));
-    font-size: calc(10px * var(--ui-scale));
+    font-size: calc(var(--fs-caption) * var(--ui-scale));
     min-height: calc(50px * var(--ui-scale));
     padding: calc(6px * var(--ui-scale));
     color: var(--muted);
@@ -2136,9 +2066,6 @@ html.reading-pages body {
   .word-groups {
     gap: calc(20px * var(--ui-scale));
   }
-  .reader-mode-tabs button {
-    padding: calc(5px * var(--ui-scale)) calc(10px * var(--ui-scale));
-  }
   .folio-toolbar-title {
     max-width: 24%;
   }
@@ -2149,10 +2076,10 @@ html.reading-pages body {
     --panel: #222325;
   }
   h1 {
-    font-size: calc(32px * var(--ui-scale));
+    font-size: calc(var(--fs-title) * var(--ui-scale));
   }
   h2 {
-    font-size: calc(21px * var(--ui-scale));
+    font-size: calc(var(--fs-headline) * var(--ui-scale));
   }
   .library-main,
   .sidebar-collapsed .library-main {
@@ -2176,7 +2103,7 @@ html.reading-pages body {
     display: none;
   }
   .library-heading h1 {
-    font-size: calc(32px * var(--ui-scale));
+    font-size: calc(var(--fs-title) * var(--ui-scale));
   }
   .mobile-settings {
     min-width: calc(32px * var(--ui-scale));
@@ -2188,7 +2115,7 @@ html.reading-pages body {
     margin-bottom: calc(30px * var(--ui-scale));
   }
   .home-section h2 {
-    font-size: calc(20px * var(--ui-scale));
+    font-size: calc(var(--fs-headline) * var(--ui-scale));
     margin-bottom: calc(16px * var(--ui-scale));
   }
   .continue-shelf {
@@ -2198,33 +2125,17 @@ html.reading-pages body {
   .continue-card {
     padding: calc(14px * var(--ui-scale));
     gap: calc(14px * var(--ui-scale));
-    border-radius: calc(15px * var(--ui-scale));
-  }
-  .continue-card .book-cover.small {
-    width: calc(68px * var(--ui-scale));
-    min-width: calc(68px * var(--ui-scale));
-    flex-basis: calc(68px * var(--ui-scale));
-    height: calc(102px * var(--ui-scale));
   }
   .continue-copy h3 {
-    font-size: calc(16px * var(--ui-scale));
-    line-height: 1.15;
     margin: calc(4px * var(--ui-scale)) 0;
   }
-  .continue-copy p {
-    font-size: calc(12px * var(--ui-scale));
-    margin: 0 0 calc(6px * var(--ui-scale));
-  }
   .continue-copy > small:first-child {
-    font-size: calc(9px * var(--ui-scale));
-  }
-  .continue-copy small {
-    font-size: calc(10px * var(--ui-scale));
+    font-size: calc(var(--fs-micro) * var(--ui-scale));
   }
   .continue-copy .primary {
     min-height: calc(29px * var(--ui-scale));
     padding: calc(5px * var(--ui-scale)) calc(10px * var(--ui-scale));
-    font-size: calc(11px * var(--ui-scale));
+    font-size: calc(var(--fs-footnote) * var(--ui-scale));
     margin-top: calc(9px * var(--ui-scale));
   }
   .new-words-card {
@@ -2232,17 +2143,17 @@ html.reading-pages body {
     gap: calc(10px * var(--ui-scale));
   }
   .new-words-card strong {
-    font-size: calc(12px * var(--ui-scale));
+    font-size: calc(var(--fs-small) * var(--ui-scale));
   }
   .new-words-card p {
-    font-size: calc(10px * var(--ui-scale));
+    font-size: calc(var(--fs-caption) * var(--ui-scale));
     line-height: 1.5;
   }
   .new-words-icon {
     display: none;
   }
   .new-words-card .pill {
-    font-size: calc(10px * var(--ui-scale));
+    font-size: calc(var(--fs-caption) * var(--ui-scale));
     min-width: calc(76px * var(--ui-scale));
     padding: calc(5px * var(--ui-scale)) calc(9px * var(--ui-scale));
     min-height: calc(29px * var(--ui-scale));
@@ -2258,7 +2169,7 @@ html.reading-pages body {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .book-status {
-    font-size: calc(10px * var(--ui-scale));
+    font-size: calc(var(--fs-caption) * var(--ui-scale));
     margin-top: calc(9px * var(--ui-scale));
   }
   .filter-tabs {
@@ -2267,7 +2178,7 @@ html.reading-pages body {
     margin-bottom: calc(22px * var(--ui-scale));
   }
   .filter-tabs button {
-    font-size: calc(11px * var(--ui-scale));
+    font-size: calc(var(--fs-footnote) * var(--ui-scale));
     padding: calc(5px * var(--ui-scale)) calc(12px * var(--ui-scale));
     min-height: calc(28px * var(--ui-scale));
   }
@@ -2280,25 +2191,16 @@ html.reading-pages body {
     background: color-mix(in srgb, var(--panel) 65%, transparent);
   }
   .bottom-nav button {
-    font-size: calc(9px * var(--ui-scale));
+    font-size: calc(var(--fs-micro) * var(--ui-scale));
     min-height: calc(48px * var(--ui-scale));
     padding: calc(5px * var(--ui-scale));
   }
-  .search-controls {
-    flex-direction: column;
-    align-items: stretch;
-    gap: calc(15px * var(--ui-scale));
-    margin-bottom: calc(22px * var(--ui-scale));
-  }
-  .search-controls .tabs {
-    min-width: 0;
-  }
   .search-controls .tabs button {
-    font-size: calc(10px * var(--ui-scale));
+    font-size: calc(var(--fs-caption) * var(--ui-scale));
     padding: calc(5px * var(--ui-scale)) calc(7px * var(--ui-scale));
   }
   .search-field input {
-    font-size: calc(12px * var(--ui-scale));
+    font-size: calc(var(--fs-small) * var(--ui-scale));
   }
   .search-result-list {
     border-radius: calc(13px * var(--ui-scale));
@@ -2309,16 +2211,16 @@ html.reading-pages body {
     gap: calc(10px * var(--ui-scale));
   }
   .book-result > span strong {
-    font-size: calc(12px * var(--ui-scale));
+    font-size: calc(var(--fs-small) * var(--ui-scale));
   }
   .book-result small {
-    font-size: calc(9px * var(--ui-scale));
+    font-size: calc(var(--fs-micro) * var(--ui-scale));
   }
   .result-book-heading h3 {
-    font-size: calc(13px * var(--ui-scale));
+    font-size: calc(var(--fs-body) * var(--ui-scale));
   }
   .text-hit {
-    font-size: calc(12px * var(--ui-scale));
+    font-size: calc(var(--fs-small) * var(--ui-scale));
     padding: calc(12px * var(--ui-scale)) calc(14px * var(--ui-scale));
   }
   .word-toolbar {
@@ -2331,7 +2233,7 @@ html.reading-pages body {
     min-width: 0;
   }
   .word-toolbar small {
-    font-size: calc(11px * var(--ui-scale));
+    font-size: calc(var(--fs-footnote) * var(--ui-scale));
   }
   .word-table-head {
     display: none;
@@ -2349,17 +2251,17 @@ html.reading-pages body {
     order: 2;
   }
   .word-main > span:first-child strong {
-    font-size: calc(13px * var(--ui-scale));
+    font-size: calc(var(--fs-body) * var(--ui-scale));
   }
   .word-main > span:first-child small {
     display: inline;
-    font-size: calc(10px * var(--ui-scale));
+    font-size: calc(var(--fs-caption) * var(--ui-scale));
   }
   .word-translation {
-    font-size: calc(12px * var(--ui-scale));
+    font-size: calc(var(--fs-small) * var(--ui-scale));
   }
   .word-sentence {
-    font-size: calc(10px * var(--ui-scale));
+    font-size: calc(var(--fs-caption) * var(--ui-scale));
   }
   .word-book {
     width: calc(25px * var(--ui-scale));
@@ -2403,7 +2305,7 @@ html.reading-pages body {
     width: max-content;
   }
   .selection-bar button {
-    font-size: calc(11px * var(--ui-scale));
+    font-size: calc(var(--fs-footnote) * var(--ui-scale));
     padding: calc(7px * var(--ui-scale)) calc(10px * var(--ui-scale));
     min-height: calc(33px * var(--ui-scale));
   }
@@ -2433,33 +2335,14 @@ html.reading-pages body {
     margin-top: calc(20px * var(--ui-scale));
   }
   .modal .setting-row {
-    font-size: calc(12px * var(--ui-scale));
+    font-size: calc(var(--fs-small) * var(--ui-scale));
   }
   .book-details {
     display: flex;
     flex-direction: column;
-    gap: calc(22px * var(--ui-scale));
-  }
-  .book-details > .book-cover {
-    width: calc(145px * var(--ui-scale));
-    min-width: calc(145px * var(--ui-scale));
-    flex-basis: auto;
   }
   .book-details > div:last-child {
     width: 100%;
-  }
-  .book-details h2 {
-    font-size: calc(25px * var(--ui-scale));
-  }
-  .book-details p {
-    font-size: calc(12px * var(--ui-scale));
-  }
-  .book-details .eyebrow {
-    font-size: calc(9px * var(--ui-scale));
-  }
-  .book-details .detail-actions button {
-    font-size: calc(12px * var(--ui-scale));
-    min-height: calc(35px * var(--ui-scale));
   }
   .book-details .progress {
     margin-top: calc(10px * var(--ui-scale));
@@ -2476,38 +2359,11 @@ html.reading-pages body {
   .folio-chapter-title {
     margin: calc(22px * var(--ui-scale)) 0 calc(42px * var(--ui-scale));
   }
-  .folio-toolbar {
-    top: calc(18px * var(--ui-scale));
-    left: calc(18px * var(--ui-scale));
-    right: calc(18px * var(--ui-scale));
-  }
   .folio-running-title {
     top: calc(29px * var(--ui-scale));
     left: 18%;
     right: 18%;
-    font-size: calc(9px * var(--ui-scale));
-  }
-  .folio-toolbar-title,
-  .desktop-contents,
-  .reader-mode-tabs,
-  .folio-toolbar-end > .folio-aa,
-  .desktop-audio,
-  .desktop-bookmark {
-    display: none;
-  }
-  .mobile-reader-menu {
-    display: inline-flex;
-  }
-  .folio-round {
-    width: calc(32px * var(--ui-scale));
-    min-width: calc(32px * var(--ui-scale));
-    height: calc(32px * var(--ui-scale));
-    min-height: calc(32px * var(--ui-scale));
-    padding: calc(7px * var(--ui-scale));
-  }
-  .folio-page-number {
-    bottom: calc(30px * var(--ui-scale));
-    font-size: calc(10px * var(--ui-scale));
+    font-size: calc(var(--fs-micro) * var(--ui-scale));
   }
   .folio-bottom {
     bottom: calc(15px * var(--ui-scale));
@@ -2520,28 +2376,11 @@ html.reading-pages body {
     width: calc(170px * var(--ui-scale));
   }
   .folio-popover {
-    right: calc(12px * var(--ui-scale));
     left: auto;
-    bottom: calc(15px * var(--ui-scale));
-    top: auto;
-    width: calc(100vw - calc(24px * var(--ui-scale)));
-    max-height: 82dvh;
-    border-radius: calc(24px * var(--ui-scale));
-    padding: calc(18px * var(--ui-scale));
-  }
-  .folio-popover.contents {
-    left: calc(12px * var(--ui-scale));
-    right: calc(12px * var(--ui-scale));
-    width: auto;
   }
   .folio-popover.contents nav {
     max-height: 52dvh;
     overflow-y: auto;
-  }
-  .reading-menu {
-    right: calc(16px * var(--ui-scale));
-    bottom: calc(75px * var(--ui-scale));
-    width: calc(280px * var(--ui-scale));
   }
   .folio-columns .parallel-row {
     display: block;
@@ -2550,16 +2389,6 @@ html.reading-pages body {
   .folio-columns .parallel-row .translation {
     margin: 0.5em 0 1em;
     font-size: 0.86em;
-  }
-  .themes-panel .setting-row,
-  .themes-panel .switch-label {
-    font-size: calc(12px * var(--ui-scale));
-  }
-  .theme-grid {
-    gap: calc(12px * var(--ui-scale));
-  }
-  .theme-tile {
-    min-height: calc(72px * var(--ui-scale));
   }
   .toast {
     bottom: calc(90px * var(--ui-scale));
@@ -2576,13 +2405,6 @@ html.reading-pages body {
     animation: none !important;
     transition: none !important;
   }
-}
-
-.controls-visible .folio-running-title {
-  opacity: 0;
-}
-.continue-card {
-  cursor: pointer;
 }
 
 .curl-leaf {
@@ -2698,7 +2520,7 @@ html.reading-pages body {
   text-align: left;
 }
 .collection-nav-row small {
-  font-size: calc(10px * var(--ui-scale));
+  font-size: calc(var(--fs-caption) * var(--ui-scale));
   color: var(--muted);
 }
 .collection-nav-row.drop-target {
@@ -2713,12 +2535,11 @@ html.reading-pages body {
   min-height: calc(28px * var(--ui-scale));
   padding: 0 calc(4px * var(--ui-scale));
   color: var(--muted);
-  font-size: calc(18px * var(--ui-scale));
+  font-size: calc(var(--fs-headline) * var(--ui-scale));
 }
 .new-collection {
   color: var(--teal);
-  font-size: calc(11px * var(--ui-scale));
-  width: 100%;
+  font-size: calc(var(--fs-footnote) * var(--ui-scale));
 }
 .collection-strip {
   display: flex;
@@ -2728,7 +2549,7 @@ html.reading-pages body {
   flex-wrap: wrap;
 }
 .collection-strip > span {
-  font-size: calc(11px * var(--ui-scale));
+  font-size: calc(var(--fs-footnote) * var(--ui-scale));
   color: var(--muted);
 }
 .collection-chips {
@@ -2741,7 +2562,7 @@ html.reading-pages body {
 }
 .collection-chips > .pill {
   white-space: nowrap;
-  font-size: calc(11px * var(--ui-scale));
+  font-size: calc(var(--fs-footnote) * var(--ui-scale));
   min-height: calc(30px * var(--ui-scale));
   padding: calc(5px * var(--ui-scale)) calc(12px * var(--ui-scale));
 }
@@ -2754,14 +2575,14 @@ html.reading-pages body {
   min-width: calc(30px * var(--ui-scale));
   height: calc(30px * var(--ui-scale));
   min-height: calc(30px * var(--ui-scale));
-  font-size: calc(18px * var(--ui-scale));
+  font-size: calc(var(--fs-headline) * var(--ui-scale));
   padding: calc(6px * var(--ui-scale));
 }
 .collection-name-label {
   display: flex;
   flex-direction: column;
   gap: calc(9px * var(--ui-scale));
-  font-size: calc(12px * var(--ui-scale));
+  font-size: calc(var(--fs-small) * var(--ui-scale));
 }
 .collection-name-label > input {
   width: 100%;
@@ -2769,7 +2590,7 @@ html.reading-pages body {
   border-radius: calc(11px * var(--ui-scale));
   padding: calc(12px * var(--ui-scale));
   background: #8882;
-  font-size: calc(15px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
 }
 .collection-order {
   display: flex;
@@ -2781,11 +2602,11 @@ html.reading-pages body {
 }
 .collection-order > span {
   flex: 1;
-  font-size: calc(11px * var(--ui-scale));
+  font-size: calc(var(--fs-footnote) * var(--ui-scale));
   min-width: calc(90px * var(--ui-scale));
 }
 .collection-order > button {
-  font-size: calc(11px * var(--ui-scale));
+  font-size: calc(var(--fs-footnote) * var(--ui-scale));
   padding: calc(6px * var(--ui-scale)) calc(10px * var(--ui-scale));
   min-height: calc(31px * var(--ui-scale));
   border: 0;
@@ -2802,7 +2623,7 @@ html.reading-pages body {
   gap: calc(12px * var(--ui-scale));
   padding: calc(13px * var(--ui-scale)) calc(15px * var(--ui-scale));
   border-bottom: calc(1px * var(--ui-scale)) solid var(--border);
-  font-size: calc(13px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
   cursor: pointer;
 }
 .collection-book-list input {
@@ -2816,7 +2637,7 @@ html.reading-pages body {
 .collection-book-list small {
   display: block;
   color: var(--muted);
-  font-size: calc(10px * var(--ui-scale));
+  font-size: calc(var(--fs-caption) * var(--ui-scale));
   margin-top: calc(3px * var(--ui-scale));
 }
 .collection-book-list + button {
@@ -2833,7 +2654,7 @@ html.reading-pages body {
   width: 100%;
   justify-content: flex-start;
   padding: calc(13px * var(--ui-scale)) calc(15px * var(--ui-scale));
-  font-size: calc(13px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
 }
 .move-collection-list > button > span {
   flex: 1;
@@ -2853,27 +2674,22 @@ html.reading-pages body {
   }
   .collection-strip > span {
     width: 100%;
-    font-size: calc(10px * var(--ui-scale));
+    font-size: calc(var(--fs-caption) * var(--ui-scale));
   }
   .collection-order {
     gap: calc(6px * var(--ui-scale));
     padding: calc(10px * var(--ui-scale));
   }
   .collection-order > button {
-    font-size: calc(10px * var(--ui-scale));
+    font-size: calc(var(--fs-caption) * var(--ui-scale));
     padding: calc(6px * var(--ui-scale)) calc(8px * var(--ui-scale));
   }
   .collection-name-label > input {
-    font-size: calc(16px * var(--ui-scale));
+    font-size: calc(var(--fs-body) * var(--ui-scale));
   }
   .collection-book-list {
     max-height: 34dvh;
   }
-}
-
-.is-selecting .word-row {
-  user-select: none;
-  -webkit-user-select: none;
 }
 
 /* Finder-like insertion cues keep the current folder readable while sorting. */
@@ -2910,7 +2726,6 @@ html.reading-pages body {
 .folder-context-menu {
   position: fixed;
   z-index: 1600;
-  width: calc(224px * var(--ui-scale));
   padding: calc(5px * var(--ui-scale));
   background: var(--panel);
   border: calc(1px * var(--ui-scale)) solid var(--border);
@@ -2963,7 +2778,6 @@ body,
 }
 .continue-card {
   flex-basis: min(calc(360px * var(--ui-scale)), 88%);
-  display: block;
   padding: 0;
   border-radius: calc(16px * var(--ui-scale));
   background: color-mix(in srgb, var(--reading-cover) 34%, var(--panel));
@@ -2973,7 +2787,6 @@ body,
   align-items: center;
   justify-content: flex-start;
   gap: calc(14px * var(--ui-scale));
-  width: 100%;
   min-height: calc(124px * var(--ui-scale));
   padding: calc(14px * var(--ui-scale));
   border: 0;
@@ -3040,7 +2853,7 @@ body,
   min-height: calc(80px * var(--ui-scale));
   gap: calc(8px * var(--ui-scale));
   padding: calc(12px * var(--ui-scale)) calc(8px * var(--ui-scale));
-  font-size: calc(13px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
   line-height: 1.3;
 }
 .continue-menu-shortcuts button:hover,
@@ -3060,22 +2873,20 @@ body,
 }
 .continue-copy h3 {
   margin: 0 0 calc(4px * var(--ui-scale));
-  font-size: calc(17px * var(--ui-scale));
+  font-size: calc(var(--fs-headline) * var(--ui-scale));
   line-height: 1.25;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
   overflow: hidden;
 }
 .continue-copy p {
-  font-size: calc(15px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
   line-height: 1.35;
   color: inherit;
   opacity: 0.86;
   margin: 0 0 calc(4px * var(--ui-scale));
 }
 .continue-copy .continue-meta {
-  font-size: calc(12px * var(--ui-scale));
+  font-size: calc(var(--fs-small) * var(--ui-scale));
   color: inherit;
   opacity: 0.75;
   letter-spacing: 0;
@@ -3103,7 +2914,7 @@ body,
   border-color: var(--muted);
 }
 .search-page .search-field input {
-  font-size: calc(16px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
   padding: calc(13px * var(--ui-scale)) 0;
 }
 .search-page .search-controls .tabs {
@@ -3120,11 +2931,11 @@ body,
 }
 .recently-viewed-heading h2 {
   margin: 0;
-  font-size: calc(26px * var(--ui-scale));
+  font-size: calc(var(--fs-headline) * var(--ui-scale));
 }
 .search-clear {
-  color: #0a84ff;
-  font-size: calc(15px * var(--ui-scale));
+  color: var(--teal);
+  font-size: calc(var(--fs-body) * var(--ui-scale));
   padding: calc(4px * var(--ui-scale));
 }
 .search-page .search-result-list {
@@ -3162,19 +2973,19 @@ body,
   border: 0;
   min-height: 0;
   border-radius: 0;
-  font-size: calc(19px * var(--ui-scale));
+  font-size: calc(var(--fs-headline) * var(--ui-scale));
   text-align: left;
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
 .search-book-copy p {
-  font-size: calc(17px * var(--ui-scale));
+  font-size: calc(var(--fs-headline) * var(--ui-scale));
   margin: calc(4px * var(--ui-scale)) 0;
   color: var(--text);
 }
 .search-book-copy small {
   display: block;
-  font-size: calc(14px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
   color: var(--muted);
 }
 .search-book-read {
@@ -3185,7 +2996,7 @@ body,
 }
 .search-empty {
   margin-top: calc(28px * var(--ui-scale));
-  font-size: calc(14px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
 }
 @media (max-width: 700px) {
   .continue-open {
@@ -3193,19 +3004,19 @@ body,
     gap: calc(12px * var(--ui-scale));
   }
   .continue-copy h3 {
-    font-size: calc(16px * var(--ui-scale));
+    font-size: calc(var(--fs-body) * var(--ui-scale));
   }
   .continue-copy p {
-    font-size: calc(13px * var(--ui-scale));
+    font-size: calc(var(--fs-body) * var(--ui-scale));
   }
   .continue-copy .continue-meta {
-    font-size: calc(11px * var(--ui-scale));
+    font-size: calc(var(--fs-footnote) * var(--ui-scale));
   }
   .search-page .search-controls {
     margin-bottom: calc(32px * var(--ui-scale));
   }
   .recently-viewed-heading h2 {
-    font-size: calc(23px * var(--ui-scale));
+    font-size: calc(var(--fs-headline) * var(--ui-scale));
   }
   .search-book-row {
     gap: calc(18px * var(--ui-scale));
@@ -3218,27 +3029,23 @@ body,
     height: calc(120px * var(--ui-scale));
   }
   .search-book-title {
-    font-size: calc(16px * var(--ui-scale));
+    font-size: calc(var(--fs-body) * var(--ui-scale));
   }
   .search-book-copy p {
-    font-size: calc(15px * var(--ui-scale));
+    font-size: calc(var(--fs-body) * var(--ui-scale));
   }
   .search-book-copy small {
-    font-size: calc(12px * var(--ui-scale));
+    font-size: calc(var(--fs-small) * var(--ui-scale));
   }
 }
 
 /* One reading menu on every device; the exit stays at the opposite corner. */
 .books-reader .folio-toolbar {
   top: auto;
-  bottom: max(
-    calc(16px * var(--ui-scale)),
-    calc(env(safe-area-inset-bottom) + calc(12px * var(--ui-scale)))
-  );
   left: max(calc(18px * var(--ui-scale)), env(safe-area-inset-left));
   right: max(calc(18px * var(--ui-scale)), env(safe-area-inset-right));
-  min-height: calc(52px * var(--ui-scale));
   justify-content: center;
+  pointer-events: none;
 }
 .books-reader .folio-toolbar .folio-bottom {
   max-width: min(
@@ -3248,7 +3055,7 @@ body,
   padding: calc(9px * var(--ui-scale)) calc(14px * var(--ui-scale));
 }
 .books-reader .folio-slider {
-  font-size: calc(12px * var(--ui-scale));
+  font-size: calc(var(--fs-small) * var(--ui-scale));
 }
 .books-reader .reader-exit,
 .books-reader .reader-tools-button {
@@ -3312,18 +3119,10 @@ body,
   overflow-y: auto;
   overscroll-behavior: contain;
 }
-.books-reader .reading-menu {
-  width: min(
-    calc(420px * var(--ui-scale)),
-    calc(100vw - calc(36px * var(--ui-scale)))
-  );
-  padding: calc(18px * var(--ui-scale));
-  border-radius: calc(26px * var(--ui-scale));
-}
 .books-reader .reading-menu > button {
   min-height: calc(56px * var(--ui-scale));
   padding: calc(14px * var(--ui-scale)) calc(16px * var(--ui-scale));
-  font-size: calc(17px * var(--ui-scale));
+  font-size: calc(var(--fs-headline) * var(--ui-scale));
 }
 .books-reader .reading-menu .reader-mode-tabs {
   display: flex;
@@ -3334,7 +3133,7 @@ body,
   min-width: 0;
   min-height: calc(48px * var(--ui-scale));
   padding: calc(8px * var(--ui-scale)) calc(6px * var(--ui-scale));
-  font-size: calc(15px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
 }
 .books-reader .reading-menu-icons button {
   width: calc(52px * var(--ui-scale));
@@ -3345,14 +3144,6 @@ body,
   width: calc(24px * var(--ui-scale));
   height: calc(24px * var(--ui-scale));
   flex-shrink: 0;
-}
-.books-reader .folio-popover.type {
-  width: min(
-    calc(400px * var(--ui-scale)),
-    calc(100vw - calc(36px * var(--ui-scale)))
-  );
-  padding: calc(16px * var(--ui-scale));
-  border-radius: calc(28px * var(--ui-scale));
 }
 
 [data-book-surface],
@@ -3389,14 +3180,13 @@ body,
   background: var(--panel);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  overscroll-behavior: contain;
 }
 .modal-backdrop:has(> .book-details-modal) {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
 .book-details-modal > .row:first-child h2 {
-  font-size: calc(22px * var(--ui-scale));
+  font-size: calc(var(--fs-headline) * var(--ui-scale));
 }
 .book-details-modal > .row:first-child .icon {
   width: calc(48px * var(--ui-scale));
@@ -3414,19 +3204,19 @@ body,
   flex: 0 0 calc(200px * var(--ui-scale));
 }
 .book-details-modal .book-details h2 {
-  font-size: calc(34px * var(--ui-scale));
+  font-size: calc(var(--fs-title) * var(--ui-scale));
   line-height: 1.2;
   overflow-wrap: anywhere;
 }
 .book-details-modal .book-details p {
-  font-size: calc(17px * var(--ui-scale));
+  font-size: calc(var(--fs-headline) * var(--ui-scale));
   line-height: 1.5;
 }
 .book-details-modal .book-details .eyebrow {
-  font-size: calc(13px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
 }
 .book-details-modal .book-details .muted {
-  font-size: calc(15px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
 }
 .book-details-modal .detail-actions {
   flex-wrap: wrap;
@@ -3436,7 +3226,7 @@ body,
 .book-details-modal .detail-actions button {
   min-height: calc(52px * var(--ui-scale));
   padding: calc(12px * var(--ui-scale)) calc(16px * var(--ui-scale));
-  font-size: calc(17px * var(--ui-scale));
+  font-size: calc(var(--fs-headline) * var(--ui-scale));
 }
 .book-details-modal .detail-more {
   margin-top: calc(28px * var(--ui-scale));
@@ -3444,7 +3234,7 @@ body,
 .book-details-modal .detail-more button {
   min-height: calc(64px * var(--ui-scale));
   padding: calc(16px * var(--ui-scale)) calc(20px * var(--ui-scale));
-  font-size: calc(17px * var(--ui-scale));
+  font-size: calc(var(--fs-headline) * var(--ui-scale));
   text-align: left;
 }
 .book-details-modal .detail-more svg {
@@ -3467,7 +3257,7 @@ body,
     flex: 0 0 auto;
   }
   .book-details-modal .book-details h2 {
-    font-size: calc(29px * var(--ui-scale));
+    font-size: calc(var(--fs-title) * var(--ui-scale));
   }
 }
 @media (hover: none) {
@@ -3479,10 +3269,9 @@ body,
   grid-template-columns: calc(35.2px * var(--ui-scale)) 1fr calc(
       35.2px * var(--ui-scale)
     );
-  margin-bottom: calc(17.6px * var(--ui-scale));
 }
 .themes-panel .sheet-heading > strong {
-  font-size: calc(14.4px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
 }
 .themes-panel .sheet-heading .round {
   width: calc(35.2px * var(--ui-scale));
@@ -3493,7 +3282,7 @@ body,
 }
 .themes-panel .appearance-tools > button {
   min-height: calc(40px * var(--ui-scale));
-  font-size: calc(17.6px * var(--ui-scale));
+  font-size: calc(var(--fs-headline) * var(--ui-scale));
 }
 .themes-panel .theme-grid {
   gap: calc(11.2px * var(--ui-scale));
@@ -3507,12 +3296,12 @@ body,
   font-size: calc(24px * var(--ui-scale));
 }
 .themes-panel .theme-tile small {
-  font-size: calc(10.4px * var(--ui-scale));
+  font-size: calc(var(--fs-footnote) * var(--ui-scale));
   line-height: 1.3;
 }
 .themes-panel > .wide {
   min-height: calc(40px * var(--ui-scale));
-  font-size: calc(12.8px * var(--ui-scale));
+  font-size: calc(var(--fs-small) * var(--ui-scale));
 }
 .themes-panel .setting-row,
 .themes-panel .switch-label,
@@ -3520,7 +3309,7 @@ body,
 .themes-panel .font-list button,
 .themes-panel select {
   min-height: calc(41.6px * var(--ui-scale));
-  font-size: calc(12.8px * var(--ui-scale));
+  font-size: calc(var(--fs-small) * var(--ui-scale));
 }
 .themes-panel .range-row {
   padding: calc(14.4px * var(--ui-scale)) calc(12.8px * var(--ui-scale));
@@ -3537,26 +3326,17 @@ body,
   flex-wrap: wrap;
   gap: calc(9.6px * var(--ui-scale));
 }
-.themes-panel .swatches button {
-  width: calc(22.4px * var(--ui-scale));
-  min-width: calc(22.4px * var(--ui-scale));
-  height: calc(22.4px * var(--ui-scale));
-  min-height: calc(22.4px * var(--ui-scale));
-}
 .themes-panel .turn-menu {
   width: calc(176px * var(--ui-scale));
   top: calc(48px * var(--ui-scale));
 }
 .themes-panel .turn-menu button {
   min-height: calc(38.4px * var(--ui-scale));
-  font-size: calc(12.8px * var(--ui-scale));
+  font-size: calc(var(--fs-small) * var(--ui-scale));
 }
 @media (max-width: 520px) {
   .themes-panel .theme-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .books-reader .folio-popover.type {
-    padding: calc(16px * var(--ui-scale));
   }
 }
 
@@ -3566,7 +3346,7 @@ body,
   height: calc(var(--icon-size) * var(--ui-scale, 1));
 }
 .interface-size .range-row {
-  font-size: calc(14px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
   gap: calc(12px * var(--ui-scale));
 }
 .interface-size .range-row > span {
@@ -3628,14 +3408,14 @@ body,
   min-width: 0;
 }
 .word-popover h2 {
-  font-size: calc(20px * var(--ui-scale));
+  font-size: calc(var(--fs-headline) * var(--ui-scale));
   line-height: 1.25;
   overflow-wrap: anywhere;
 }
 .word-popover .muted {
   display: block;
   margin-top: calc(4px * var(--ui-scale));
-  font-size: calc(10px * var(--ui-scale));
+  font-size: calc(var(--fs-caption) * var(--ui-scale));
   line-height: 1.4;
 }
 .word-panel-actions {
@@ -3651,7 +3431,7 @@ body,
 }
 .word-popover .word-panel > p {
   margin: calc(10px * var(--ui-scale)) 0;
-  font-size: calc(13px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
   line-height: 1.45;
 }
 .word-popover .word-context {
@@ -3660,7 +3440,7 @@ body,
 }
 .word-context summary {
   cursor: pointer;
-  font-size: calc(11px * var(--ui-scale));
+  font-size: calc(var(--fs-footnote) * var(--ui-scale));
   color: var(--folio-muted);
 }
 .word-context[open] summary {
@@ -3669,10 +3449,7 @@ body,
 .word-popover .primary {
   min-height: calc(36px * var(--ui-scale));
   padding: calc(8px * var(--ui-scale));
-  font-size: calc(12px * var(--ui-scale));
-}
-.folio-columns .word {
-  filter: none;
+  font-size: calc(var(--fs-small) * var(--ui-scale));
 }
 
 /* Every reading panel opens beside the menu at the right edge. */
@@ -3681,17 +3458,10 @@ body,
 .books-reader .folio-popover.words {
   left: auto;
   right: max(calc(18px * var(--ui-scale)), env(safe-area-inset-right));
-  width: min(
-    calc(380px * var(--ui-scale)),
-    calc(100vw - calc(36px * var(--ui-scale)))
-  );
-}
-.books-reader .folio-popover input[type="range"] {
-  touch-action: none;
 }
 .themes-panel .interface-size .range-row {
   padding: calc(10px * var(--ui-scale)) calc(12px * var(--ui-scale));
-  font-size: calc(12px * var(--ui-scale));
+  font-size: calc(var(--fs-small) * var(--ui-scale));
 }
 .themes-panel .interface-size-reset {
   min-height: calc(36px * var(--ui-scale));
@@ -3700,10 +3470,6 @@ body,
 .themes-panel select {
   max-width: 100%;
   min-width: 0;
-}
-.folio-popover.words h2 {
-  font: 600 calc(15px * var(--ui-scale)) system-ui;
-  margin: 0;
 }
 .reader-word-list {
   display: grid;
@@ -3715,7 +3481,6 @@ body,
   gap: calc(6px * var(--ui-scale)) calc(10px * var(--ui-scale));
   padding: calc(12px * var(--ui-scale));
   background: #8882;
-  border-radius: calc(12px * var(--ui-scale));
 }
 .reader-saved-word details {
   min-width: 0;
@@ -3726,11 +3491,11 @@ body,
   overflow-wrap: anywhere;
 }
 .reader-saved-word summary strong {
-  font-size: calc(15px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
 }
 .reader-saved-word summary small {
   display: block;
-  font-size: calc(11px * var(--ui-scale));
+  font-size: calc(var(--fs-footnote) * var(--ui-scale));
   margin-top: calc(4px * var(--ui-scale));
 }
 .reader-saved-word > .round {
@@ -3739,7 +3504,7 @@ body,
 }
 .reader-saved-word p,
 .reader-saved-word blockquote {
-  font-size: calc(13px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
   line-height: 1.5;
   margin: calc(6px * var(--ui-scale)) 0 0;
   overflow-wrap: anywhere;
@@ -3789,16 +3554,11 @@ body,
 .books-reader .folio-popover.contents .chapter-entry {
   min-height: calc(52px * var(--ui-scale));
   padding: calc(12px * var(--ui-scale));
+  border-radius: calc(22px * var(--ui-scale));
 }
 .books-reader .folio-popover.contents .chapter-entry strong {
-  font-size: calc(18px * var(--ui-scale));
+  font-size: calc(var(--fs-headline) * var(--ui-scale));
   line-height: 1.45;
-}
-.folio-popover.search h2 {
-  font: 600 calc(15px * var(--ui-scale)) system-ui;
-}
-.folio-popover.search > .row {
-  margin-bottom: calc(12px * var(--ui-scale));
 }
 .page-turn-control {
   position: static;
@@ -3819,33 +3579,27 @@ body,
 }
 .themes-panel .page-turn-control .turn-menu button {
   min-height: calc(42px * var(--ui-scale));
-  font-size: calc(13px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
 }
 
 /* Menus cover the page instead of reserving space in its text layout. */
 .books-reader .folio-columns {
   transition: none;
-}
-.books-reader .folio-popover.search {
-  width: min(
-    calc(560px * var(--ui-scale)),
-    calc(100vw - 36px * var(--ui-scale))
-  );
-  padding: calc(20px * var(--ui-scale));
+  --ui-scale: 1.08;
 }
 .books-reader .folio-popover.search h2 {
-  font-size: calc(20px * var(--ui-scale));
+  font-size: calc(var(--fs-headline) * var(--ui-scale));
 }
 .books-reader .folio-popover.search .book-search {
   min-height: calc(56px * var(--ui-scale));
-  font-size: calc(18px * var(--ui-scale));
+  font-size: calc(var(--fs-headline) * var(--ui-scale));
   padding: calc(14px * var(--ui-scale)) calc(16px * var(--ui-scale));
 }
 .books-reader .folio-popover.search .page-entry strong {
-  font-size: calc(17px * var(--ui-scale));
+  font-size: calc(var(--fs-headline) * var(--ui-scale));
 }
 .books-reader .folio-popover.search .page-entry small {
-  font-size: calc(15px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
   max-width: none;
 }
 .books-reader button:not(:disabled):active,
@@ -3990,7 +3744,6 @@ body,
 .books-reader .folio-toolbar {
   min-height: 0;
   bottom: max(14px, env(safe-area-inset-bottom));
-  pointer-events: none;
 }
 .reader-page-count {
   font: 12px/1.5 system-ui;
@@ -4037,8 +3790,6 @@ body,
   position: absolute;
   inset: 0;
   opacity: 0;
-  width: 100%;
-  height: 100%;
   margin: 0;
   padding: 0;
   cursor: ew-resize;
@@ -4059,16 +3810,13 @@ body,
   overflow: visible;
 }
 .filled-interface-size .filled-control-label {
-  font-size: calc(15px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
 }
 .filled-interface-size .interface-size-reset {
   margin-top: calc(8px * var(--ui-scale));
-  font-size: calc(12px * var(--ui-scale));
+  font-size: calc(var(--fs-small) * var(--ui-scale));
 }
 /* Interface scaling affects controls, never the book's chapter headings. */
-.books-reader .folio-columns {
-  --ui-scale: 1.08;
-}
 .books-reader .reading-menu {
   display: flex;
   flex-direction: column;
@@ -4118,7 +3866,6 @@ body,
   box-shadow: 0 8px 24px #0002;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  scrollbar-width: none;
 }
 .books-reader
   .folio-popover
@@ -4158,15 +3905,12 @@ body,
   border-radius: 999px;
   min-height: calc(56px * var(--ui-scale));
   padding: calc(14px * var(--ui-scale)) calc(16px * var(--ui-scale));
-  font-size: calc(18px * var(--ui-scale));
+  font-size: calc(var(--fs-headline) * var(--ui-scale));
   margin-bottom: calc(8px * var(--ui-scale));
 }
 .books-reader .folio-popover nav {
   display: grid;
   gap: calc(8px * var(--ui-scale));
-}
-.books-reader .folio-popover.contents .chapter-entry {
-  border-radius: calc(22px * var(--ui-scale));
 }
 .books-reader .themes-panel .appearance-tools,
 .books-reader .themes-panel > .wide {
@@ -4365,19 +4109,14 @@ body,
   font-weight: 600;
   border-radius: calc(18px * var(--ui-scale));
 }
-
-.modal-backdrop {
-  overscroll-behavior: none;
-}
 .modal {
-  overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
 }
 .settings-group .filled-control {
   margin: calc(8px * var(--ui-scale));
 }
 .settings-group .filled-control-label {
-  font-size: calc(13px * var(--ui-scale));
+  font-size: calc(var(--fs-body) * var(--ui-scale));
 }
 .filled-control:has(input:disabled) {
   opacity: 0.55;
@@ -4507,4 +4246,111 @@ body,
 body:has(.library-main :is(.home-section, .filter-tabs))
   .modal-backdrop:has(> .book-details-modal) {
   animation-duration: 200ms !important;
+}
+
+/* Density for a mouse or trackpad. Touch keeps finger-sized targets (44 px
+   and more); a pointer needs about 30-40 px. Sizes are design pixels times
+   --ui-scale (1 in the library, 0.9 for reading controls; input-density.ts),
+   and the interface size settings still scale them. Keep pointer-only sizes
+   here rather than scattered through the file. */
+@media (hover: hover) and (pointer: fine) {
+  /* Library and dialogs. */
+  .round {
+    width: calc(32px * var(--ui-scale));
+    height: calc(32px * var(--ui-scale));
+    min-width: calc(32px * var(--ui-scale));
+    min-height: calc(32px * var(--ui-scale));
+    padding: calc(7px * var(--ui-scale));
+  }
+  .pill {
+    min-height: calc(30px * var(--ui-scale));
+    padding: calc(5px * var(--ui-scale)) calc(12px * var(--ui-scale));
+  }
+  .sidebar-item {
+    min-height: calc(30px * var(--ui-scale));
+    padding: calc(6px * var(--ui-scale)) calc(10px * var(--ui-scale));
+  }
+  .setting-row,
+  .switch-label {
+    min-height: calc(40px * var(--ui-scale));
+  }
+  .filled-control-label {
+    min-height: calc(36px * var(--ui-scale));
+  }
+  .font-list button {
+    min-height: calc(34px * var(--ui-scale));
+  }
+  .continue-more {
+    min-height: calc(32px * var(--ui-scale));
+  }
+  .continue-context-menu > button {
+    min-height: calc(34px * var(--ui-scale));
+  }
+  .continue-menu-shortcuts button {
+    min-height: calc(60px * var(--ui-scale));
+  }
+  .book-details-modal > .row:first-child .icon {
+    width: calc(36px * var(--ui-scale));
+    min-width: calc(36px * var(--ui-scale));
+    height: calc(36px * var(--ui-scale));
+    min-height: calc(36px * var(--ui-scale));
+  }
+  .book-details-modal .detail-actions button {
+    min-height: calc(38px * var(--ui-scale));
+    padding: calc(8px * var(--ui-scale)) calc(16px * var(--ui-scale));
+  }
+  .book-details-modal .detail-more button {
+    min-height: calc(42px * var(--ui-scale));
+    padding: calc(10px * var(--ui-scale)) calc(16px * var(--ui-scale));
+  }
+
+  /* Reading controls. */
+  .books-reader .reader-exit,
+  .books-reader .reader-tools-button {
+    width: calc(44px * var(--ui-scale));
+    min-width: calc(44px * var(--ui-scale));
+    height: calc(44px * var(--ui-scale));
+    min-height: calc(44px * var(--ui-scale));
+    padding: calc(10px * var(--ui-scale));
+  }
+  /* The menu and its panels (Themes, Contents, Search) share one width. */
+  .books-reader :is(.reading-menu, .folio-popover).glass {
+    width: min(
+      calc(380px * var(--ui-scale)),
+      calc(100vw - 36px * var(--ui-scale))
+    );
+  }
+  .books-reader .reading-menu > button {
+    min-height: calc(44px * var(--ui-scale));
+    padding: calc(10px * var(--ui-scale)) calc(14px * var(--ui-scale));
+  }
+  .books-reader .reading-menu .reader-mode-tabs button {
+    min-height: calc(40px * var(--ui-scale));
+  }
+  .books-reader .reading-menu-icons button {
+    min-height: calc(44px * var(--ui-scale));
+  }
+  .books-reader .folio-popover :is(.sheet-heading, .reader-panel-heading),
+  .books-reader .folio-popover .book-search,
+  .books-reader .folio-popover.search .book-search {
+    min-height: calc(44px * var(--ui-scale));
+  }
+  .books-reader .folio-popover.contents .chapter-entry {
+    min-height: calc(42px * var(--ui-scale));
+  }
+  .page-entry {
+    min-height: calc(44px * var(--ui-scale));
+  }
+  .themes-panel .theme-tile {
+    min-height: calc(64px * var(--ui-scale));
+  }
+  .themes-panel .appearance-tools > button,
+  .themes-panel > .wide,
+  .page-turn-control > button {
+    min-height: calc(36px * var(--ui-scale));
+  }
+  .themes-panel .page-turn-control .turn-menu button,
+  .themes-panel .turn-menu button {
+    min-height: calc(34px * var(--ui-scale));
+  }
 }

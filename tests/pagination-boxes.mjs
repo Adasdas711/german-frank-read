@@ -1,6 +1,6 @@
 import { chromium } from "playwright-core";
 import { createServer } from "node:http";
-import { readFile } from "node:fs/promises";
+import { readFile, mkdir } from "node:fs/promises";
 import assert from "node:assert/strict";
 
 // Reproduce the algorithmic failure independently of browser-specific element
@@ -10,7 +10,8 @@ const html = await readFile(process.env.READER_HTML || "index.html");
 const server = createServer((_, res) => res.end(html));
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const browser = await chromium.launch({
-  executablePath: "/usr/bin/chromium",
+  // CI sets CHROME_PATH to the runner's browser.
+  executablePath: process.env.CHROME_PATH || "/usr/bin/chromium",
   args: ["--no-sandbox"],
 });
 try {
@@ -85,6 +86,43 @@ try {
           r.bottom <= v.bottom + 1,
       );
     });
+  if (!lastVisible) {
+    // Diagnostics for CI, where the browser version differs from local runs.
+    await mkdir(".test-results/pagination-boxes", { recursive: true });
+    await p.screenshot({
+      path: ".test-results/pagination-boxes/last-page.png",
+    });
+    console.log(
+      JSON.stringify(
+        await p.evaluate(() => {
+          const word = [...document.querySelectorAll("[data-book-char]")].at(
+            -1,
+          );
+          const range = document.createRange();
+          range.selectNodeContents(word);
+          return {
+            browser: navigator.userAgent,
+            counter: document.querySelector(".reader-page-count")?.textContent,
+            paginated:
+              document.querySelector(".books-reader")?.dataset.paginated,
+            word: word.textContent,
+            rects: [...range.getClientRects()].map((r) =>
+              [r.left, r.top, r.right, r.bottom].map(Math.round),
+            ),
+            viewport: (({ left, top, right, bottom }) =>
+              [left, top, right, bottom].map(Math.round))(
+              document.querySelector(".folio-viewport").getBoundingClientRect(),
+            ),
+            transform:
+              document.querySelector(".folio-columns")?.style.transform,
+            chapters: [...document.querySelectorAll(".folio-chapter")].map(
+              (c) => c.getAttribute("style"),
+            ),
+          };
+        }),
+      ),
+    );
+  }
   assert(
     lastVisible,
     "final source word must actually be visible on the last page",

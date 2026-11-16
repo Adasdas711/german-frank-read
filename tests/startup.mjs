@@ -25,7 +25,8 @@ const server = createServer((req, res) => {
 });
 await new Promise((r) => server.listen(4174, "127.0.0.1", r));
 const browser = await chromium.launch({
-  executablePath: "/usr/bin/chromium",
+  // CI sets CHROME_PATH to the runner's browser.
+  executablePath: process.env.CHROME_PATH || "/usr/bin/chromium",
   args: ["--no-sandbox"],
 });
 try {

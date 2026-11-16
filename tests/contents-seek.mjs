@@ -24,7 +24,8 @@ const server = createServer((_, res) => {
 });
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const browser = await chromium.launch({
-  executablePath: "/usr/bin/chromium",
+  // CI sets CHROME_PATH to the runner's browser.
+  executablePath: process.env.CHROME_PATH || "/usr/bin/chromium",
   args: ["--no-sandbox"],
 });
 const failures = [];
@@ -101,6 +102,9 @@ try {
           kind,
         );
         await frame();
+        // Long books finish pagination in the background; the page count is
+        // final only then.
+        await p.locator(".books-reader[data-paginated=complete]").waitFor();
         await open();
         const row = p.locator(".contents-progress");
         await row.evaluate((node) => {

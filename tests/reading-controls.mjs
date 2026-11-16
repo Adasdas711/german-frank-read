@@ -1,4 +1,8 @@
-import { revealReader, choosePageTurn } from "./reader-helpers.mjs";
+import {
+  revealReader,
+  choosePageTurn,
+  readerSizes,
+} from "./reader-helpers.mjs";
 import { chromium } from "playwright-core";
 import { createServer } from "node:http";
 import { readFile, mkdir } from "node:fs/promises";
@@ -14,7 +18,8 @@ const server = createServer((_, res) => {
 });
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const browser = await chromium.launch({
-  executablePath: "/usr/bin/chromium",
+  // CI sets CHROME_PATH to the runner's browser.
+  executablePath: process.env.CHROME_PATH || "/usr/bin/chromium",
   args: ["--no-sandbox"],
 });
 await mkdir(".test-results/reading-controls", { recursive: true });
@@ -166,10 +171,11 @@ try {
       0,
     );
     const box = await themes.boundingBox();
+    const sizes = await readerSizes(p);
     assert(
       Math.abs(
         (await themes.evaluate((n) => parseFloat(getComputedStyle(n).width))) -
-          Math.min(420 * 1.08, width - 36 * 1.08),
+          Math.min(sizes.panel * sizes.scale, width - 36 * sizes.scale),
       ) < 1,
       "Themes shares the reading menu width",
     );

@@ -751,6 +751,10 @@ textarea {
   justify-content: center;
   padding: calc(20px * var(--ui-scale, 1));
 }
+/* Dialogs take focus themselves when they open (see Modal in ui.tsx). */
+.modal:focus {
+  outline: none;
+}
 .modal {
   background: var(--panel);
   border-radius: calc(20px * var(--ui-scale, 1));

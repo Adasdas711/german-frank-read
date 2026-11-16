@@ -51,5 +51,6 @@
   "Системный голос недоступен. Выберите eSpeak NG.": "The system voice is unavailable. Use eSpeak NG.",
   "Немецкий системный голос не установлен. Выберите eSpeak NG.": "A German system voice is not installed. Use eSpeak NG.",
   "Файл превышает 32 МБ.": "The file exceeds 32 MB.",
-  "В .fbook нужны только mimetype (первый, без сжатия), manifest.json и book.json.": "An .fbook must contain only mimetype (first and uncompressed), manifest.json and book.json."
+  "В .fbook нужны только mimetype (первый, без сжатия), manifest.json и book.json.": "An .fbook must contain only mimetype (first and uncompressed), manifest.json and book.json.",
+  "Число предложений перевода не совпадает: {0} (ожидалось {1}, в переводе {2})": "The number of translated sentences does not match: {0} (expected {1}, translation has {2})"
 }

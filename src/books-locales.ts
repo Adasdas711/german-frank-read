@@ -133,6 +133,7 @@ const rows: [string, string, string][] = [
   ["{0} words · {1} new", "{0} слов · новых: {1}", "{0} Wörter · {1} neu"],
   ["{0} of {1} selected", "Выбрано: {0} из {1}", "{0} von {1} ausgewählt"],
   ["German with Frank", "Немецкий по Франку", "Deutsch mit Frank"],
+  ["Books, words and text", "Книги, слова и текст", "Bücher, Wörter und Text"],
   ["Home", "Главная", "Startseite"],
   ["Library", "Библиотека", "Bibliothek"],
   ["Words", "Слова", "Wörter"],
@@ -291,6 +292,11 @@ const rows: [string, string, string][] = [
     "Die Datei ist größer als 32 MB.",
   ],
   ["Book added", "Книга добавлена", "Buch hinzugefügt"],
+  [
+    "Translation not shown in {0} passages, first: {1}",
+    "Перевод не показан в {0} отрывках, первый: {1}",
+    "Übersetzung in {0} Abschnitten ausgeblendet, erster: {1}",
+  ],
   [
     "Books are stored only on this device. Keep copies of your .fbook files too.",
     "Книги хранятся только на этом устройстве. Сохраняйте копии файлов .fbook.",

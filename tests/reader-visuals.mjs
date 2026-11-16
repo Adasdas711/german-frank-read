@@ -2,7 +2,11 @@ import { chromium } from "playwright-core";
 import { createServer } from "node:http";
 import { readFile, mkdir } from "node:fs/promises";
 import assert from "node:assert/strict";
-import { revealReader, choosePageTurn } from "./reader-helpers.mjs";
+import {
+  revealReader,
+  choosePageTurn,
+  readerSizes,
+} from "./reader-helpers.mjs";
 
 const html = await readFile("index.html");
 const server = createServer((_, res) => {
@@ -11,7 +15,8 @@ const server = createServer((_, res) => {
 });
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const browser = await chromium.launch({
-  executablePath: "/usr/bin/chromium",
+  // CI sets CHROME_PATH to the runner's browser.
+  executablePath: process.env.CHROME_PATH || "/usr/bin/chromium",
   args: ["--no-sandbox"],
 });
 await mkdir(".test-results/reader-visuals", { recursive: true });
@@ -134,17 +139,23 @@ try {
     await search.evaluate((n) =>
       Promise.all(n.getAnimations().map((a) => a.finished.catch(() => {}))),
     );
+    const sizes = await readerSizes(p);
+    // Finger-sized on touch, compact with a mouse.
     assert(
       await input.evaluate(
-        (n) =>
-          parseFloat(getComputedStyle(n).fontSize) >= 18 &&
-          n.getBoundingClientRect().height >= 56,
+        (n, fine) =>
+          parseFloat(getComputedStyle(n).fontSize) >= (fine ? 15 : 18) &&
+          n.getBoundingClientRect().height >= (fine ? 38 : 56),
+        sizes.fine,
       ),
     );
     const searchBox = await search.boundingBox();
     assert(searchBox.x >= 0 && searchBox.x + searchBox.width <= width + 1);
     assert(
-      Math.abs(searchBox.width - Math.min(420 * 1.08, width - 36 * 1.08)) < 1,
+      Math.abs(
+        searchBox.width -
+          Math.min(sizes.panel * sizes.scale, width - 36 * sizes.scale),
+      ) < 1,
       "search and reading tools share a width",
     );
     await p.screenshot({

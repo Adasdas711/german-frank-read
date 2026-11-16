@@ -13,7 +13,8 @@ const server = createServer((q, s) => {
 });
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const browser = await chromium.launch({
-  executablePath: "/usr/bin/chromium",
+  // CI sets CHROME_PATH to the runner's browser.
+  executablePath: process.env.CHROME_PATH || "/usr/bin/chromium",
   args: ["--no-sandbox"],
 });
 const out = ".test-results/frank-original";
@@ -153,9 +154,17 @@ try {
     await p
       .locator('.reader-mode-tabs button[data-reading-mode="clean"]')
       .click();
+    // The mode is applied after the hash change, so wait for it to render.
+    const modeIs = (value) =>
+      p.waitForFunction(
+        (v) => document.querySelector(".books-reader").dataset.mode === v,
+        value,
+      );
     await frankTab(p).click();
+    await modeIs("frank");
     assert.equal(await mode(p), "frank");
     await frankTab(p).click();
+    await modeIs("frank-original");
     assert.equal(await mode(p), "frank-original");
 
     // Book search reports matches from the Frank paragraph only, so the

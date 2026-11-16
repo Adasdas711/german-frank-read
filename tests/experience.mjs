@@ -12,7 +12,8 @@ const server = createServer((req, res) => {
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const base = `http://127.0.0.1:${server.address().port}/german-frank-read/`;
 const browser = await chromium.launch({
-  executablePath: "/usr/bin/chromium",
+  // CI sets CHROME_PATH to the runner's browser.
+  executablePath: process.env.CHROME_PATH || "/usr/bin/chromium",
   args: ["--no-sandbox"],
 });
 await mkdir(".test-results/experience", { recursive: true });
@@ -127,6 +128,13 @@ try {
     .textContent();
   await page.getByRole("button", { name: "Hide sidebar" }).click();
   assert.equal(await page.locator(".library-sidebar").isVisible(), false);
+  // The sidebar hides at once and the setting is written right after; reload
+  // only once it is stored, or a slow machine reloads the old setting.
+  for (let i = 0; i < 50; i++) {
+    if ((await value(page, "settings", "app")).sidebarCollapsed) break;
+    await page.waitForTimeout(50);
+  }
+  assert.equal((await value(page, "settings", "app")).sidebarCollapsed, true);
   await page.reload();
   await page.getByRole("button", { name: "Show sidebar" }).click();
   await page.keyboard.press("Control+Meta+s");

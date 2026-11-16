@@ -1,0 +1,42 @@
+{
+  "$comment": "Browser suites (package.json test:* scripts) run in parallel CI jobs. Every suite must appear exactly once; scripts/ci-groups.mjs checks this. knownFailing suites also fail on the code before the CI was added; they run in a separate, non-blocking job. Move a suite back into a group once it passes.",
+  "groups": {
+    "contents": ["test:contents-seek"],
+    "pages": [
+      "test:pages",
+      "test:continue-touch",
+      "test:gestures",
+      "test:light-themes",
+      "test:startup",
+      "test:demos"
+    ],
+    "reader": [
+      "test:e2e",
+      "test:word-sheet",
+      "test:experience",
+      "test:reader-dock",
+      "test:frank-original",
+      "test:sidebar",
+      "test:pagination-boxes"
+    ],
+    "interface": [
+      "test:settings",
+      "test:interface-size",
+      "test:reader-drag",
+      "test:layout",
+      "test:folders",
+      "test:reading-menu",
+      "test:reader-fixes",
+      "test:pwa-selection",
+      "test:apple-home"
+    ]
+  },
+  "knownFailing": [
+    "test:collections",
+    "test:reading-controls",
+    "test:reader-visuals",
+    "test:touch-library",
+    "test:sentence-pages",
+    "test:reader-settings"
+  ]
+}
