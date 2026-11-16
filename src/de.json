@@ -372,5 +372,6 @@
   "Поиск": "Suchen",
   "Продолжить чтение": "Weiterlesen",
   "Ваши книги": "Deine Bücher",
-  "Добавить книгу": "Buch hinzufügen"
+  "Добавить книгу": "Buch hinzufügen",
+  "Число предложений перевода не совпадает: {0} (ожидалось {1}, в переводе {2})": "Abweichende Satzanzahl in der Übersetzung: {0} (erwartet {1}, übersetzt {2})"
 }

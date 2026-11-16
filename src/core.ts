@@ -61,7 +61,18 @@ const fail = (s: string): never => {
   throw Error(s);
 };
 export const IPA = /^[\p{L}\p{M}\sˈˌːˑ.͜͡‿|()\-]+$/u;
-export function validate(m: any, b: any): asserts b is Content {
+export type TranslationWarning = { at: string; expected: number; got: number };
+export const translationMismatch = (w: TranslationWarning) =>
+  `Число предложений перевода не совпадает: ${w.at} (ожидалось ${w.expected}, в переводе ${w.got})`;
+// Strict mode (packBook, builder) rejects a translation whose line count differs
+// from sentences(text). Lenient mode (reading/importing) clears that fragment's
+// translation instead and reports it, so one bad fragment cannot block a book.
+export function validate(
+  m: any,
+  b: any,
+  options: { strict?: boolean } = {},
+): TranslationWarning[] {
+  const warnings: TranslationWarning[] = [];
   if (!m || m.format !== "fbook" || m.formatVersion !== 2)
     fail("Неподдерживаемая версия .fbook. Нужен формат 2.");
   for (const key of [
@@ -168,13 +179,22 @@ export function validate(m: any, b: any): asserts b is Content {
       for (const word of words(text))
         if (!Object.hasOwn(b.f, word)) fail(`Нет IPA для «${word}» в ${at}`);
       if (hasT) {
-        const t = b.t[ci][fi];
+        const t = b.t[ci][fi],
+          expected = sentences(text).length;
         if (
           !Array.isArray(t) ||
           !t.every((x: any) => typeof x === "string" && x.trim()) ||
-          t.length !== sentences(text).length
-        )
-          fail("Число предложений перевода не совпадает: " + at);
+          t.length !== expected
+        ) {
+          const warning = {
+            at,
+            expected,
+            got: Array.isArray(t) ? t.length : 0,
+          };
+          if (options.strict) fail(translationMismatch(warning));
+          warnings.push(warning);
+          b.t[ci][fi] = [];
+        }
       }
     });
   });
@@ -202,6 +222,7 @@ export function validate(m: any, b: any): asserts b is Content {
           fail("Неверная IPA по месту: " + at);
     }
   }
+  return warnings;
 }
 const MAX = 32 * 1024 * 1024;
 // Read the central directory before inflation. Never trust compressed or advertised sizes alone.
@@ -351,19 +372,34 @@ export function readBook(bytes: Uint8Array) {
   } catch {
     fail("Некорректный JSON в книге.");
   }
-  validate(manifest, content);
-  return { manifest: manifest as Manifest, content: content as Content, bytes };
+  const warnings = validate(manifest, content);
+  return {
+    manifest: manifest as Manifest,
+    content: content as Content,
+    bytes,
+    warnings,
+  };
 }
-export function packBook(manifest: Manifest, content: Content) {
-  validate(manifest, content);
-  const bytes = zipSync(
+const zipBook = (manifest: Manifest, book: Uint8Array) =>
+  zipSync(
     {
       mimetype: [strToU8(MIME), { level: 0 }],
       "manifest.json": strToU8(JSON.stringify(manifest)),
-      "book.json": strToU8(JSON.stringify(content)),
+      "book.json": book,
     },
     { level: 9 },
   );
+// Replace only the manifest and keep book.json byte for byte, so a book that
+// opened with translation warnings can still be renamed without being rejected.
+export function repackManifest(bytes: Uint8Array, manifest: Manifest) {
+  const out = safeUnzip(bytes),
+    packed = zipBook(manifest, out["book.json"]);
+  readBook(packed);
+  return packed;
+}
+export function packBook(manifest: Manifest, content: Content) {
+  validate(manifest, content, { strict: true });
+  const bytes = zipBook(manifest, strToU8(JSON.stringify(content)));
   readBook(bytes);
   return bytes;
 }

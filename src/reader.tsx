@@ -9,7 +9,7 @@ import {
 } from "preact/hooks";
 import {
   readBook,
-  packBook,
+  repackManifest,
   plain,
   isReadingMode,
   addresses,
@@ -830,7 +830,17 @@ function App() {
     await refresh();
     setOverlay("");
     setPending(null);
-    notify(t("Book added"));
+    const skipped = pending.warnings;
+    notify(
+      skipped.length
+        ? t("Book added") +
+            ". " +
+            t("Translation not shown in {0} passages, first: {1}", {
+              0: skipped.length,
+              1: skipped[0].at,
+            })
+        : t("Book added"),
+    );
   };
   const removeBook = (b: Book) =>
     setConfirm({
@@ -1195,7 +1205,7 @@ function App() {
       const updated = {
         ...renaming,
         manifest,
-        bytes: packBook(manifest, original.content),
+        bytes: repackManifest(renaming.bytes, manifest),
       };
       await store.put("books", manifest.id, updated);
       setBooks((previous) =>

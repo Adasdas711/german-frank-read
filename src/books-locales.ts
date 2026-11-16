@@ -292,6 +292,11 @@ const rows: [string, string, string][] = [
   ],
   ["Book added", "Книга добавлена", "Buch hinzugefügt"],
   [
+    "Translation not shown in {0} passages, first: {1}",
+    "Перевод не показан в {0} отрывках, первый: {1}",
+    "Übersetzung in {0} Abschnitten ausgeblendet, erster: {1}",
+  ],
+  [
     "Books are stored only on this device. Keep copies of your .fbook files too.",
     "Книги хранятся только на этом устройстве. Сохраняйте копии файлов .fbook.",
     "Bücher werden nur auf diesem Gerät gespeichert. Bewahre Kopien deiner .fbook-Dateien auf.",

@@ -5,6 +5,7 @@ import {
   IPA,
   validate,
   packBook,
+  translationMismatch,
   type Content,
   type Manifest,
   type Chunk,
@@ -95,7 +96,13 @@ export function checkSource(source: any): asserts source is Source {
         (!f.translation.every((t: any) => typeof t === "string" && t.trim()) ||
           f.translation.length !== sentences(text).length)
       )
-        throw Error("Не совпадает число предложений перевода: " + at);
+        throw Error(
+          translationMismatch({
+            at,
+            expected: sentences(text).length,
+            got: f.translation.length,
+          }),
+        );
     }
   }
   const translated = source.chapters

@@ -47,7 +47,8 @@ describe("fbook v2", () => {
     expect(() => validate(sample.manifest, b)).toThrow(/подсказка/);
     const c = structuredClone(sample.content);
     c.t![0][0] = [];
-    expect(() => validate(sample.manifest, c)).toThrow(/предложений/);
+    expect(validate(sample.manifest, c)).toHaveLength(1);
+    expect(() => packBook(sample.manifest, c)).toThrow(/предложений/);
   });
   it("rejects extra entries, encrypted and inflated sizes", () => {
     const entries = {
@@ -227,14 +228,13 @@ describe("Reader quotation boundaries", () => {
       "„Ein Engel?“ sagte sie. „Hatte er denn Flügel?“",
       ["Ангел?", "сказала она.", "У него были крылья?", "“"],
     );
+    // "?“ sagte" is followed by a lowercase letter, so it is not a boundary.
     expect(rows.map((row) => row.text)).toEqual([
-      "„Ein Engel?“",
-      "sagte sie.",
+      "„Ein Engel?“ sagte sie.",
       "„Hatte er denn Flügel?“",
     ]);
     expect(rows.map((row) => row.translation)).toEqual([
-      "Ангел?",
-      "сказала она.",
+      "Ангел? сказала она.",
       "У него были крылья?",
     ]);
   });
