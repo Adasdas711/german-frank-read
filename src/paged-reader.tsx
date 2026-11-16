@@ -1080,9 +1080,12 @@ export function PagedReader(props: Props) {
     props.onDismissWord();
     clearTimeout(lookupTimer.current);
     clearTurnAnimations();
-    if (paged.current && !pageReady(target))
-      prepareTarget((g) => clampPage(target, g));
-    const next = clampPage(target, state.current.layout);
+    // "Last page" stays the last page when measuring a chapter on the way
+    // changes the page count (End, the end of the slider).
+    const toEnd = target >= state.current.layout.count - 1;
+    const resolve = (g: Layout) => (toEnd ? g.count - 1 : clampPage(target, g));
+    if (paged.current && !pageReady(target)) prepareTarget(resolve);
+    const next = resolve(state.current.layout);
     report(next);
     setPage(next);
     state.current.page = next;
