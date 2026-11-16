@@ -1349,6 +1349,29 @@ html.reading-pages body {
 .turn-curl .folio-columns {
   transition: none;
 }
+/* Paged reading: each chapter is its own multicol box in a horizontal row
+   (see prepareChapters). Widths come from the reader's measurement. */
+.books-reader:not(.scroll-reader) .folio-columns[data-chaptered] {
+  display: flex;
+  align-items: flex-start;
+}
+.books-reader:not(.scroll-reader)
+  .folio-columns[data-chaptered]
+  > .folio-chapter {
+  flex: none;
+  width: var(--chapter-width, var(--chapter-column));
+  height: var(--chapter-height);
+  column-width: var(--chapter-column);
+  column-gap: inherit;
+  column-fill: auto;
+}
+.books-reader:not(.scroll-reader)
+  .folio-columns[data-chapter-pages]
+  > .folio-chapter {
+  content-visibility: auto;
+  contain-intrinsic-size: var(--chapter-width) var(--chapter-height);
+  overflow-clip-margin: 24px;
+}
 .folio-columns section {
   margin: 0;
   padding: 0;

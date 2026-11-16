@@ -123,6 +123,10 @@ export function sentencePages(
   panel.append(paragraph);
   probe.append(panel);
   canvas.parentElement!.append(scratch, probe);
+  // Each measurement below forces a layout. Keep the live book out of those
+  // layouts; it is typeset once, with the final breaks, after planning.
+  const visibility = canvas.style.contentVisibility;
+  canvas.style.contentVisibility = "hidden";
   const fits = (row: HTMLElement) => {
     const copy = row.cloneNode(true) as HTMLElement;
     delete copy.dataset.pageStart;
@@ -172,6 +176,7 @@ export function sentencePages(
   } finally {
     scratch.remove();
     probe.remove();
+    canvas.style.contentVisibility = visibility;
   }
   for (const i of breaks) rows[i].dataset.pageStart = "true";
   return breaks;

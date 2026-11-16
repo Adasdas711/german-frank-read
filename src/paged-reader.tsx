@@ -60,7 +60,50 @@ type MeasuredLayout = {
   entries: PageEntry[];
   sources: string[];
   breaks: number[];
+  chapters: number[];
 };
+// One multicol box holding a whole novel makes Chromium layerize every column
+// fragment on each paint (seconds per page turn at 500+ pages). Each chapter
+// already starts in a new column, so chapters become separate multicol boxes in
+// a horizontal row; their columns keep the same stride and therefore the same
+// page positions. Once measured, off-screen chapters skip rendering. The row
+// itself is CSS (books.css), so switching to Scroll restores normal flow at once.
+function prepareChapters(
+  canvas: HTMLElement,
+  columnWidth: number,
+  height: number,
+) {
+  delete canvas.dataset.chapterPages;
+  canvas.dataset.chaptered = "true";
+  canvas.style.setProperty("--chapter-column", columnWidth + "px");
+  canvas.style.setProperty("--chapter-height", height + "px");
+  for (const chapter of canvas.querySelectorAll<HTMLElement>(
+    ":scope > .folio-chapter",
+  ))
+    chapter.style.removeProperty("--chapter-width");
+}
+function sizeChapters(
+  canvas: HTMLElement,
+  stride: number,
+  gap: number,
+  known?: number[],
+) {
+  const chapters = [
+    ...canvas.querySelectorAll<HTMLElement>(":scope > .folio-chapter"),
+  ];
+  const counts = chapters.map(
+    (chapter, i) =>
+      known?.[i] ||
+      Math.max(1, Math.ceil((chapter.scrollWidth + gap - 0.5) / stride)),
+  );
+  chapters.forEach((chapter, i) =>
+    chapter.style.setProperty(
+      "--chapter-width",
+      counts[i] * stride - gap + "px",
+    ),
+  );
+  return counts;
+}
 // Reuse exact layout indexes when reopening a book with the same settings.
 const measuredLayouts = new WeakMap<Content, Map<string, MeasuredLayout>>();
 const roman = (n: number) =>
@@ -216,6 +259,18 @@ export function PagedReader(props: Props) {
       ),
     [content],
   );
+  // First word of every physical leaf, from the last measurement.
+  const entriesRef = useRef<PageEntry[]>([]);
+  // Avoids scanning every word of the book on each page turn. A leaf without
+  // words repeats the previous entry, so the word's column is confirmed.
+  const leafWord = (leaf: number, geometry: Layout) => {
+    const entry = entriesRef.current[leaf];
+    if (!entry || !text.current) return undefined;
+    const word = text.current.querySelector<HTMLElement>(
+      `[data-reading-at="${entry.at}"] [data-book-char="${entry.offset}"]`,
+    );
+    return word && columnOf(word, geometry) === leaf ? word : undefined;
+  };
   const textRange = useRef<Range>();
   // Read actual glyph positions. Inline form-control rectangles can describe
   // their original flow box instead of its fragment in WebKit columns.
@@ -318,6 +373,7 @@ export function PagedReader(props: Props) {
       text.current.style.columnWidth = scrolling ? "auto" : columnWidth + "px";
       text.current.style.columnCount = scrolling ? "auto" : String(columns);
       text.current.style.columnGap = gap + "px";
+      prepareChapters(text.current, columnWidth, viewportHeight);
       const cacheKey = JSON.stringify([width, viewportHeight, typesetting]);
       let cache = measuredLayouts.get(content);
       if (!cache) {
@@ -332,13 +388,23 @@ export function PagedReader(props: Props) {
         scrolling ? 0 : viewportHeight,
         scrolling ? [] : cached?.breaks,
       );
+      const chapterPages = scrolling
+        ? []
+        : sizeChapters(
+            text.current,
+            (width + gap) / columns,
+            gap,
+            cached?.chapters,
+          );
       if (cached) {
+        entriesRef.current = cached.entries;
         setPageIndex(cached.entries);
         setPageSources(cached.sources);
         const restored = positionFor(cached.layout);
         text.current.style.transition = "none";
         setLayout(cached.layout);
         setPage(restored);
+        if (!scrolling) text.current.dataset.chapterPages = "true";
         state.current.props.onIndex?.(cached.entries);
         cancelAnimationFrame(settle);
         settle = requestAnimationFrame(() => {
@@ -473,6 +539,7 @@ export function PagedReader(props: Props) {
           entries,
           sources: measuredSources,
           breaks,
+          chapters: chapterPages,
         });
         if (cache.size > 6) cache.delete(cache.keys().next().value!);
       }
@@ -484,10 +551,12 @@ export function PagedReader(props: Props) {
       }
       if (document.fonts.status === "loaded")
         state.current.props.onIndex?.(entries);
+      entriesRef.current = entries;
       const restored = positionFor(next);
       text.current.style.transition = "none";
       setLayout(next);
       setPage(restored);
+      if (!scrolling) text.current.dataset.chapterPages = "true";
       cancelAnimationFrame(settle);
       settle = requestAnimationFrame(() => {
         if (text.current) text.current.style.transition = "";
@@ -544,6 +613,14 @@ export function PagedReader(props: Props) {
   const lastScrollPage = useRef<number | null>(null);
   function report(next: number) {
     const geometry = state.current.layout;
+    const entry = entriesRef.current[next * geometry.columns];
+    if (entry && leafWord(next * geometry.columns, geometry)) {
+      anchor.current = { at: entry.at, offset: entry.offset };
+      lastReported.current = entry.at + ":" + entry.offset;
+      if (!props.measureOnly)
+        state.current.props.onPosition(entry.at, entry.offset);
+      return;
+    }
     const nodes = [
       ...text.current!.querySelectorAll<HTMLElement>("[data-book-char]"),
     ];
@@ -625,8 +702,12 @@ export function PagedReader(props: Props) {
     // Capture the complete sheet, including its margins, rather than sliding
     // just the text rectangle through a stationary frame.
     const box = root.current!.getBoundingClientRect();
-    const nodes = [...canvas.querySelectorAll<HTMLElement>("[data-book-char]")];
+    let nodes: HTMLElement[] | undefined;
     const snapshot = (target: number) => {
+      const known = leafWord(target * geometry.columns, geometry);
+      if (known)
+        return finishSnapshot(pageSnapshot(canvas, box, known), target);
+      nodes ||= [...canvas.querySelectorAll<HTMLElement>("[data-book-char]")];
       let low = 0,
         high = nodes.length;
       while (low < high) {
@@ -635,7 +716,9 @@ export function PagedReader(props: Props) {
           low = middle + 1;
         else high = middle;
       }
-      const copy = pageSnapshot(canvas, box, nodes[low]);
+      return finishSnapshot(pageSnapshot(canvas, box, nodes[low]), target);
+    };
+    const finishSnapshot = (copy: HTMLElement, target: number) => {
       const footer = document.createElement("span");
       footer.className = "snapshot-page-number";
       footer.textContent = String(target * geometry.columns + 1);
