@@ -1359,18 +1359,31 @@ html.reading-pages body {
   .folio-columns[data-chaptered]
   > .folio-chapter {
   flex: none;
-  width: var(--chapter-width, var(--chapter-column));
-  height: var(--chapter-height);
-  column-width: var(--chapter-column);
+  /* Until measured, a chapter is one screen wide, so off-screen chapters are
+     skipped from the very first frame instead of all overlapping at x = 0. */
+  box-sizing: content-box;
+  width: var(--chapter-page, 100vw);
+  height: var(--chapter-height, 100vh);
+  column-count: var(--chapter-columns, 1);
   column-gap: inherit;
   column-fill: auto;
+  /* Room for the chapter's further columns (see sizeChapter). */
+  padding-right: var(--chapter-pad, 0px);
+  margin-right: var(--chapter-shift, 0px);
 }
 .books-reader:not(.scroll-reader)
   .folio-columns[data-chapter-pages]
   > .folio-chapter {
   content-visibility: auto;
-  contain-intrinsic-size: var(--chapter-width) var(--chapter-height);
+  contain-intrinsic-size: var(--chapter-page, 100vw)
+    var(--chapter-height, 100vh);
   overflow-clip-margin: 24px;
+}
+/* The chapter being measured is laid out normally. */
+.books-reader:not(.scroll-reader)
+  .folio-columns[data-chapter-pages]
+  > .folio-chapter[data-measuring] {
+  content-visibility: visible;
 }
 .folio-columns section {
   margin: 0;

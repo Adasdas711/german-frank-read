@@ -206,9 +206,14 @@ export async function clearAll() {
 export async function deleteBook(bookId: string) {
   const d = await db();
   await new Promise<void>((resolve, reject) => {
-    const tx = d.transaction(["books", "progress", "settings"], "readwrite");
+    const tx = d.transaction(
+      ["books", "progress", "settings", "drafts"],
+      "readwrite",
+    );
     tx.objectStore("books").delete(bookId);
     tx.objectStore("progress").delete(bookId);
+    // Saved page layouts of the book (see chapter-layout.ts).
+    tx.objectStore("drafts").delete("layout:" + bookId);
     const settings = tx.objectStore("settings"),
       request = settings.get("collections");
     request.onsuccess = () => {

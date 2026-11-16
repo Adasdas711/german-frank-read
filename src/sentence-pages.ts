@@ -74,22 +74,19 @@ function planParagraph(
 // Measure each paragraph in an isolated scratch column. Reflowing the full
 // novel once per page makes opening long books unresponsive on mobile devices.
 // This produces the break plan using small DOM trees, then applies it in one
-// batch to the live book. Native columns still perform the final typesetting.
-export function sentencePages(
+// batch to the live chapter. Native columns still perform the final typesetting.
+// Every chapter starts in a new column, so chapters are planned independently;
+// the returned indexes are local to the chapter's sentence rows.
+export function planChapterBreaks(
   canvas: HTMLElement,
+  chapter: HTMLElement,
   stride: number,
+  gap: number,
   height: number,
-  restored?: number[],
 ) {
-  const rows = [...canvas.querySelectorAll<HTMLElement>(".sentence-row")];
+  const rows = [...chapter.querySelectorAll<HTMLElement>(".sentence-row")];
   for (const row of rows) delete row.dataset.pageStart;
-  if (restored) {
-    for (const i of restored) if (rows[i]) rows[i].dataset.pageStart = "true";
-    return restored;
-  }
-  if (height <= 0) return [];
-  const style = getComputedStyle(canvas),
-    gap = parseFloat(style.columnGap);
+  if (height <= 0 || !rows.length) return [];
   const scratch = document.createElement("main");
   scratch.className = "folio-columns sentence-measure";
   scratch.inert = true;
@@ -123,10 +120,6 @@ export function sentencePages(
   panel.append(paragraph);
   probe.append(panel);
   canvas.parentElement!.append(scratch, probe);
-  // Each measurement below forces a layout. Keep the live book out of those
-  // layouts; it is typeset once, with the final breaks, after planning.
-  const visibility = canvas.style.contentVisibility;
-  canvas.style.contentVisibility = "hidden";
   const fits = (row: HTMLElement) => {
     const copy = row.cloneNode(true) as HTMLElement;
     delete copy.dataset.pageStart;
@@ -135,49 +128,66 @@ export function sentencePages(
   };
   const breaks: number[] = [];
   let y = 0,
-    base = 0;
+    base = 0,
+    first = true;
   try {
-    for (const chapter of canvas.querySelectorAll<HTMLElement>(
-      ".folio-chapter",
+    for (const fragment of chapter.querySelectorAll<HTMLElement>(
+      ".folio-fragment",
     )) {
-      y = 0;
-      let first = true;
-      for (const fragment of chapter.querySelectorAll<HTMLElement>(
-        ".folio-fragment",
-      )) {
-        const spacer = document.createElement("div");
-        spacer.style.height = y + "px";
-        const copy = fragment.cloneNode(true) as HTMLElement;
-        const originalParagraph = fragment.querySelector(".reading-panel p");
-        const copiedParagraph =
-          copy.querySelector<HTMLElement>(".reading-panel p");
-        if (originalParagraph && copiedParagraph)
-          copiedParagraph.style.textIndent =
-            getComputedStyle(originalParagraph).textIndent;
-        const tail = document.createElement("div");
-        tail.style.height = "0px";
-        scratch.replaceChildren(spacer);
-        if (first) {
-          const heading = chapter.querySelector(".folio-chapter-title");
-          if (heading) scratch.append(heading.cloneNode(true));
-        }
-        scratch.append(copy, tail);
-        const planned = planParagraph(scratch, stride, height, fits);
-        for (const i of planned) breaks.push(base + i);
-        base += copy.querySelectorAll(".sentence-row").length;
-        y = Math.max(
-          0,
-          tail.getBoundingClientRect().top -
-            scratch.getBoundingClientRect().top,
-        );
-        first = false;
+      // Only a chapter's first fragment matches ".folio-fragment:first-of-type"
+      // (no paragraph indent). A section spacer keeps later copies from
+      // matching it, so the scratch gets the live indent from CSS alone.
+      const spacer = document.createElement(first ? "div" : "section");
+      spacer.style.height = y + "px";
+      const copy = fragment.cloneNode(true) as HTMLElement;
+      const tail = document.createElement("div");
+      tail.style.height = "0px";
+      scratch.replaceChildren(spacer);
+      if (first) {
+        const heading = chapter.querySelector(".folio-chapter-title");
+        if (heading) scratch.append(heading.cloneNode(true));
       }
+      scratch.append(copy, tail);
+      const planned = planParagraph(scratch, stride, height, fits);
+      for (const i of planned) breaks.push(base + i);
+      base += copy.querySelectorAll(".sentence-row").length;
+      y = Math.max(
+        0,
+        tail.getBoundingClientRect().top - scratch.getBoundingClientRect().top,
+      );
+      first = false;
     }
   } finally {
     scratch.remove();
     probe.remove();
-    canvas.style.contentVisibility = visibility;
   }
   for (const i of breaks) rows[i].dataset.pageStart = "true";
+  return breaks;
+}
+
+// Whole-canvas variant with global row indexes (Scroll mode and fallbacks).
+export function sentencePages(
+  canvas: HTMLElement,
+  stride: number,
+  height: number,
+  restored?: number[],
+) {
+  const rows = [...canvas.querySelectorAll<HTMLElement>(".sentence-row")];
+  for (const row of rows) delete row.dataset.pageStart;
+  if (restored) {
+    for (const i of restored) if (rows[i]) rows[i].dataset.pageStart = "true";
+    return restored;
+  }
+  if (height <= 0) return [];
+  const gap = parseFloat(canvas.style.columnGap) || 0,
+    breaks: number[] = [];
+  let base = 0;
+  for (const chapter of canvas.querySelectorAll<HTMLElement>(
+    ".folio-chapter",
+  )) {
+    for (const i of planChapterBreaks(canvas, chapter, stride, gap, height))
+      breaks.push(base + i);
+    base += chapter.querySelectorAll(".sentence-row").length;
+  }
   return breaks;
 }

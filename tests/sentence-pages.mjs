@@ -34,6 +34,8 @@ try {
         { id, mode },
       );
       await p.locator(".books-reader[data-ready=true]").waitFor();
+      // Later chapters of a long book are paginated in the background.
+      await p.locator(".books-reader[data-paginated=complete]").waitFor();
       await p.evaluate(() => document.fonts.ready);
       await p.waitForTimeout(100);
       const result = await p.evaluate(() => {

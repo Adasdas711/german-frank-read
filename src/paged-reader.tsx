@@ -23,7 +23,19 @@ import {
 import { FilledSlider } from "./filled-slider";
 import { ReaderPresence, useReaderControls } from "./reader-presence";
 import { sentencePages } from "./sentence-pages";
-export type PageEntry = { at: string; offset: number; preview: string };
+import {
+  applyChapter,
+  chapterMatches,
+  loadLayouts,
+  measureChapter,
+  saveLayout,
+  sizeChapter,
+  chapterSpan,
+  type ChapterGeometry,
+  type ChapterMeasure,
+  type PageEntry,
+} from "./chapter-layout";
+export type { PageEntry };
 
 type Props = {
   manifest: Manifest;
@@ -55,57 +67,48 @@ type Layout = {
   ready: boolean;
   leaves?: number;
 };
+// Scroll mode measures the whole book at once.
 type MeasuredLayout = {
   layout: Layout;
   entries: PageEntry[];
   sources: string[];
-  breaks: number[];
-  chapters: number[];
 };
 // One multicol box holding a whole novel makes Chromium layerize every column
 // fragment on each paint (seconds per page turn at 500+ pages). Each chapter
-// already starts in a new column, so chapters become separate multicol boxes in
-// a horizontal row; their columns keep the same stride and therefore the same
-// page positions. Once measured, off-screen chapters skip rendering. The row
-// itself is CSS (books.css), so switching to Scroll restores normal flow at once.
-function prepareChapters(
-  canvas: HTMLElement,
-  columnWidth: number,
-  height: number,
-) {
-  delete canvas.dataset.chapterPages;
-  canvas.dataset.chaptered = "true";
-  canvas.style.setProperty("--chapter-column", columnWidth + "px");
-  canvas.style.setProperty("--chapter-height", height + "px");
-  for (const chapter of canvas.querySelectorAll<HTMLElement>(
-    ":scope > .folio-chapter",
-  ))
-    chapter.style.removeProperty("--chapter-width");
-}
-function sizeChapters(
-  canvas: HTMLElement,
-  stride: number,
-  gap: number,
-  known?: number[],
-) {
-  const chapters = [
-    ...canvas.querySelectorAll<HTMLElement>(":scope > .folio-chapter"),
-  ];
-  const counts = chapters.map(
-    (chapter, i) =>
-      known?.[i] ||
-      Math.max(1, Math.ceil((chapter.scrollWidth + gap - 0.5) / stride)),
-  );
-  chapters.forEach((chapter, i) =>
-    chapter.style.setProperty(
-      "--chapter-width",
-      counts[i] * stride - gap + "px",
-    ),
-  );
-  return counts;
-}
-// Reuse exact layout indexes when reopening a book with the same settings.
-const measuredLayouts = new WeakMap<Content, Map<string, MeasuredLayout>>();
+// already starts in a new column, so chapters are separate multicol boxes in a
+// horizontal row (books.css); their columns keep the same stride and therefore
+// the same page positions. Off-screen chapters skip rendering, and a chapter is
+// measured only when it is needed or when the browser is idle.
+type PagedState = {
+  key: string;
+  geometry: ChapterGeometry;
+  chapters: HTMLElement[];
+  measures: (ChapterMeasure | undefined)[];
+  // Measurements restored from storage are checked once the chapter is laid out.
+  checked: boolean[];
+  starts: number[];
+  idle: number;
+  delay: number;
+};
+// Measurements made in this session need no check against the live layout.
+const sessionMeasured = new WeakSet<ChapterMeasure>();
+// Reuse chapter measurements when reopening a book with the same settings.
+const measuredLayouts = new WeakMap<
+  Content,
+  Map<string, (ChapterMeasure | undefined)[]>
+>();
+const scrollLayouts = new WeakMap<Content, Map<string, MeasuredLayout>>();
+const loadedLayouts = new WeakMap<Content, Promise<void>>();
+// Measure further chapters synchronously while opening stays this short.
+const OPEN_BUDGET = 250;
+const idle = (callback: () => void) =>
+  "requestIdleCallback" in globalThis
+    ? requestIdleCallback(callback, { timeout: 300 })
+    : (setTimeout(callback, 30) as unknown as number);
+const cancelIdle = (handle: number) =>
+  "cancelIdleCallback" in globalThis
+    ? cancelIdleCallback(handle)
+    : clearTimeout(handle);
 const roman = (n: number) =>
   n < 11
     ? ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"][n - 1]
@@ -209,7 +212,6 @@ export function PagedReader(props: Props) {
   useLayoutEffect(() => {
     if (props.measureOnly) return;
     document.documentElement.classList.add("reading-pages");
-    root.current?.focus({ preventScroll: true });
     const cancelHold = () => {
       clearTimeout(lookupTimer.current);
       dragTurn.current?.motion.finish(false);
@@ -226,6 +228,49 @@ export function PagedReader(props: Props) {
       document.removeEventListener("visibilitychange", cancelHold);
     };
   }, []);
+  // Start loading the reading font's faces and the saved page layout while
+  // the book is still being rendered, so measuring can begin right after it.
+  const readingFont = String(appearance["--reading"] || "");
+  const preload = useMemo(() => {
+    const families = new Set(
+      readingFont
+        .split(",")
+        .map((name) => name.trim().replace(/^["']|["']$/g, "")),
+    );
+    const faces = () =>
+      [...document.fonts].filter((face) =>
+        families.has(face.family.replace(/^["']|["']$/g, "")),
+      );
+    // Load every face of the reading font before measuring, so no face starts
+    // loading halfway through and forces the whole book to be measured again.
+    const fonts = Promise.all(
+      faces().map((face) =>
+        (face.status === "unloaded" ? face.load() : face.loaded).catch(
+          () => undefined,
+        ),
+      ),
+    );
+    let stored = loadedLayouts.get(content);
+    if (!stored) {
+      stored = loadLayouts(manifest.id, manifest.revision).then((layouts) => {
+        let cache = measuredLayouts.get(content);
+        if (!cache) measuredLayouts.set(content, (cache = new Map()));
+        for (const [key, chapters] of layouts)
+          if (!cache.has(key) && chapters.length === content.c.length) {
+            for (const chapter of chapters)
+              for (const entry of chapter.entries) {
+                const [ci, fi] = entry.at.split(".").map((n) => +n - 1);
+                const text = plain(content.c[ci]?.[fi] || []),
+                  start = entry.offset % (text.length + 1);
+                entry.preview = text.slice(start, start + 95);
+              }
+            cache.set(key, chapters);
+          }
+      });
+      loadedLayouts.set(content, stored);
+    }
+    return { faces, ready: Promise.all([fonts, stored]) };
+  }, [content, readingFont]);
   const pages = useMemo(
     () =>
       content.c.map((chapter, ci) => (
@@ -336,27 +381,276 @@ export function PagedReader(props: Props) {
       Math.floor(columnOf(target, geometry) / geometry.columns),
     );
   };
+  const sourcesRef = useRef<string[]>([]);
+  const paged = useRef<PagedState | null>(null);
+  const appliedKey = useRef("");
+  const settleFrame = useRef(0);
+  const focused = useRef(false);
+  const held = useRef(false);
+  useLayoutEffect(() => {
+    const down = () => (held.current = true),
+      up = () => (held.current = false);
+    document.addEventListener("pointerdown", down, true);
+    document.addEventListener("pointerup", up, true);
+    document.addEventListener("pointercancel", up, true);
+    return () => {
+      document.removeEventListener("pointerdown", down, true);
+      document.removeEventListener("pointerup", up, true);
+      document.removeEventListener("pointercancel", up, true);
+    };
+  }, []);
+  const chapterChars = useMemo(
+    () =>
+      content.c.map((chapter, ci) =>
+        chapter.reduce(
+          (n, _, fi) =>
+            n + (sourceTexts.get(`${ci + 1}.${fi + 1}`)?.length || 0),
+          0,
+        ),
+      ),
+    [content, sourceTexts],
+  );
+  const anchorChapter = () => Math.max(0, +anchor.current.at.split(".")[0] - 1);
+  // The neighbouring chapters first (next, then previous), then the rest of
+  // the book forward, then backward.
+  const chapterOrder = (from: number, total: number) =>
+    [
+      from + 1,
+      from - 1,
+      ...Array.from({ length: total }, (_, i) => from + 2 + i),
+      ...Array.from({ length: total }, (_, i) => from - 2 - i),
+    ].filter((i) => i >= 0 && i < total);
+  const chapterOfLeaf = (leaf: number) => {
+    const starts = paged.current!.starts;
+    let low = 0,
+      high = starts.length - 1;
+    while (low < high) {
+      const mid = (low + high + 1) >>> 1;
+      if (starts[mid] <= leaf) low = mid;
+      else high = mid - 1;
+    }
+    return low;
+  };
+  // Join chapter indexes into book pages. A chapter not measured yet gets an
+  // estimated width from the measured text density; it is not rendered.
+  const compose = (): Layout => {
+    const state = paged.current!;
+    const { geometry, measures } = state;
+    let chars = 0,
+      leaves = 0;
+    measures.forEach((m, i) => {
+      if (!m) return;
+      chars += chapterChars[i];
+      leaves += m.columns;
+    });
+    const perLeaf = leaves ? chars / leaves : 1200;
+    const entries: PageEntry[] = [],
+      sources: string[] = [],
+      starts: number[] = [];
+    measures.forEach((m, i) => {
+      starts.push(entries.length);
+      if (m) {
+        for (const entry of m.entries) entries.push(entry);
+        for (const source of m.sources) sources.push(source);
+        // An empty facing column completes the chapter's last spread.
+        for (let k = m.columns; k < chapterSpan(m.columns, geometry); k++) {
+          entries.push(m.entries.at(-1)!);
+          sources.push("");
+        }
+        return;
+      }
+      const columns = chapterSpan(
+        Math.max(1, Math.round(chapterChars[i] / perLeaf)),
+        geometry,
+      );
+      sizeChapter(state.chapters[i], columns, geometry);
+      const at = `${i + 1}.1`,
+        filler = {
+          at,
+          offset: 0,
+          preview: (sourceTexts.get(at) || "").slice(0, 95),
+        };
+      for (let k = 0; k < columns; k++) {
+        entries.push(filler);
+        sources.push("");
+      }
+    });
+    state.starts = starts;
+    entriesRef.current = entries;
+    sourcesRef.current = sources;
+    const total = Math.max(1, entries.length);
+    return {
+      width: geometry.width,
+      gap: geometry.gap,
+      columns: geometry.columns,
+      count: Math.ceil(total / geometry.columns),
+      ready: true,
+      leaves: total,
+    };
+  };
+  const publish = () => {
+    const entries = entriesRef.current,
+      sources = sourcesRef.current;
+    const json = JSON.stringify([entries, sources]);
+    if (json !== emittedIndex.current) {
+      emittedIndex.current = json;
+      setPageIndex(entries);
+      setPageSources(sources);
+    }
+    state.current.props.onIndex?.(entries);
+  };
+  // Show the page holding the reading position for the given layout.
+  const applyLayout = (next: Layout) => {
+    const canvas = text.current!;
+    canvas.style.transition = "none";
+    const restored = positionFor(next);
+    state.current.layout = next;
+    state.current.page = restored;
+    if (!scrolling)
+      canvas.style.transform = `translateX(${-restored * (next.width + next.gap)}px)`;
+    setLayout(next);
+    setPage(restored);
+    cancelAnimationFrame(settleFrame.current);
+    settleFrame.current = requestAnimationFrame(() => {
+      if (text.current) text.current.style.transition = "";
+    });
+    const complete = !paged.current || paged.current.measures.every(Boolean);
+    // Long books finish pagination in the background; tests and tools can
+    // wait for "complete" before inspecting every page.
+    if (root.current)
+      root.current.dataset.paginated = complete ? "complete" : "partial";
+    if (complete) publish();
+    if (!focused.current && !props.measureOnly) {
+      focused.current = true;
+      root.current?.focus({ preventScroll: true });
+    }
+  };
+  const measureAt = (ci: number) => {
+    const state = paged.current!;
+    const measure = measureChapter(
+      text.current!,
+      state.chapters[ci],
+      state.geometry,
+      sourceTexts,
+    );
+    sessionMeasured.add(measure);
+    state.measures[ci] = measure;
+    state.checked[ci] = true;
+    if (state.measures.every(Boolean))
+      void saveLayout(
+        manifest.id,
+        manifest.revision,
+        state.key,
+        state.measures as ChapterMeasure[],
+      );
+  };
+  // Make sure a chapter about to be shown is measured (or that a stored
+  // measurement still matches). Returns true when page numbers changed.
+  const ensureChapter = (ci: number) => {
+    const state = paged.current;
+    if (!state || ci < 0 || ci >= state.chapters.length) return false;
+    const known = state.measures[ci];
+    if (known && state.checked[ci]) return false;
+    if (known) {
+      if (chapterMatches(state.chapters[ci], known, state.geometry.stride)) {
+        state.checked[ci] = true;
+        return false;
+      }
+      // This browser typesets differently now: discard every stored chapter.
+      state.measures.forEach((_, i) => {
+        if (!state.checked[i]) state.measures[i] = undefined;
+      });
+      void saveLayout(manifest.id, manifest.revision, state.key, null);
+    }
+    measureAt(ci);
+    return true;
+  };
+  // Resolve a page and measure every chapter visible on it, repeating while
+  // measurement moves page numbers. Returns the layout and whether it changed.
+  const settlePage = (resolve: (geometry: Layout) => number) => {
+    let next = state.current.layout,
+      changed = false;
+    for (let pass = 0; pass < 4; pass++) {
+      const page = resolve(next);
+      let measured = false;
+      for (
+        let leaf = page * next.columns;
+        leaf < (page + 1) * next.columns && leaf < (next.leaves || 1);
+        leaf++
+      )
+        measured = ensureChapter(chapterOfLeaf(leaf)) || measured;
+      if (!measured) break;
+      changed = true;
+      next = compose();
+    }
+    return { next, changed };
+  };
+  const scheduleIdle = () => {
+    const state = paged.current;
+    if (!state || state.idle || state.measures.every(Boolean)) return;
+    state.idle = idle(() => {
+      state.idle = 0;
+      if (paged.current !== state || !text.current) return;
+      // Never re-number pages under a finger (slider, swipe) or mid-turn.
+      if (root.current?.dataset.turning || dragTurn.current || held.current) {
+        scheduleIdle();
+        return;
+      }
+      const ci = chapterOrder(anchorChapter(), state.chapters.length).find(
+        (i) => !state.measures[i],
+      );
+      if (ci === undefined) return;
+      measureAt(ci);
+      applyLayout(compose());
+      scheduleIdle();
+    });
+  };
+  // Book search needs the text of every page.
+  const measureAll = () => {
+    const state = paged.current;
+    if (!state || state.measures.every(Boolean)) return;
+    state.measures.forEach((m, i) => m || measureAt(i));
+    applyLayout(compose());
+  };
   // Measure columns after fonts/layout changes. The bookmark is a source-text offset,
   // so it survives a different font, window width or number of facing pages.
   useLayoutEffect(() => {
     let frame = 0,
-      settle = 0,
+      started = false,
       closed = false;
+    // New geometry or text: pagination restarts until applyLayout says otherwise.
+    if (root.current) root.current.dataset.paginated = "partial";
+    const { faces } = preload;
     const calculate = () => {
       if (closed || !viewport.current || !text.current) return;
-      stopTurn.current();
-      dragTurn.current = null;
       const viewportBox = viewport.current.getBoundingClientRect();
       const viewportHeight = viewport.current.clientHeight;
       if (viewportBox.width <= 0 || viewportHeight <= 0) return;
+      const width = viewportBox.width;
+      const fontState = faces()
+        .map((face) => face.status)
+        .join();
+      const cacheKey = JSON.stringify([
+        width,
+        viewportHeight,
+        typesetting,
+        fontState,
+      ]);
+      // Resize observers and font events repeat; identical geometry needs no work.
+      if (appliedKey.current === cacheKey && state.current.layout.ready) return;
+      stopTurn.current();
+      dragTurn.current = null;
+      if (paged.current?.idle) cancelIdle(paged.current.idle);
+      clearTimeout(paged.current?.delay);
+      paged.current = null;
+      const canvas = text.current;
       // Safari may treat a percentage height inside an inset-positioned box
       // as auto, flowing the entire book into one long column. Use a definite
       // physical height before asking the browser to fragment its columns.
-      text.current.style.height = scrolling ? "auto" : viewportHeight + "px";
-      text.current.style.width = viewportBox.width + "px";
+      canvas.style.height = scrolling ? "auto" : viewportHeight + "px";
+      canvas.style.width = width + "px";
       // Apply the destination column geometry before any layout read. A mode
       // switch must not lay out the whole novel once with the old columns first.
-      const width = viewportBox.width;
       const columns =
         scrolling || mode === "parallel"
           ? 1
@@ -370,87 +664,92 @@ export function PagedReader(props: Props) {
       const gap =
         columns === 2 ? Math.min(100, Math.max(52, width * 0.075)) : 48;
       const columnWidth = (width - gap * (columns - 1)) / columns;
-      text.current.style.columnWidth = scrolling ? "auto" : columnWidth + "px";
-      text.current.style.columnCount = scrolling ? "auto" : String(columns);
-      text.current.style.columnGap = gap + "px";
-      prepareChapters(text.current, columnWidth, viewportHeight);
-      const cacheKey = JSON.stringify([width, viewportHeight, typesetting]);
-      let cache = measuredLayouts.get(content);
-      if (!cache) {
-        cache = new Map();
-        measuredLayouts.set(content, cache);
-      }
-      const cached =
-        document.fonts.status === "loaded" ? cache.get(cacheKey) : undefined;
-      const breaks = sentencePages(
-        text.current,
-        (width + gap) / columns,
-        scrolling ? 0 : viewportHeight,
-        scrolling ? [] : cached?.breaks,
-      );
-      const chapterPages = scrolling
-        ? []
-        : sizeChapters(
-            text.current,
-            (width + gap) / columns,
-            gap,
-            cached?.chapters,
-          );
-      if (cached) {
-        entriesRef.current = cached.entries;
-        setPageIndex(cached.entries);
-        setPageSources(cached.sources);
-        const restored = positionFor(cached.layout);
-        text.current.style.transition = "none";
-        setLayout(cached.layout);
-        setPage(restored);
-        if (!scrolling) text.current.dataset.chapterPages = "true";
-        state.current.props.onIndex?.(cached.entries);
-        cancelAnimationFrame(settle);
-        settle = requestAnimationFrame(() => {
-          if (text.current) text.current.style.transition = "";
-        });
+      const stride = (width + gap) / columns;
+      canvas.style.columnWidth = scrolling ? "auto" : columnWidth + "px";
+      canvas.style.columnCount = scrolling ? "auto" : String(columns);
+      canvas.style.columnGap = gap + "px";
+      canvas.style.setProperty("--chapter-page", width + "px");
+      canvas.style.setProperty("--chapter-columns", String(columns));
+      canvas.style.setProperty("--chapter-height", viewportHeight + "px");
+      appliedKey.current = cacheKey;
+      if (!scrolling) {
+        let cache = measuredLayouts.get(content);
+        if (!cache) measuredLayouts.set(content, (cache = new Map()));
+        let measures = cache.get(cacheKey);
+        if (!measures) {
+          cache.set(cacheKey, (measures = []));
+          if (cache.size > 6) cache.delete(cache.keys().next().value!);
+        }
+        const chapters = [
+          ...canvas.querySelectorAll<HTMLElement>(":scope > .folio-chapter"),
+        ];
+        // Dense, so every()/forEach() see chapters that are not measured yet.
+        while (measures.length < chapters.length) measures.push(undefined);
+        const geometry = {
+          stride,
+          gap,
+          height: viewportHeight,
+          width,
+          columns,
+        };
+        paged.current = {
+          key: cacheKey,
+          geometry,
+          chapters,
+          measures,
+          checked: chapters.map(
+            (_, i) => !!measures[i] && sessionMeasured.has(measures[i]),
+          ),
+          starts: [],
+          idle: 0,
+          delay: 0,
+        };
+        measures.forEach((m, i) => m && applyChapter(chapters[i], m, geometry));
+        const begin = performance.now();
+        const target = anchorChapter();
+        ensureChapter(target);
+        // Short books are measured completely before they appear. Another
+        // chapter is taken only while its expected cost, predicted from the
+        // first chapter's speed, still fits in the opening budget.
+        const rate =
+          (performance.now() - begin) / Math.max(1, chapterChars[target]);
+        for (const ci of chapterOrder(target, chapters.length)) {
+          if (measures[ci]) continue;
+          const elapsed = performance.now() - begin;
+          if (elapsed + rate * chapterChars[ci] > OPEN_BUDGET) break;
+          measureAt(ci);
+        }
+        state.current.layout = compose();
+        applyLayout(settlePage((g) => positionFor(g)).next);
+        // Let the first page paint and answer the first touch before the
+        // remaining chapters are measured.
+        const opened = paged.current;
+        opened.delay = window.setTimeout(() => {
+          opened.delay = 0;
+          scheduleIdle();
+        }, 500);
         return;
       }
-      const count = scrolling
-        ? Math.max(
-            1,
-            Math.ceil(
-              text.current.scrollHeight / viewport.current.clientHeight,
-            ),
-          )
-        : Math.max(
-            1,
-            Math.ceil(
-              (text.current.scrollWidth + gap - 0.5) /
-                (columnWidth + gap) /
-                columns,
-            ),
-          );
-      const next = {
-        width,
-        gap,
-        columns,
-        count,
-        ready: true,
-        leaves: count * columns,
-      };
+      // Scroll: one continuous column, measured at once.
+      sentencePages(canvas, stride, 0);
+      let cache = scrollLayouts.get(content);
+      if (!cache) scrollLayouts.set(content, (cache = new Map()));
+      const cached = cache.get(cacheKey);
+      if (cached) {
+        entriesRef.current = cached.entries;
+        sourcesRef.current = cached.sources;
+        applyLayout(cached.layout);
+        return;
+      }
+      const origin = canvas.getBoundingClientRect();
       const nodes = [
-        ...text.current.querySelectorAll<HTMLElement>("[data-book-char]"),
+        ...canvas.querySelectorAll<HTMLElement>("[data-book-char]"),
       ];
-      const origin = text.current.getBoundingClientRect();
-      const stride = (width + gap) / columns;
-      const leafOf = (element: Element) => {
-        const rect = textRect(element);
-        return Math.max(
+      const leafOf = (element: Element) =>
+        Math.max(
           0,
-          Math.floor(
-            scrolling
-              ? (rect.top - origin.top + 1) / viewportHeight
-              : (rect.left - origin.left + 1) / stride,
-          ),
+          Math.floor((textRect(element).top - origin.top + 1) / viewportHeight),
         );
-      };
       const entries: PageEntry[] = [];
       const sourceGroups: {
         key: string;
@@ -458,8 +757,6 @@ export function PagedReader(props: Props) {
         start: number;
         end: number;
       }[][] = [];
-      // Source words are ordered by physical leaf. Locate page boundaries with
-      // binary search, rather than requesting a layout rectangle for every word.
       let cursor = 0;
       while (cursor < nodes.length) {
         const leaf = leafOf(nodes[cursor]);
@@ -477,20 +774,14 @@ export function PagedReader(props: Props) {
           const sourceText = sourceTexts.get(address)!;
           const char = Number(node.dataset.bookChar) || 0;
           const copy = Math.floor(char / (sourceText.length + 1));
-          if (!entries[leaf])
-            entries[leaf] = {
-              at: address,
-              offset: char,
-              preview: sourceText.slice(
-                char % (sourceText.length + 1),
-                (char % (sourceText.length + 1)) + 95,
-              ),
-            };
-          // Book search covers the Frank paragraph only; its hint-free repeat
-          // would report every match twice.
+          const start = char % (sourceText.length + 1);
+          entries[leaf] ||= {
+            at: address,
+            offset: char,
+            preview: sourceText.slice(start, start + 95),
+          };
           if (copy > 0) continue;
-          const start = char % (sourceText.length + 1),
-            end = start + (node.textContent?.length || 0);
+          const end = start + (node.textContent?.length || 0);
           const groups = (sourceGroups[leaf] ||= []),
             key = address + ":" + copy;
           if (groups.at(-1)?.key === key) groups.at(-1)!.end = end;
@@ -499,32 +790,24 @@ export function PagedReader(props: Props) {
         cursor = low;
       }
       let lastLeaf = 0;
-      // Paragraph fragments include hints, punctuation and translations. Measuring
-      // their boxes avoids a Range/layout read for every text node in the novel.
-      for (const element of text.current.querySelectorAll(
+      for (const element of canvas.querySelectorAll(
         ".reading-panel p,.folio-chapter-title",
-      )) {
-        for (const rect of element.getClientRects()) {
-          const leaf = scrolling
-            ? Math.floor((rect.bottom - origin.top - 0.5) / viewportHeight)
-            : Math.floor((rect.left - origin.left + 1) / (columnWidth + gap));
-          lastLeaf = Math.max(lastLeaf, leaf);
-        }
-      }
-      // The overflow extent is independent of element rectangles. Never
-      // collapse a multi-column book to one page because a fragment box was
-      // reported in the first column by the browser.
-      const extentLeaves = scrolling
-        ? Math.ceil(text.current.scrollHeight / viewportHeight)
-        : Math.ceil((text.current.scrollWidth + gap - 0.5) / stride);
-      const leaves = Math.max(1, extentLeaves, entries.length, lastLeaf + 1);
+      ))
+        for (const rect of element.getClientRects())
+          lastLeaf = Math.max(
+            lastLeaf,
+            Math.floor((rect.bottom - origin.top - 0.5) / viewportHeight),
+          );
+      const leaves = Math.max(
+        1,
+        Math.ceil(canvas.scrollHeight / viewportHeight),
+        entries.length,
+        lastLeaf + 1,
+      );
       for (let i = 0; i < leaves; i++)
-        if (!entries[i])
-          entries[i] = entries[i - 1] ||
-            entries.find(Boolean) || { at: "1.1", offset: 0, preview: "" };
-      next.leaves = leaves;
-      next.count = Math.ceil(leaves / columns);
-      const measuredSources = Array.from({ length: leaves }, (_, i) =>
+        entries[i] ||= entries[i - 1] ||
+          entries.find(Boolean) || { at: "1.1", offset: 0, preview: "" };
+      const sources = Array.from({ length: leaves }, (_, i) =>
         (sourceGroups[i] || [])
           .map(
             (g) =>
@@ -533,36 +816,22 @@ export function PagedReader(props: Props) {
           )
           .join("\n"),
       );
-      if (document.fonts.status === "loaded") {
-        cache.set(cacheKey, {
-          layout: next,
-          entries,
-          sources: measuredSources,
-          breaks,
-          chapters: chapterPages,
-        });
-        if (cache.size > 6) cache.delete(cache.keys().next().value!);
-      }
-      const json = JSON.stringify([entries, measuredSources]);
-      if (document.fonts.status === "loaded" && json !== emittedIndex.current) {
-        emittedIndex.current = json;
-        setPageIndex(entries);
-        setPageSources(measuredSources);
-      }
-      if (document.fonts.status === "loaded")
-        state.current.props.onIndex?.(entries);
+      const next = {
+        width,
+        gap,
+        columns: 1,
+        count: leaves,
+        ready: true,
+        leaves,
+      };
+      cache.set(cacheKey, { layout: next, entries, sources });
+      if (cache.size > 6) cache.delete(cache.keys().next().value!);
       entriesRef.current = entries;
-      const restored = positionFor(next);
-      text.current.style.transition = "none";
-      setLayout(next);
-      setPage(restored);
-      if (!scrolling) text.current.dataset.chapterPages = "true";
-      cancelAnimationFrame(settle);
-      settle = requestAnimationFrame(() => {
-        if (text.current) text.current.style.transition = "";
-      });
+      sourcesRef.current = sources;
+      applyLayout(next);
     };
     const measure = () => {
+      if (!started) return;
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         // Let the new settings and pressed state paint before the expensive
@@ -572,27 +841,47 @@ export function PagedReader(props: Props) {
         else calculate();
       });
     };
-    measure();
+    void Promise.race([
+      preload.ready,
+      new Promise((resolve) => setTimeout(resolve, 1500)),
+    ]).then(() => {
+      if (closed) return;
+      started = true;
+      measure();
+    });
     const observer = new ResizeObserver(measure);
     observer.observe(viewport.current!);
     document.fonts.addEventListener("loadingdone", measure);
-    document.fonts.ready.then(() => {
-      if (!closed) measure();
-    });
     return () => {
       closed = true;
       cancelAnimationFrame(frame);
-      cancelAnimationFrame(settle);
+      cancelAnimationFrame(settleFrame.current);
+      if (paged.current?.idle) cancelIdle(paged.current.idle);
+      clearTimeout(paged.current?.delay);
+      paged.current = null;
+      appliedKey.current = "";
       observer.disconnect();
       document.fonts.removeEventListener("loadingdone", measure);
     };
   }, [content, pages, typesetting]);
   useLayoutEffect(() => {
+    if (bookQuery.trim()) measureAll();
+  }, [bookQuery]);
+  useLayoutEffect(() => {
     const key = at + ":" + offset;
     if (key === lastReported.current) return;
     anchor.current = { at, offset };
     if (!layout.ready) return;
-    setPage(positionFor(layout));
+    if (paged.current) {
+      const measured = ensureChapter(anchorChapter());
+      if (measured) state.current.layout = compose();
+      const settled = settlePage((g) => positionFor(g));
+      if (measured || settled.changed) {
+        applyLayout(settled.next);
+        return;
+      }
+    }
+    setPage(positionFor(state.current.layout));
   }, [at, offset]);
   // The transform is written every commit, including a reflow with the same page.
   useLayoutEffect(() => {
@@ -689,11 +978,40 @@ export function PagedReader(props: Props) {
       if (viewport.current) delete viewport.current.dataset.modeTransition;
     };
   }, [mode, settings.pageTurn]);
+  // Every chapter visible on the page is measured and confirmed.
+  const pageReady = (page: number) => {
+    const state = paged.current,
+      geometry = stateLayout();
+    if (!state || !state.starts.length) return true;
+    for (
+      let leaf = page * geometry.columns;
+      leaf < (page + 1) * geometry.columns && leaf < (geometry.leaves || 1);
+      leaf++
+    ) {
+      const ci = chapterOfLeaf(leaf);
+      if (!state.measures[ci] || !state.checked[ci]) return false;
+    }
+    return true;
+  };
+  const stateLayout = () => state.current.layout;
+  const clampPage = (page: number, geometry: Layout) =>
+    Math.max(0, Math.min(geometry.count - 1, page));
+  // Measure the destination chapter first when a turn or jump leaves the
+  // measured part of a long book.
+  const prepareTarget = (resolve: (geometry: Layout) => number) => {
+    const settled = settlePage(resolve);
+    if (settled.changed) applyLayout(settled.next);
+  };
   const turn = (delta: number, interactive = false, originY = 0.75) => {
     props.onDismissWord();
     clearTimeout(lookupTimer.current);
+    if (!state.current.layout.ready) return;
+    if (
+      paged.current &&
+      !pageReady(clampPage(state.current.page + delta, state.current.layout))
+    )
+      prepareTarget((g) => clampPage(positionFor(g) + delta, g));
     const geometry = state.current.layout;
-    if (!geometry.ready) return;
     const origin = state.current.page;
     const next = Math.max(0, Math.min(geometry.count - 1, origin + delta));
     if (next === origin) return;
@@ -758,10 +1076,13 @@ export function PagedReader(props: Props) {
     stopTurn.current = motion.stop;
     return { motion, direction: delta, origin };
   };
-  const jumpPage = (next: number) => {
+  const jumpPage = (target: number) => {
     props.onDismissWord();
     clearTimeout(lookupTimer.current);
     clearTurnAnimations();
+    if (paged.current && !pageReady(target))
+      prepareTarget((g) => clampPage(target, g));
+    const next = clampPage(target, state.current.layout);
     report(next);
     setPage(next);
     state.current.page = next;
@@ -1149,6 +1470,8 @@ export function PagedReader(props: Props) {
         <main
           class="folio-columns"
           ref={text}
+          data-chaptered=""
+          data-chapter-pages=""
           aria-label={t("Текст книги")}
           onDblClick={(event) => event.preventDefault()}
           style={{ visibility: layout.ready ? "visible" : "hidden" }}
