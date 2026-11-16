@@ -23,3 +23,12 @@ export async function choosePageTurn(
     themes.getByRole("menuitemradio", { name: label, exact: true }),
   );
 }
+
+// Reading controls are compact with a mouse and finger-sized with touch
+// (src/input-density.ts and the density block at the end of books.css).
+export const readerSizes = (page) =>
+  page.evaluate(() =>
+    matchMedia("(hover: hover) and (pointer: fine)").matches
+      ? { scale: 0.9, tool: 44, panel: 380, fine: true }
+      : { scale: 1.08, tool: 52, panel: 420, fine: false },
+  );

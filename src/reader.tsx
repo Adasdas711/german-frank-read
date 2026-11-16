@@ -1,3 +1,4 @@
+import { appBase, useFineInput } from "./input-density";
 import { render } from "preact";
 import {
   useState,
@@ -437,12 +438,14 @@ function App() {
     window.addEventListener("hashchange", change);
     return () => window.removeEventListener("hashchange", change);
   }, []);
+  const fine = useFineInput();
   useLayoutEffect(() => {
     document.documentElement.style.setProperty(
       "--ui-scale",
-      String((settings.uiScale / 100) * 1.25),
+      String((settings.uiScale / 100) * appBase(fine)),
     );
-  }, [settings.uiScale]);
+    document.documentElement.dataset.input = fine ? "fine" : "touch";
+  }, [settings.uiScale, fine]);
   const appTheme = readingTheme(settings).light ? "light" : "dark";
   const appColors = applicationStyle(settings);
   useLayoutEffect(() => {

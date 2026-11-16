@@ -1,3 +1,4 @@
+import { readerBase } from "./input-density";
 import type { Settings } from "./storage";
 export const fonts = [
   "Literata",
@@ -162,8 +163,8 @@ export function appearanceStyle(s: Settings) {
       : s.hintColor || selected.hint;
   return {
     "color-scheme": selected.light ? "light" : "dark",
-    "--ui-scale": (s.readingUiScale / 100) * 1.08,
-    "--reading-ui-scale": (s.readingUiScale / 100) * 1.08,
+    "--ui-scale": (s.readingUiScale / 100) * readerBase(),
+    "--reading-ui-scale": (s.readingUiScale / 100) * readerBase(),
     "--folio-paper": selected.paper,
     "--folio-ink": selected.ink,
     "--folio-muted": selected.ink + "a8",

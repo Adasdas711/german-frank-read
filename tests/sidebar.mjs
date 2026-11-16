@@ -92,9 +92,11 @@ try {
     "root collections occupy separate rows",
   );
   await p.screenshot({ path: ".test-results/sidebar.png" });
-  await p
-    .locator("[data-level=A2]")
-    .dragTo(p.locator("[data-level=B2]"), { targetPosition: { x: 20, y: 30 } });
+  // Drop on the lower part of B2 (rows are shorter with a mouse).
+  const b2 = await p.locator("[data-level=B2]").boundingBox();
+  await p.locator("[data-level=A2]").dragTo(p.locator("[data-level=B2]"), {
+    targetPosition: { x: 20, y: Math.round(b2.height * 0.75) },
+  });
   assert.deepEqual(await order(p, "[data-level]", "data-level"), [
     "B1",
     "B2",

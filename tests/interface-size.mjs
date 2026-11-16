@@ -1,4 +1,4 @@
-import { revealReader } from "./reader-helpers.mjs";
+import { revealReader, readerSizes } from "./reader-helpers.mjs";
 import { chromium } from "playwright-core";
 import { createServer } from "node:http";
 import { readFile, mkdir } from "node:fs/promises";
@@ -73,18 +73,20 @@ try {
     const text = p.locator(".folio-columns");
     const bookFont = await fontSize(text);
     const bookArea = await p.locator(".folio-viewport").boundingBox();
+    const sizes = await readerSizes(p);
     assert(
       // Body size of the type scale (--fs-body) at the reader's own scale.
-      Math.abs((await fontSize(p.locator(".books-reader"))) - 13.6 * 1.08) <
-        0.1,
+      Math.abs(
+        (await fontSize(p.locator(".books-reader"))) - 13.6 * sizes.scale,
+      ) < 0.1,
       "reader interface must not inherit the larger library font",
     );
     assert(
       Math.abs(
         (await tools.evaluate((n) => n.getBoundingClientRect().width)) -
-          52 * 1.08,
+          sizes.tool * sizes.scale,
       ) < 0.1,
-      "reader default 100% includes the 8% increase",
+      "reader default 100% uses the base size for this input",
     );
     await tools.click();
     await p
@@ -106,7 +108,7 @@ try {
       assert(
         Math.abs(
           (await tools.evaluate((n) => n.getBoundingClientRect().width)) -
-            (52 * 1.08 * value) / 100,
+            (sizes.tool * sizes.scale * value) / 100,
         ) < 0.1,
       );
       assert.equal(

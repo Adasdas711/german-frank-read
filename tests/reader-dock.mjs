@@ -1,4 +1,4 @@
-import { revealReader } from "./reader-helpers.mjs";
+import { revealReader, readerSizes } from "./reader-helpers.mjs";
 import { chromium } from "playwright-core";
 import { createServer } from "node:http";
 import { readFile, mkdir } from "node:fs/promises";
@@ -62,18 +62,20 @@ try {
     const tools = await p
       .getByRole("button", { name: "Reading tools", exact: true })
       .boundingBox();
+    // Finger-sized on touch; compact but comfortable with a mouse.
+    const target = (await readerSizes(p)).fine ? 36 : 48;
     assert(
       exit.x > width / 2 &&
         exit.y < 80 &&
-        exit.width >= 48 &&
-        exit.height >= 48,
+        exit.width >= target &&
+        exit.height >= target,
       name + " exit at top right",
     );
     assert(
       tools.x > width / 2 &&
         tools.y > height / 2 &&
-        tools.width >= 48 &&
-        tools.height >= 48,
+        tools.width >= target &&
+        tools.height >= target,
       name + " single tools button at bottom right",
     );
     assert.equal(await p.locator(".folio-toolbar button").count(), 0);
@@ -130,7 +132,10 @@ try {
       await p
         .locator(".theme-tile")
         .first()
-        .evaluate((n) => n.getBoundingClientRect().height >= 75),
+        .evaluate(
+          (n, min) => n.getBoundingClientRect().height >= min,
+          target === 48 ? 75 : 55,
+        ),
     );
     assert.ok(
       panel.y >= 0 && panel.y + panel.height <= height,
@@ -164,7 +169,10 @@ try {
       assert(
         await node
           .locator("strong")
-          .evaluate((n) => parseFloat(getComputedStyle(n).fontSize) >= 18),
+          .evaluate(
+            (n, min) => parseFloat(getComputedStyle(n).fontSize) >= min,
+            target === 48 ? 18 : 15,
+          ),
       );
     }
     await p.screenshot({

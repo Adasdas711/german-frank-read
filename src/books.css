@@ -9,6 +9,17 @@
    control, the chosen word, inline styles set by the reader (Scroll mode),
    text selection in fields, reduced motion, and the library's motion switch
    with its few opt-in animations. */
+/* Base sizes before the app sets them from settings (see input-density.ts):
+   a mouse or trackpad gets compact controls, touch keeps roomy ones. */
+@media (hover: hover) and (pointer: fine) {
+  :root,
+  :root[data-theme="dark"] {
+    --ui-scale: 1;
+  }
+  :root .books-reader {
+    --ui-scale: 0.9;
+  }
+}
 :root {
   --fs-micro: 9px;
   --fs-caption: 9.6px;
@@ -285,9 +296,9 @@ button:disabled {
 }
 .library-main {
   min-width: 0;
-  /* About 1200 px at the default scale: wide screens get margins, not a
-     stretched page. */
-  max-width: calc(960px * var(--ui-scale));
+  /* About 1200 px with a mouse: wide screens get margins, not a stretched
+     page. */
+  max-width: calc(1200px * var(--ui-scale));
   width: 100%;
   padding: calc(56px * var(--ui-scale))
     clamp(calc(28px * var(--ui-scale)), 4vw, calc(68px * var(--ui-scale)))
@@ -412,7 +423,7 @@ button:disabled {
   display: grid;
   grid-template-columns: repeat(
     auto-fill,
-    minmax(calc(124px * var(--ui-scale)), 1fr)
+    minmax(calc(140px * var(--ui-scale)), 1fr)
   );
   gap: calc(30px * var(--ui-scale)) calc(25px * var(--ui-scale));
 }
@@ -4235,4 +4246,111 @@ body,
 body:has(.library-main :is(.home-section, .filter-tabs))
   .modal-backdrop:has(> .book-details-modal) {
   animation-duration: 200ms !important;
+}
+
+/* Density for a mouse or trackpad. Touch keeps finger-sized targets (44 px
+   and more); a pointer needs about 30-40 px. Sizes are design pixels times
+   --ui-scale (1 in the library, 0.9 for reading controls; input-density.ts),
+   and the interface size settings still scale them. Keep pointer-only sizes
+   here rather than scattered through the file. */
+@media (hover: hover) and (pointer: fine) {
+  /* Library and dialogs. */
+  .round {
+    width: calc(32px * var(--ui-scale));
+    height: calc(32px * var(--ui-scale));
+    min-width: calc(32px * var(--ui-scale));
+    min-height: calc(32px * var(--ui-scale));
+    padding: calc(7px * var(--ui-scale));
+  }
+  .pill {
+    min-height: calc(30px * var(--ui-scale));
+    padding: calc(5px * var(--ui-scale)) calc(12px * var(--ui-scale));
+  }
+  .sidebar-item {
+    min-height: calc(30px * var(--ui-scale));
+    padding: calc(6px * var(--ui-scale)) calc(10px * var(--ui-scale));
+  }
+  .setting-row,
+  .switch-label {
+    min-height: calc(40px * var(--ui-scale));
+  }
+  .filled-control-label {
+    min-height: calc(36px * var(--ui-scale));
+  }
+  .font-list button {
+    min-height: calc(34px * var(--ui-scale));
+  }
+  .continue-more {
+    min-height: calc(32px * var(--ui-scale));
+  }
+  .continue-context-menu > button {
+    min-height: calc(34px * var(--ui-scale));
+  }
+  .continue-menu-shortcuts button {
+    min-height: calc(60px * var(--ui-scale));
+  }
+  .book-details-modal > .row:first-child .icon {
+    width: calc(36px * var(--ui-scale));
+    min-width: calc(36px * var(--ui-scale));
+    height: calc(36px * var(--ui-scale));
+    min-height: calc(36px * var(--ui-scale));
+  }
+  .book-details-modal .detail-actions button {
+    min-height: calc(38px * var(--ui-scale));
+    padding: calc(8px * var(--ui-scale)) calc(16px * var(--ui-scale));
+  }
+  .book-details-modal .detail-more button {
+    min-height: calc(42px * var(--ui-scale));
+    padding: calc(10px * var(--ui-scale)) calc(16px * var(--ui-scale));
+  }
+
+  /* Reading controls. */
+  .books-reader .reader-exit,
+  .books-reader .reader-tools-button {
+    width: calc(44px * var(--ui-scale));
+    min-width: calc(44px * var(--ui-scale));
+    height: calc(44px * var(--ui-scale));
+    min-height: calc(44px * var(--ui-scale));
+    padding: calc(10px * var(--ui-scale));
+  }
+  /* The menu and its panels (Themes, Contents, Search) share one width. */
+  .books-reader :is(.reading-menu, .folio-popover).glass {
+    width: min(
+      calc(380px * var(--ui-scale)),
+      calc(100vw - 36px * var(--ui-scale))
+    );
+  }
+  .books-reader .reading-menu > button {
+    min-height: calc(44px * var(--ui-scale));
+    padding: calc(10px * var(--ui-scale)) calc(14px * var(--ui-scale));
+  }
+  .books-reader .reading-menu .reader-mode-tabs button {
+    min-height: calc(40px * var(--ui-scale));
+  }
+  .books-reader .reading-menu-icons button {
+    min-height: calc(44px * var(--ui-scale));
+  }
+  .books-reader .folio-popover :is(.sheet-heading, .reader-panel-heading),
+  .books-reader .folio-popover .book-search,
+  .books-reader .folio-popover.search .book-search {
+    min-height: calc(44px * var(--ui-scale));
+  }
+  .books-reader .folio-popover.contents .chapter-entry {
+    min-height: calc(42px * var(--ui-scale));
+  }
+  .page-entry {
+    min-height: calc(44px * var(--ui-scale));
+  }
+  .themes-panel .theme-tile {
+    min-height: calc(64px * var(--ui-scale));
+  }
+  .themes-panel .appearance-tools > button,
+  .themes-panel > .wide,
+  .page-turn-control > button {
+    min-height: calc(36px * var(--ui-scale));
+  }
+  .themes-panel .page-turn-control .turn-menu button,
+  .themes-panel .turn-menu button {
+    min-height: calc(34px * var(--ui-scale));
+  }
 }
