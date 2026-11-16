@@ -1,8 +1,6 @@
 // Runs the given npm scripts one after another, keeps going after a failure,
 // prints a summary and exits non-zero if any of them failed.
 //
-// RETRIES=n   rerun a failed suite up to n times. A suite that passes on a
-//             rerun is reported as FLAKY (a GitHub warning), not as passed.
 // KNOWN_FAILING=1   the suites are expected to fail: failures become
 //             warnings and the exit code is 0; a suite that passes is
 //             announced so it can move back into a regular group.
@@ -10,13 +8,12 @@ import { spawnSync } from "node:child_process";
 import { appendFileSync } from "node:fs";
 
 const names = process.argv.slice(2);
-const retries = Number(process.env.RETRIES || 0);
 const known = process.env.KNOWN_FAILING === "1";
 const annotate = (level, title, message) =>
   process.env.GITHUB_ACTIONS &&
   console.log(`::${level} title=${title}::${message}`);
-const run = (name, attempt) => {
-  console.log(`\n::group::${name}${attempt ? ` (retry ${attempt})` : ""}`);
+const run = (name) => {
+  console.log(`\n::group::${name}`);
   const { status } = spawnSync("npm", ["run", "-s", name], {
     stdio: "inherit",
     shell: process.platform === "win32",
@@ -27,10 +24,7 @@ const run = (name, attempt) => {
 const results = [];
 for (const name of names) {
   const started = Date.now();
-  let ok = run(name, 0),
-    attempts = 0;
-  while (!ok && attempts < retries) ok = run(name, ++attempts);
-  const status = ok ? (attempts ? "FLAKY" : "PASS") : "FAIL";
+  const status = run(name) ? "PASS" : "FAIL";
   results.push({ name, status, seconds: (Date.now() - started) / 1000 });
 }
 console.log("\nSummary:");
@@ -56,18 +50,8 @@ for (const r of results) {
       "Known failing test passes",
       `${r.name} now passes: move it from knownFailing into a group in tests/ci-groups.json`,
     );
-  else if (r.status === "FLAKY")
-    annotate(
-      "warning",
-      "Flaky browser test",
-      `${r.name} failed and then passed on a retry`,
-    );
   else if (r.status === "FAIL")
-    annotate(
-      "error",
-      "Browser test failed",
-      `${r.name} failed${retries ? ` ${retries + 1} times` : ""}`,
-    );
+    annotate("error", "Browser test failed", `${r.name} failed`);
 }
 const failed = results.filter((r) => r.status === "FAIL");
 if (failed.length && !known) {

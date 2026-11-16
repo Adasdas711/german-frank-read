@@ -65,10 +65,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - run: npm ci
-      # One retry per suite; a pass on retry is reported as a flaky warning.
       - run: node scripts/run-suites.mjs ${{ matrix.suites }}
-        env:
-          RETRIES: 1
       - name: Screenshots of failed runs
         if: failure()
         uses: actions/upload-artifact@v4

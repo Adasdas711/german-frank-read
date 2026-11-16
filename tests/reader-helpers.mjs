@@ -11,17 +11,32 @@ export async function revealReader(page, touch = false) {
   await page.locator(".books-reader.controls-visible").waitFor();
 }
 
+// Wait until a panel's entrance animations finish. A panel holds still at its
+// starting position for two frames before it moves in, so a click aimed while
+// it is still animating can land on a different control on a slow machine.
+export async function settled(locator) {
+  await locator.evaluate((node) =>
+    Promise.all(
+      (node.closest(".folio-popover") || node)
+        .getAnimations({ subtree: true })
+        .map((animation) => animation.finished.catch(() => {})),
+    ),
+  );
+}
+
 export async function choosePageTurn(
   themes,
   label,
   activate = (n) => n.click(),
 ) {
+  await settled(themes);
   await activate(
     themes.getByRole("button", { name: "Page turning", exact: true }),
   );
-  await activate(
-    themes.getByRole("menuitemradio", { name: label, exact: true }),
-  );
+  const item = themes.getByRole("menuitemradio", { name: label, exact: true });
+  await item.waitFor();
+  await settled(item);
+  await activate(item);
 }
 
 // Reading controls are compact with a mouse and finger-sized with touch
