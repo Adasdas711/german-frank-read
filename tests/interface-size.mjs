@@ -74,7 +74,9 @@ try {
     const bookFont = await fontSize(text);
     const bookArea = await p.locator(".folio-viewport").boundingBox();
     assert(
-      Math.abs((await fontSize(p.locator(".books-reader"))) - 14 * 1.08) < 0.1,
+      // Body size of the type scale (--fs-body) at the reader's own scale.
+      Math.abs((await fontSize(p.locator(".books-reader"))) - 13.6 * 1.08) <
+        0.1,
       "reader interface must not inherit the larger library font",
     );
     assert(

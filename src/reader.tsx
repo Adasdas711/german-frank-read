@@ -1682,21 +1682,27 @@ function App() {
               {t("Export to Anki")}
             </button>
             <div class="sidebar-spacer" />
-            <button
-              class="sidebar-item"
-              onClick={() => {
-                setPending(null);
-                setFileError("");
-                setOverlay("add");
-              }}
-            >
-              <Icon name="plus" size={17} />
-              {t("Add .fbook")}
-            </button>
-            <button class="sidebar-item" onClick={() => setOverlay("settings")}>
-              <Icon name="settings" size={17} />
-              {t("Settings")}
-            </button>
+            {/* Stays visible at the bottom when the list above scrolls. */}
+            <div class="sidebar-footer">
+              <button
+                class="sidebar-item"
+                onClick={() => {
+                  setPending(null);
+                  setFileError("");
+                  setOverlay("add");
+                }}
+              >
+                <Icon name="plus" size={17} />
+                {t("Add .fbook")}
+              </button>
+              <button
+                class="sidebar-item"
+                onClick={() => setOverlay("settings")}
+              >
+                <Icon name="settings" size={17} />
+                {t("Settings")}
+              </button>
+            </div>
           </aside>
           <main
             ref={navigationPane}
@@ -2102,7 +2108,7 @@ function App() {
                     <input
                       ref={searchRef}
                       aria-label={t("Search your library")}
-                      placeholder={t("German with Frank")}
+                      placeholder={t("Books, words and text")}
                       value={query}
                       onInput={(e) => {
                         setQuery(e.currentTarget.value);
@@ -2362,6 +2368,7 @@ function App() {
         <Modal
           title={details.manifest.title}
           className="book-details-modal"
+          hideTitle
           onClose={() => setOverlay("")}
         >
           <div class="book-details">

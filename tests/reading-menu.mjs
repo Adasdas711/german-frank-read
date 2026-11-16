@@ -126,30 +126,36 @@ try {
         ].every((s) => getComputedStyle(c.querySelector(s)).display !== "none"),
       ),
     }));
-    assert.equal(new Set(layout.tops).size, 1, "all books on one row");
-    assert.ok(layout.scroll > layout.width);
     assert.ok(
       layout.details.every(Boolean),
       "every book shows cover, level, title and author",
     );
     const box = await shelf.boundingBox();
-    await p.mouse.move(box.x + 30, box.y + 30);
-    await p.mouse.wheel(0, 500);
-    await p.waitForTimeout(250);
-    assert.ok(
-      await shelf.evaluate((n) => n.scrollLeft > 0),
-      "vertical mouse wheel scrolls shelf horizontally",
-    );
-    await shelf.evaluate((n) => (n.scrollLeft = 0));
-    await shelf.focus();
-    await p.keyboard.press("ArrowRight");
-    await p.waitForTimeout(100);
-    assert.ok(
-      await shelf.evaluate((n) => n.scrollLeft > 0),
-      "keyboard moves shelf",
-    );
-    await shelf.evaluate((n) => (n.scrollLeft = 0));
-    await p.waitForTimeout(100);
+    // With a mouse on a wide screen the shelf is a wrapping grid.
+    if (width >= 1100) {
+      assert.ok(new Set(layout.tops).size > 1, "books wrap into rows");
+      assert.ok(layout.scroll <= layout.width + 1, "no sideways scrolling");
+    } else {
+      assert.equal(new Set(layout.tops).size, 1, "all books on one row");
+      assert.ok(layout.scroll > layout.width);
+      await p.mouse.move(box.x + 30, box.y + 30);
+      await p.mouse.wheel(0, 500);
+      await p.waitForTimeout(250);
+      assert.ok(
+        await shelf.evaluate((n) => n.scrollLeft > 0),
+        "vertical mouse wheel scrolls shelf horizontally",
+      );
+      await shelf.evaluate((n) => (n.scrollLeft = 0));
+      await shelf.focus();
+      await p.keyboard.press("ArrowRight");
+      await p.waitForTimeout(100);
+      assert.ok(
+        await shelf.evaluate((n) => n.scrollLeft > 0),
+        "keyboard moves shelf",
+      );
+      await shelf.evaluate((n) => (n.scrollLeft = 0));
+      await p.waitForTimeout(100);
+    }
     if (width === 390) {
       const client = await context.newCDPSession(p);
       const startX = box.x + box.width * 0.85,

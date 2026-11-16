@@ -133,6 +133,7 @@ const rows: [string, string, string][] = [
   ["{0} words · {1} new", "{0} слов · новых: {1}", "{0} Wörter · {1} neu"],
   ["{0} of {1} selected", "Выбрано: {0} из {1}", "{0} von {1} ausgewählt"],
   ["German with Frank", "Немецкий по Франку", "Deutsch mit Frank"],
+  ["Books, words and text", "Книги, слова и текст", "Bücher, Wörter und Text"],
   ["Home", "Главная", "Startseite"],
   ["Library", "Библиотека", "Bibliothek"],
   ["Words", "Слова", "Wörter"],

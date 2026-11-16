@@ -204,12 +204,15 @@ export function Modal({
   onClose,
   className = "",
   showHeader = true,
+  hideTitle = false,
 }: {
   title: string;
   children: any;
   onClose: () => void;
   className?: string;
   showHeader?: boolean;
+  // The dialog still announces the title; the body repeats it visibly.
+  hideTitle?: boolean;
 }) {
   const t = useT();
   const ref = useRef<HTMLDivElement>(null);
@@ -217,8 +220,9 @@ export function Modal({
   useEffect(() => {
     const before = document.activeElement as HTMLElement;
     const dialog = ref.current!;
-    const el = dialog.querySelector<HTMLElement>("button,input,select");
-    el?.focus({ preventScroll: true });
+    // Focus the dialog itself: Tab then reaches its first control, and the
+    // close button does not light up its focus ring on every opening.
+    dialog.focus({ preventScroll: true });
     const handle = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
       if (e.key === "Tab") {
@@ -257,11 +261,12 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
+        tabIndex={-1}
         ref={ref}
       >
         {showHeader && (
           <div class="row between">
-            <h2>{title}</h2>
+            {hideTitle ? <span /> : <h2>{title}</h2>}
             <button class="icon" aria-label={t("Close")} onClick={onClose}>
               <Icon name="close" />
             </button>
