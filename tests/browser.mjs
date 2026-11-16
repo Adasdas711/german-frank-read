@@ -24,7 +24,8 @@ const server = createServer(async (req, res) => {
 await new Promise((r) => server.listen(4173, "127.0.0.1", r));
 await mkdir(".test-results", { recursive: true });
 const browser = await chromium.launch({
-  executablePath: "/usr/bin/chromium",
+  // CI sets CHROME_PATH to the runner's browser.
+  executablePath: process.env.CHROME_PATH || "/usr/bin/chromium",
   headless: true,
   args: ["--no-sandbox", "--autoplay-policy=no-user-gesture-required"],
 });

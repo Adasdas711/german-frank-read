@@ -3,3 +3,4 @@ node_modules/
 src/wasm-base64.txt
 .build-*/
 .*.html
+_site/

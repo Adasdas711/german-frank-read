@@ -11,7 +11,8 @@ const server = createServer((_, response) => {
 });
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
 const browser = await chromium.launch({
-  executablePath: "/usr/bin/chromium",
+  // CI sets CHROME_PATH to the runner's browser.
+  executablePath: process.env.CHROME_PATH || "/usr/bin/chromium",
   args: ["--no-sandbox"],
 });
 await mkdir(".test-results/continue-touch", { recursive: true });
@@ -74,26 +75,24 @@ try {
         await new Promise((resolve) => {
           const tx = db.transaction(["progress", "words"], "readwrite");
           ids.forEach((book, i) =>
-            tx
-              .objectStore("progress")
-              .put(
-                {
-                  book,
-                  at: "1.1",
-                  offset: 20,
-                  percent: 10 + i,
-                  mode: "frank",
-                  updatedAt: "2026-01-01T12:00:00Z",
-                  bookmarks: [
-                    {
-                      at: "1.1",
-                      offset: 20,
-                      createdAt: "2026-01-01T12:00:00Z",
-                    },
-                  ],
-                },
+            tx.objectStore("progress").put(
+              {
                 book,
-              ),
+                at: "1.1",
+                offset: 20,
+                percent: 10 + i,
+                mode: "frank",
+                updatedAt: "2026-01-01T12:00:00Z",
+                bookmarks: [
+                  {
+                    at: "1.1",
+                    offset: 20,
+                    createdAt: "2026-01-01T12:00:00Z",
+                  },
+                ],
+              },
+              book,
+            ),
           );
           tx.objectStore("words").put(
             {

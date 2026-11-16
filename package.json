@@ -6,10 +6,12 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "node scripts/build.mjs",
+    "site": "node scripts/site.mjs",
     "test": "vitest run",
     "test:e2e": "node tests/browser.mjs",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write \"src/*.{ts,tsx,css}\" \"scripts/*.mjs\" \"tests/*.{ts,mjs}\"",
+    "format:check": "prettier --check \"src/*.{ts,tsx,css}\" \"scripts/*.mjs\" \"tests/*.{ts,mjs}\"",
     "test:startup": "node tests/startup.mjs",
     "test:layout": "node tests/layout.mjs",
     "test:demos": "node tests/demos.mjs",
