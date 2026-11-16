@@ -65,7 +65,10 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - run: npm ci
+      # One retry per suite; a pass on retry is reported as a flaky warning.
       - run: node scripts/run-suites.mjs ${{ matrix.suites }}
+        env:
+          RETRIES: 1
       - name: Screenshots of failed runs
         if: failure()
         uses: actions/upload-artifact@v4
@@ -75,14 +78,13 @@ jobs:
           if-no-files-found: ignore
 
   # These suites fail on the code from before CI as well (see
-  # tests/ci-groups.json). They run so their state stays visible, without
-  # blocking merges or the deployment.
+  # tests/ci-groups.json). They run so their state stays visible as warnings
+  # on the pull request, without failing the check or blocking deployment.
   known-failing:
     name: Browser tests (known failing)
     needs: check
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    continue-on-error: true
     env:
       CHROME_PATH: /usr/bin/google-chrome
     steps:
@@ -93,6 +95,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: node scripts/run-suites.mjs ${{ needs.check.outputs.known }}
+        env:
+          KNOWN_FAILING: 1
 
   deploy:
     name: Deploy to GitHub Pages
